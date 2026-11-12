@@ -62,6 +62,8 @@ function dlLine(d) {
 
 function dlButtons(d) {
   if (d.store === 'steam') {
+    // Mise à jour seulement prévue : Steam ouvre sa fenêtre de téléchargement pour la lancer tout de suite
+    if (d.phase === 'scheduled') return `<button type="button" class="btn btn-ghost dl-btn" data-steam="steam://install/${encodeURIComponent(d.key)}">Mettre à jour</button>`;
     return `<button type="button" class="btn btn-ghost dl-btn" data-steam="steam://open/downloads">Gérer dans Steam</button>`;
   }
   if (d.phase === 'installing') return '';
@@ -151,7 +153,7 @@ VIEWS.downloads = () => {
     ${done.length ? section('Terminés', `<div class="dl-list">${done.map(doneRow).join('')}</div>`, '<button type="button" class="link-btn" data-act="dl-clear-done">Effacer</button>') : ''}
     ${sched.length ? `<details class="dl-sched"${state.dlSchedOpen ? ' open' : ''}>
       <summary><span>Mises à jour prévues par Steam</span><span class="dl-count num">${sched.length}</span></summary>
-      <p class="dl-sched-note">Steam les télécharge tout seul, souvent la nuit ou au lancement du jeu. Elles ne bloquent rien.</p>
+      <p class="dl-sched-note">Steam les télécharge tout seul, souvent la nuit ou au lancement du jeu. « Mettre à jour » la lance tout de suite (Steam affiche sa fenêtre de téléchargement).</p>
       <div class="dl-list compact">${sched.map(downloadRow).join('')}</div>
       <button type="button" class="link-btn" data-steam="steam://open/downloads">Ouvrir les téléchargements de Steam</button>
     </details>` : ''}`;
