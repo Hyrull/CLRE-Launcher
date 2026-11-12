@@ -1,0 +1,18 @@
+# Dépendances et builds
+node_modules/
+dist/
+
+# Stub local qui pointe vers node_modules/electron
+/electron.exe
+
+# Captures de travail et projets vidéo (locaux)
+unslop/
+video/
+video-v3/
+/discord-logo.png
+
+# Divers
+*.log
+.DS_Store
+Thumbs.db
+.claude/

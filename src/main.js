@@ -1,0 +1,957 @@
+const { app, BrowserWindow, ipcMain, shell, protocol, net, Tray, Menu, nativeImage, globalShortcut, dialog, Notification, nativeTheme, desktopCapturer, session } = require('electron');
+const { Overlay } = require('./overlay');
+const { Perf } = require('./perf');
+const journal = require('./journal');
+const { Tags } = require('./tags');
+const storefront = require('./storefront');
+const { Presence } = require('./presence');
+const { Parties, commonGames } = require('./party');
+// Application Discord de CLRE-Launcher, intégrée : le statut et le logo marchent chez tout le monde sans rien régler
+const DISCORD_APP_ID = '1568079866841137202';
+const path = require('path');
+const fs = require('fs');
+const { execFile, spawn } = require('child_process');
+const { pathToFileURL } = require('url');
+const { loadLibrary, regDword } = require('./steam');
+const { loadEpic, epicUri, EPIC_DATA } = require('./epic');
+const { loadPlatforms, applyArt, resolveArt } = require('./platforms');
+const { loadMorePlatforms } = require('./platforms2');
+const extras = require('./extras');
+const gameinfo = require('./gameinfo');
+const store = require('./store');
+const { workshopMods } = require('./workshop');
+const { Saves } = require('./saves');
+const sys = require('./system');
+
+// Le nom d'app a changé (Launcher → CLRE-Launcher) : on garde l'ancien dossier de données
+// pour conserver la clé API, les favoris et le temps de jeu déjà mesuré.
+app.setName('CLRE-Launcher');
+app.setPath('userData', path.join(app.getPath('appData'), 'launcher'));
+
+if (!app.requestSingleInstanceLock()) { app.quit(); process.exit(0); }
+
+protocol.registerSchemesAsPrivileged([{ scheme: 'steamart', privileges: { standard: true, secure: true, supportFetchAPI: true } }]);
+
+const dataFile = (name) => path.join(app.getPath('userData'), name);
+function readJson(name, fallback = {}) { try { return JSON.parse(fs.readFileSync(dataFile(name), 'utf8')); } catch { return fallback; } }
+function writeJson(name, v) { fs.mkdirSync(app.getPath('userData'), { recursive: true }); fs.writeFileSync(dataFile(name), JSON.stringify(v, null, 2)); }
+const readPrefs = () => readJson('prefs.json');
+const writePrefs = (p) => writeJson('prefs.json', p);
+const system = () => ({ closeToTray: true, autostart: false, shortcut: true, ...(readPrefs().system || {}) });
+// Réglages des fonctions en plus (notifications, Discord, sauvegardes, mises à jour)
+const settings = () => {
+  const s = readPrefs().settings || {};
+  return {
+    notify: { downloads: true, promos: true, friends: true, updates: true, storage: true, recaps: true, party: true, ...(s.notify || {}) },
+    theme: ['dark', 'light', 'system'].includes(s.theme) ? s.theme : 'dark',
+    overlay: { enabled: true, pauseMin: 120, ...(s.overlay || {}) },
+    presentMon: s.presentMon || '',
+    liveBanners: s.liveBanners !== false,
+    gameTint: s.gameTint !== false,
+    discordId: s.discordId || '', // ID perso (facultatif) ; vide = celui intégré à l'app
+    discordAppId: s.discordId || DISCORD_APP_ID,
+    discordAppIdDefault: DISCORD_APP_ID,
+    discordEnabled: s.discordEnabled !== false,
+    discordBrowse: s.discordBrowse !== false,
+    updateRepo: s.updateRepo || '',
+    backupDir: s.backupDir || path.join(app.getPath('documents'), 'CLRE-Launcher', 'Sauvegardes'),
+    autoBackup: s.autoBackup !== false,
+  };
+};
+
+let win;
+let tray;
+let quitting = false;
+let watchers = [];
+let games = new Map(); // key -> jeu
+let lib = null;
+let running = [];
+let sessions;
+let saves;
+const discord = new sys.Discord();
+const POLL_MS = 5000;
+
+// ---------- Notifications Windows ----------
+function notify(kind, title, body, route) {
+  // Centre de notifications du launcher : on garde les 50 dernières, même si Windows ne les affiche pas
+  try {
+    const p = readPrefs();
+    const item = { t: Date.now(), kind, title, body, route: route || null };
+    p.inbox = [item, ...(p.inbox || [])].slice(0, 50);
+    writePrefs(p);
+    if (win) win.webContents.send('inbox', item);
+  } catch { /* rien */ }
+  if (!Notification.isSupported() || !settings().notify[kind]) return;
+  const n = new Notification({ title, body, icon: path.join(__dirname, '..', 'assets', 'icon-256.png'), silent: false });
+  n.on('click', () => { showWindow(); if (route && win) win.webContents.send('navigate', route); });
+  n.show();
+}
+
+// ---------- Synchronisation de toutes les plateformes ----------
+async function sync() {
+  const prefs = readPrefs();
+  let steamError = null;
+  try {
+    lib = await loadLibrary({ apiKey: prefs.apiKey, steamId: prefs.steamId });
+  } catch (e) {
+    steamError = e.message;
+    lib = { steamPath: null, user: { name: '?', id64: null }, users: [], games: [], collections: [], watchPaths: [] };
+  }
+  const epic = loadEpic(readJson('epic-stats.json'));
+  let more = [];
+  try { more = await loadMorePlatforms(); } catch { more = []; }
+  const others = [...loadPlatforms(prefs.customGames || []), ...more];
+  const artCache = readJson('art-cache.json');
+  applyArt(others, artCache);
+
+  // Temps de jeu hors Steam : ce que le launcher a mesuré lui-même
+  const totals = sessions.totals();
+  for (const g of [...epic.games, ...others]) {
+    const t = totals[g.key];
+    if (!t) continue;
+    g.playtime += Math.round(t.seconds / 60);
+    g.lastPlayed = Math.max(g.lastPlayed, t.last);
+  }
+
+  const all = [...lib.games, ...epic.games, ...others];
+  if (steamError && !all.length) throw new Error(steamError);
+  // Jaquettes choisies à la main
+  const covers = prefs.coverOverrides || {};
+  for (const g of all) if (covers[g.key]) { g.art = { ...g.art, cover: covers[g.key] }; g.coverCustom = true; }
+  // Mise à jour disponible pour un jeu marqué « En cours »
+  const status = (prefs.local && prefs.local.status) || {};
+  for (const g of all) {
+    if (g.needsUpdate && status[g.key] === 'playing' && !notifiedUpdates.has(g.key)) {
+      notifiedUpdates.add(g.key);
+      notify('updates', `Mise à jour pour ${g.name}`, 'Steam va la télécharger avant ta prochaine partie', { view: 'game', id: g.key });
+    }
+  }
+  // Succès lus en local : compteur par jeu Steam
+  try {
+    const sums = gameinfo.achievementSummaries(lib.steamPath, lib.user.accountId, lib.games.filter((g) => g.store === 'steam').map((g) => g.appid));
+    for (const g of all) if (g.store === 'steam' && sums[g.appid]) g.ach = sums[g.appid];
+  } catch {}
+  lib.games = all.sort((a, b) => a.name.localeCompare(b.name, 'fr', { sensitivity: 'base' }));
+  lib.platforms = ['steam', 'epic', 'gog', 'ubisoft', 'ea', 'xbox', 'battlenet', 'riot', 'amazon', 'itch', 'custom'].map((s) => ({ id: s, count: all.filter((g) => g.store === s).length }));
+  lib.steamError = steamError;
+  lib.running = running;
+  lib.hasApiKey = !!prefs.apiKey;
+  lib.canAutostart = app.isPackaged;
+  games = new Map(all.map((g) => [g.key, g]));
+  setTimeout(checkDisks, 8000);
+
+  const paths = [...lib.watchPaths];
+  if (epic.available) paths.push(path.join(EPIC_DATA, 'Manifests'));
+  watch(paths);
+  delete lib.watchPaths;
+  updateTray();
+
+  // Visuels manquants (GOG, Ubisoft, EA, jeux ajoutés) cherchés en arrière-plan
+  // Tags du magasin Steam : noms en français + tags des jeux hors Steam reliés à une fiche
+  tags = tags || new Tags(dataFile('tag-names.json'), dataFile('tags-cache.json'));
+  lib.tagNames = tags.names.map;
+  const missing = tags.apply(all);
+  (async () => {
+    const before = Object.keys(tags.names.map).length;
+    await tags.loadNames();
+    const more = missing.length ? await tags.fetchMissing(missing) : false;
+    if ((more || (!before && Object.keys(tags.names.map).length)) && win) win.webContents.send('library-changed');
+  })();
+  resolveArt(others, artCache).then((changed) => {
+    if (!changed) return;
+    writeJson('art-cache.json', artCache);
+    if (win) win.webContents.send('library-changed');
+  });
+  return lib;
+}
+
+function watch(paths) {
+  watchers.forEach((w) => w.close());
+  watchers = [];
+  let timer;
+  for (const p of paths) {
+    try {
+      watchers.push(fs.watch(p, () => {
+        clearTimeout(timer);
+        timer = setTimeout(() => win && win.webContents.send('library-changed'), 1500);
+      }));
+    } catch { /* dossier absent */ }
+  }
+}
+
+// ---------- Jeux en cours + sessions ----------
+function listProcesses() {
+  return new Promise((resolve) => {
+    execFile('tasklist', ['/fo', 'csv', '/nh'], { windowsHide: true, maxBuffer: 8 * 1024 * 1024 }, (err, out) => {
+      if (err) return resolve(new Set());
+      resolve(new Set(out.split(/\r?\n/).map((l) => (l.match(/^"([^"]+)"/) || [])[1]).filter(Boolean).map((s) => s.toLowerCase())));
+    });
+  });
+}
+
+async function pollRunning() {
+  const now = [];
+  const steamId = regDword('RunningAppID');
+  if (steamId) now.push(String(steamId));
+  const watched = [...games.values()].filter((g) => g.store !== 'steam' && g.installed && g.processNames && g.processNames.length);
+  if (watched.length) {
+    const procs = await listProcesses();
+    for (const g of watched) if (g.processNames.some((p) => procs.has(p))) now.push(g.key);
+  }
+  const names = Object.fromEntries(now.map((k) => [k, (games.get(k) || {}).name || k]));
+  sessions.tick(now, names);
+
+  for (const k of now) if (!runStart[k]) { runStart[k] = Date.now(); pauseShown[k] = 0; if (perf) perf.start(k, (games.get(k) || {}).processNames || []); }
+  for (const k of Object.keys(runStart)) if (!now.includes(k)) {
+    delete runStart[k]; delete pauseShown[k];
+    const done = perf && perf.stop(k, (games.get(k) || {}).name || k);
+    if (done && win) win.webContents.send('perf-saved', k);
+  }
+  checkPause();
+  const prev = running;
+  running = now;
+  if (prev.join('|') === now.join('|')) return;
+  if (win) win.webContents.send('running-changed', now);
+  const stopped = prev.filter((k) => !now.includes(k));
+  // Une partie hors Steam vient de finir : on rafraîchit pour afficher le nouveau temps de jeu
+  if (win && stopped.some((k) => k.includes(':'))) win.webContents.send('library-changed');
+
+  // Statut Discord : le premier jeu en cours (phrases qui tournent), sinon la navigation dans le launcher
+  if (presence) presence.setGame(now.find((k) => games.has(k)) || null);
+
+  // Sauvegarde automatique des sauvegardes à la fin d'une partie
+  if (settings().autoBackup) {
+    for (const k of stopped) {
+      const sg = games.get(k);
+      if (!sg) continue;
+      saves.backup(sg, [...games.values()], lib && lib.user.accountId, 'fin de partie')
+        .then(() => win && win.webContents.send('saves-changed', k))
+        .catch(() => { /* jeu absent de la base ou sans sauvegarde locale */ });
+    }
+  }
+}
+
+let lastDownloads = '';
+function pollDownloads() {
+  if (!lib || !lib.steamPath || !win) return;
+  const list = extras.steamDownloads(lib.steamPath);
+  const sig = JSON.stringify(list);
+  if (sig !== lastDownloads) {
+    const before = lastDownloads ? JSON.parse(lastDownloads) : [];
+    for (const d of before) {
+      if (d.active && !list.some((x) => x.key === d.key)) notify('downloads', `${d.name} est prêt`, 'Téléchargement terminé, tu peux lancer le jeu', { view: 'game', id: d.key });
+    }
+    lastDownloads = sig;
+    win.webContents.send('downloads', list);
+  }
+}
+
+// ---------- Veille en arrière-plan : promos de la liste de souhaits, amis ----------
+const notifiedUpdates = new Set();
+const normName = (s) => String(s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '');
+function ownsByName(name) { const n = normName(name); return [...games.values()].some((g) => normName(g.name) === n); }
+async function checkEpicFree() {
+  try {
+    const list = (await gameinfo.epicFree()).filter((x) => x.now && !ownsByName(x.name));
+    const p = readPrefs();
+    const seen = new Set(p.seenEpicFree || []);
+    const fresh = list.filter((x) => !seen.has(x.id));
+    p.seenEpicFree = [...new Set([...seen, ...list.map((x) => x.id)])].slice(-60);
+    writePrefs(p);
+    if (fresh.length) notify('promos', fresh.length === 1 ? `${fresh[0].name} est gratuit sur Epic` : `${fresh.length} jeux gratuits sur Epic`, fresh.length === 1 ? 'À récupérer cette semaine, il reste à toi ensuite' : fresh.map((x) => x.name).join(' · '), { view: 'wishlist' });
+  } catch { /* hors ligne */ }
+}
+async function checkPromos() {
+  checkEpicFree();
+  if (!lib || !lib.user.id64) return;
+  try {
+    const w = await extras.wishlist(lib.user.id64);
+    if (!w.list) return;
+    const p = readPrefs();
+    const seen = p.seenDiscounts || {};
+    const fresh = w.list.filter((x) => x.discount > 0 && (seen[x.appid] || 0) < x.discount);
+    p.seenDiscounts = Object.fromEntries(w.list.filter((x) => x.discount > 0).map((x) => [x.appid, x.discount]));
+    writePrefs(p);
+    if (fresh.length === 1) notify('promos', `${fresh[0].name} est en promo`, `−${fresh[0].discount} % · ${fresh[0].price}`, { view: 'wishlist' });
+    else if (fresh.length > 1) notify('promos', `${fresh.length} jeux de ta liste en promo`, fresh.slice(0, 3).map((x) => `${x.name} −${x.discount} %`).join(' · '), { view: 'wishlist' });
+  } catch { /* hors ligne */ }
+}
+let friendGames = null;
+async function checkFriends() {
+  const key = readPrefs().apiKey;
+  if (!key || !lib || !lib.user.id64) return;
+  try {
+    const f = await extras.friends(key, lib.user.id64);
+    if (!f.list) return;
+    const nowGames = Object.fromEntries(f.list.map((p) => [p.id, p.gameId]));
+    if (friendGames) {
+      for (const p of f.list) {
+        if (!p.gameId || friendGames[p.id] === p.gameId) continue;
+        const g = games.get(p.gameId);
+        if (g) notify('friends', `${p.name} joue à ${g.name}`, 'Tu as le jeu aussi', { view: 'game', id: g.key });
+      }
+    }
+    friendGames = nowGames;
+  } catch { /* hors ligne */ }
+}
+
+// ---------- Actions ----------
+// Options de lancement par jeu : arguments, applis à ouvrir avant, applis à fermer avant.
+const launchOpts = (key) => (readPrefs().launchOpts || {})[key] || {};
+function beforeLaunch(key) {
+  const o = launchOpts(key);
+  for (const proc of o.close || []) {
+    if (/^[\w .()-]+\.exe$/i.test(proc)) execFile('taskkill', ['/IM', proc], { windowsHide: true }, () => {});
+  }
+  for (const exe of o.open || []) {
+    if (fs.existsSync(exe)) spawn(exe, [], { cwd: path.dirname(exe), detached: true, stdio: 'ignore' }).unref();
+  }
+  return o.args || '';
+}
+
+function launchExe(g, extra = '') {
+  const args = `${g.args || g.launchParam || ''} ${extra}`.trim().match(/(?:[^\s"]+|"[^"]*")+/g) || [];
+  const child = spawn(g.exe, args.map((a) => a.replace(/^"|"$/g, '')), { cwd: g.workingDir || path.dirname(g.exe), detached: true, stdio: 'ignore' });
+  child.on('error', () => win && win.webContents.send('toast', `Impossible de lancer ${g.name}`));
+  child.unref();
+}
+
+function action(key, kind) {
+  const g = games.get(String(key));
+  if (!g) return;
+  const open = (uri) => shell.openExternal(uri);
+  const search = (site) => open(site + encodeURIComponent(g.name));
+  const extra = kind === 'play' ? beforeLaunch(g.key) : '';
+  switch (g.store) {
+    case 'epic':
+      if (kind === 'play') return open(epicUri(g, 'launch'));
+      if (kind === 'install') return open(epicUri(g, 'install'));
+      if (kind === 'store') return search('https://store.epicgames.com/browse?q=');
+      return open('com.epicgames.launcher://store/library');
+    case 'gog':
+      if (kind === 'play' && g.exe) return launchExe(g, extra);
+      if (kind === 'store') return search('https://www.gog.com/fr/games?query=');
+      return open(`goggalaxy://openGameView/${g.platformId}`);
+    case 'ubisoft':
+      if (kind === 'store') return search('https://store.ubisoft.com/fr/search?q=');
+      return open(`uplay://launch/${g.platformId}/0`);
+    case 'ea':
+      if (kind === 'store') return search('https://www.ea.com/fr-fr/games/library?q=');
+      return open(`origin2://game/launch?offerIds=${encodeURIComponent(g.platformId)}`);
+    case 'xbox':
+      if (kind === 'store') return open(g.storeId ? `ms-windows-store://pdp/?productid=${g.storeId}` : `ms-windows-store://search/?query=${encodeURIComponent(g.name)}`);
+      if (kind === 'play') return spawn('explorer.exe', ['shell:AppsFolder\\' + g.aumid], { detached: true, stdio: 'ignore' }).unref();
+      return open('xbox://');
+    case 'battlenet':
+      if (kind === 'play' && g.bnetExe && g.bnetCode) return spawn(g.bnetExe, [`--exec=launch ${g.bnetCode}`], { detached: true, stdio: 'ignore' }).unref();
+      if (kind === 'store') return search('https://shop.battle.net/fr-fr/search?q=');
+      return open(g.bnetCode ? `battlenet://${g.bnetCode}` : 'battlenet://');
+    case 'riot':
+      if (g.riotClient && (kind === 'play' || kind === 'install')) return spawn(g.riotClient, [`--launch-product=${g.platformId}`, '--launch-patchline=live'], { detached: true, stdio: 'ignore' }).unref();
+      return open('https://www.riotgames.com/fr');
+    case 'amazon':
+      if (kind === 'store') return search('https://gaming.amazon.com/search?q=');
+      return open(kind === 'play' ? `amazon-games://play/${g.platformId}` : 'amazon-games://');
+    case 'itch':
+      if (kind === 'play' && g.exe) return launchExe(g, extra);
+      if (kind === 'store') return search('https://itch.io/search?q=');
+      return open(`itch://games/${g.platformId}`);
+    case 'custom':
+      if (kind === 'play') return launchExe(g, extra);
+      return undefined;
+    default: {
+      const id = Number(g.appid);
+      // Avec des arguments, Steam les transmet via steam://run/<id>//<args>/
+      const play = extra ? `steam://run/${id}//${encodeURIComponent(extra)}/` : `steam://rungameid/${id}`;
+      const uris = { play, install: `steam://install/${id}`, uninstall: `steam://uninstall/${id}`, store: `steam://store/${id}`, details: `steam://nav/games/details/${id}` };
+      if (uris[kind]) open(uris[kind]);
+    }
+  }
+}
+
+// ---------- Fenêtre, barre des tâches, raccourci ----------
+// Logo « Pile de jaquettes » : variantes dessinées pour 16 et 32 px (tray.png + tray@2x.png)
+const ASSETS = path.join(__dirname, '..', 'assets');
+function trayIcon() {
+  const img = nativeImage.createFromPath(path.join(ASSETS, 'tray.png'));
+  const hi = nativeImage.createFromPath(path.join(ASSETS, 'tray@2x.png'));
+  if (!hi.isEmpty()) img.addRepresentation({ scaleFactor: 2, buffer: hi.toPNG() });
+  return img;
+}
+
+function showWindow() {
+  if (!win) return;
+  if (win.isMinimized()) win.restore();
+  win.show();
+  win.focus();
+}
+
+function updateTray() {
+  if (!tray) return;
+  const recent = [...games.values()].filter((g) => g.installed && g.lastPlayed).sort((a, b) => b.lastPlayed - a.lastPlayed).slice(0, 5);
+  tray.setContextMenu(Menu.buildFromTemplate([
+    { label: 'Ouvrir CLRE-Launcher', click: showWindow },
+    { type: 'separator' },
+    ...(recent.length ? [{ label: 'Jouer à', enabled: false }, ...recent.map((g) => ({ label: g.name, click: () => action(g.key, 'play') })), { type: 'separator' }] : []),
+    { label: 'Quitter', click: () => { quitting = true; app.quit(); } },
+  ]));
+}
+
+// ---------- Thème : sombre, clair ou celui de Windows ----------
+function applyTheme(theme) {
+  nativeTheme.themeSource = theme || 'dark';
+  if (win && !win.isDestroyed()) {
+    const light = !nativeTheme.shouldUseDarkColors;
+    win.setBackgroundColor(light ? '#f5f5f7' : '#111113');
+    try { win.setTitleBarOverlay({ color: '#00000000', symbolColor: light ? '#3a3a3c' : '#a1a1a6', height: 36 }); } catch { /* fenêtre sans barre personnalisée */ }
+  }
+}
+nativeTheme.on('updated', () => applyTheme(nativeTheme.themeSource));
+
+// ---------- Infos en jeu ----------
+const overlay = new Overlay();
+const runStart = {};
+let perf = null;
+let presence = null;
+let tags = null;
+let rarity = null;
+const pauseShown = {};
+function overlayInfo(message) {
+  const k = running.find((x) => games.has(x));
+  const g = k ? games.get(k) : null;
+  return { game: g ? g.name : '', start: g ? runStart[k] || Date.now() : Date.now(), message: message || '' };
+}
+function checkPause() {
+  const st = settings().overlay;
+  if (!st.enabled || !st.pauseMin) return;
+  for (const k of running) {
+    const mins = Math.floor((Date.now() - (runStart[k] || Date.now())) / 60000);
+    const step = Math.floor(mins / st.pauseMin);
+    if (step >= 1 && (pauseShown[k] || 0) < step) {
+      pauseShown[k] = step;
+      const h = Math.floor(mins / 60); const m = mins % 60;
+      overlay.show(overlayInfo(`Ça fait ${h ? `${h}h${m ? String(m).padStart(2, '0') : ''}` : `${m} min`} que tu joues. Pense à faire une pause : bois un verre d’eau, regarde au loin.`), 12000);
+    }
+  }
+}
+
+// ---------- Récaps prêts (semaine, mois, année) ----------
+function periodIds(d = new Date()) {
+  const day = (d.getDay() + 6) % 7; // lundi = 0
+  const monday = new Date(d.getFullYear(), d.getMonth(), d.getDate() - day);
+  return { week: monday.toISOString().slice(0, 10), month: `${d.getFullYear()}-${d.getMonth() + 1}`, year: String(d.getFullYear()), monday };
+}
+function checkRecaps() {
+  try {
+    const p = readPrefs();
+    const seen = p.recapSeen || {};
+    const ids = periodIds();
+    const d = new Date();
+    const prev = {
+      week: [ids.monday.getTime() / 1000 - 7 * 86400, ids.monday.getTime() / 1000],
+      month: [new Date(d.getFullYear(), d.getMonth() - 1, 1).getTime() / 1000, new Date(d.getFullYear(), d.getMonth(), 1).getTime() / 1000],
+      year: [new Date(d.getFullYear() - 1, 0, 1).getTime() / 1000, new Date(d.getFullYear(), 0, 1).getTime() / 1000],
+    };
+    const label = { week: 'de la semaine', month: 'du mois', year: 'de l’année' };
+    let sent = false;
+    for (const k of ['year', 'month', 'week']) {
+      if (seen[k] === ids[k]) continue;
+      const first = !seen[k];
+      seen[k] = ids[k];
+      if (first || sent) continue; // pas de notification au tout premier lancement
+      const [from, to] = prev[k];
+      const secs = sessions.list.filter((x) => x.end > from && x.start < to).reduce((a, x) => a + Math.min(x.end, to) - Math.max(x.start, from), 0);
+      if (secs < 600) continue;
+      notify('recaps', `Ton récap ${label[k]} est prêt`, `${Math.floor(secs / 3600)}h${String(Math.round((secs % 3600) / 60)).padStart(2, '0')} de jeu. Ouvre ta story`, { view: 'recap', story: k, offset: -1 });
+      sent = true;
+    }
+    p.recapSeen = seen;
+    writePrefs(p);
+  } catch { /* rien */ }
+}
+
+// ---------- Disque presque plein ----------
+function checkDisks() {
+  try {
+    const p = readPrefs();
+    const last = p.diskAlerts || {};
+    const DAY = 86400000;
+    for (const d of extras.disks([...games.values()])) {
+      if (!d.total) continue;
+      const low = d.free < 0.08 * d.total || d.free < 25e9;
+      if (!low || (last[d.root] || 0) > Date.now() - DAY) continue;
+      last[d.root] = Date.now();
+      const old = [...games.values()].filter((g) => g.installed && g.sizeOnDisk && g.installDir && g.installDir.toUpperCase().startsWith(d.root) && (!g.lastPlayed || g.lastPlayed < Date.now() / 1000 - 180 * 86400));
+      const gb = Math.round(old.reduce((s2, g) => s2 + g.sizeOnDisk, 0) / 1e9);
+      notify('storage', `Disque ${d.root.replace(/[\\/]+$/, '')} presque plein`, `${Math.round(d.free / 1e9)} Go libres${gb ? ` · ${gb} Go récupérables sur ${old.length} jeu${old.length > 1 ? 'x' : ''} pas lancé${old.length > 1 ? 's' : ''} depuis 6 mois` : ''}`, { view: 'storage' });
+    }
+    p.diskAlerts = last;
+    writePrefs(p);
+  } catch { /* rien */ }
+}
+
+function applySystem() {
+  const s = system();
+  globalShortcut.unregisterAll();
+  if (s.shortcut) globalShortcut.register('Control+Alt+L', () => (win && win.isVisible() && win.isFocused() ? win.hide() : showWindow()));
+  const st = settings();
+  if (st.overlay.enabled) globalShortcut.register('Control+Alt+O', () => overlay.toggle(overlayInfo()));
+  else overlay.hide();
+  applyTheme(st.theme);
+  if (app.isPackaged) {
+    app.setLoginItemSettings({ openAtLogin: !!s.autostart, path: process.env.PORTABLE_EXECUTABLE_FILE || process.execPath, args: ['--hidden'] });
+  }
+}
+
+function createWindow() {
+  win = new BrowserWindow({
+    width: 1440,
+    height: 900,
+    minWidth: 960,
+    minHeight: 640,
+    show: !process.argv.includes('--hidden') && !playArg(process.argv),
+    backgroundColor: (nativeTheme.themeSource = settings().theme, nativeTheme.shouldUseDarkColors) ? '#111113' : '#f5f5f7',
+    icon: path.join(ASSETS, 'icon-256.png'),
+    titleBarStyle: 'hidden',
+    titleBarOverlay: { color: '#00000000', symbolColor: nativeTheme.shouldUseDarkColors ? '#a1a1a6' : '#3a3a3c', height: 36 },
+    webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false },
+  });
+  win.loadFile(path.join(__dirname, 'renderer', 'index.html'));
+  win.webContents.setWindowOpenHandler(({ url }) => { if (/^https:\/\//.test(url)) shell.openExternal(url); return { action: 'deny' }; });
+  if (presence && !win.isVisible()) presence.visible = false; // lancé réduit dans la barre des tâches
+  for (const ev of ['show', 'restore', 'focus']) win.on(ev, () => presence && presence.setVisible(true));
+  for (const ev of ['hide', 'minimize']) win.on(ev, () => presence && presence.setVisible(false));
+  win.on('close', (e) => {
+    if (!quitting && system().closeToTray) { e.preventDefault(); win.hide(); }
+  });
+  setInterval(pollRunning, POLL_MS);
+  setInterval(pollDownloads, 3000);
+}
+
+// Raccourci Bureau : CLRE-Launcher.exe --play=<clé>
+const playArg = (argv) => { const a = argv.find((x) => x.startsWith('--play=')); return a ? a.slice(7) : null; };
+async function playFromArgs(argv) {
+  const key = playArg(argv);
+  if (!key) return false;
+  if (!games.size) { try { await sync(); } catch { return false; } }
+  action(key, 'play');
+  const g = games.get(key);
+  if (g && win) win.webContents.send('toast', `Lancement de ${g.name}…`);
+  return true;
+}
+app.on('second-instance', async (_e, argv) => { if (!(await playFromArgs(argv))) showWindow(); });
+app.on('before-quit', () => { quitting = true; });
+
+app.whenReady().then(() => {
+  sessions = new extras.Sessions(dataFile('sessions.json'));
+  perf = new Perf(dataFile('perf'), () => settings().presentMon);
+  rarity = new journal.Rarity(dataFile('ach-global.json'));
+  // Export vidéo du récap : la page filme sa propre fenêtre
+  session.defaultSession.setDisplayMediaRequestHandler((_req, cb) => {
+    desktopCapturer.getSources({ types: ['window'] }).then((src) => {
+      const mine = win && src.find((x) => x.id === win.getMediaSourceId());
+      cb(mine ? { video: mine } : {});
+    }).catch(() => cb({}));
+  });
+  setTimeout(checkRecaps, 20000);
+  setInterval(checkRecaps, 6 * 3600 * 1000);
+  saves = new Saves({ dataDir: app.getPath('userData'), documents: app.getPath('documents'), getBackupDir: () => settings().backupDir });
+  const coversDir = dataFile('covers');
+
+  protocol.handle('steamart', (req) => {
+    const file = path.normalize(decodeURIComponent(new URL(req.url).pathname.slice(1)));
+    const ok = /librarycache/i.test(file) || /[\\/]760[\\/]remote[\\/]/.test(file) || file.toLowerCase().startsWith(coversDir.toLowerCase());
+    if (!ok) return new Response('', { status: 403 });
+    return net.fetch(pathToFileURL(file).toString());
+  });
+
+  const prefs = () => readPrefs();
+  const steamAppId = (key) => { const g = games.get(String(key)); return g ? (g.store === 'steam' ? g.appid : g.steamAppId) : null; };
+
+  ipcMain.handle('library', () => sync());
+  for (const kind of ['play', 'install', 'uninstall', 'store', 'details']) ipcMain.handle(kind, (_e, key) => action(key, kind));
+  ipcMain.handle('open-store-home', () => shell.openExternal('steam://store'));
+  ipcMain.handle('open-friends', () => shell.openExternal('steam://open/friends'));
+  ipcMain.handle('open-url', (_e, url) => { if (/^https:\/\/([a-z0-9-]+\.)*(steampowered|steamcommunity|steamstatic|akamaihd)\.(com|net)\//.test(String(url)) || /^steam:\/\//.test(String(url))) shell.openExternal(url); });
+  ipcMain.handle('open-folder', (_e, key) => {
+    const g = games.get(String(key));
+    if (g && g.installDir && fs.existsSync(g.installDir)) shell.openPath(g.installDir);
+  });
+  ipcMain.handle('open-screenshot', (_e, file) => {
+    if (typeof file === 'string' && /[\\/]760[\\/]remote[\\/]/.test(file) && fs.existsSync(file)) shell.openPath(file);
+  });
+
+  // Données en plus
+  ipcMain.handle('downloads', () => (lib && lib.steamPath ? extras.steamDownloads(lib.steamPath) : []));
+  ipcMain.handle('sessions', () => sessions.list);
+  ipcMain.handle('disks', () => extras.disks([...games.values()]));
+  ipcMain.handle('screenshots', (_e, key) => {
+    const id = steamAppId(key);
+    return lib && lib.steamPath && id ? extras.steamScreenshots(lib.steamPath, lib.user.accountId, id) : [];
+  });
+  ipcMain.handle('screenshots-all', () => {
+    if (!lib || !lib.steamPath) return [];
+    return extras.screenshotApps(lib.steamPath, lib.user.accountId).map((appid) => {
+      const g = games.get(appid);
+      return { key: appid, name: g ? g.name : `App ${appid}`, shots: extras.steamScreenshots(lib.steamPath, lib.user.accountId, appid) };
+    }).filter((x) => x.shots.length).sort((a, b) => b.shots[0].time - a.shots[0].time);
+  });
+  ipcMain.handle('news', async (_e, key) => {
+    const id = steamAppId(key);
+    if (!id) return { error: 'nosteam' };
+    try { return { list: await extras.news(id, 6) }; } catch (e) { return { error: e.message }; }
+  });
+  ipcMain.handle('news-home', async () => {
+    const recent = [...games.values()].filter((g) => g.store === 'steam' && g.installed).sort((a, b) => b.lastPlayed - a.lastPlayed).slice(0, 10);
+    const res = await Promise.allSettled(recent.map((g) => extras.news(g.appid, 3).then((l) => l.map((n) => ({ ...n, key: g.key, game: g.name })))));
+    const cutoff = Date.now() / 1000 - 45 * 86400;
+    const out = [];
+    // Accueil : uniquement les annonces officielles des studios
+    for (const r of res) if (r.status === 'fulfilled') { const n = r.value.find((x) => x.date > cutoff && x.official); if (n) out.push(n); }
+    return out.sort((a, b) => b.date - a.date).slice(0, 6);
+  });
+  ipcMain.handle('achievements', async (_e, key) => {
+    const id = steamAppId(key);
+    const g = games.get(String(key));
+    if (!id || !g || g.store !== 'steam') return { error: 'nosteam' };
+    // D'abord le cache local de Steam (sans clé), sinon l'API Web si une clé est configurée
+    const local = lib.steamPath && lib.user.accountId ? gameinfo.localAchievements(lib.steamPath, lib.user.accountId, id) : null;
+    if (local && local.total) {
+      const pct = await gameinfo.globalPercents(id);
+      for (const a of local.list) a.global = pct[a.id] ?? null;
+      return local;
+    }
+    if (!prefs().apiKey) return local ? local : { error: 'nolocal' };
+    try { return await extras.achievements(prefs().apiKey, lib.user.id64, id); } catch (e) { return { error: e.message }; }
+  });
+  let howLong = null;
+  presence = new Presence(discord, {
+    settings,
+    games: () => [...games.values()],
+    lib: () => lib,
+    local: () => readPrefs().local || {},
+    howLong: (key) => { const h = howLong && howLong.db[key]; return h && h.v; },
+  });
+  ipcMain.on('presence', (_e, ctx) => presence.setBrowse(ctx || {}));
+  // Soirées jeu entre amis
+  const parties = new Parties(readPrefs, writePrefs, (title, body, ev) => {
+    notify('party', title, body, ev.key ? { view: 'game', id: ev.key } : { view: 'party' });
+    if (win) win.webContents.send('parties-changed');
+  });
+  ipcMain.handle('inbox:get', () => readPrefs().inbox || []);
+  ipcMain.handle('inbox:clear', () => { const p = readPrefs(); p.inbox = []; writePrefs(p); return true; });
+  ipcMain.handle('party:list', () => parties.list());
+  ipcMain.handle('party:save', (_e, ev) => parties.save(ev || {}));
+  ipcMain.handle('party:remove', (_e, id) => parties.remove(id));
+  ipcMain.handle('party:common', async (_e, ids) => {
+    try { return await commonGames(readPrefs().apiKey, ids || [], [...games.values()], (lib && lib.tagNames) || {}); } catch (e) { return { error: e.message }; }
+  });
+  ipcMain.handle('howlong', async (_e, key) => {
+    const g = games.get(String(key));
+    if (!g) return null;
+    howLong = howLong || new gameinfo.HowLong(dataFile('hltb.json'));
+    try { return await howLong.get(g.key, g.name); } catch (e) { return { error: e.message }; }
+  });
+  ipcMain.handle('friends', async () => {
+    try { return await extras.friends(prefs().apiKey, lib && lib.user.id64); } catch (e) { return { error: e.message }; }
+  });
+  ipcMain.handle('epic-free', async () => {
+    try { return (await gameinfo.epicFree()).map((x) => ({ ...x, owned: ownsByName(x.name) })); } catch (e) { return { error: e.message }; }
+  });
+  ipcMain.handle('wishlist', async () => {
+    if (!lib || !lib.user.id64) return { error: 'Compte Steam introuvable' };
+    try { return await extras.wishlist(lib.user.id64); } catch (e) { return { error: e.message }; }
+  });
+
+  // Jeux ajoutés à la main
+  ipcMain.handle('pick-exe', async () => {
+    const r = await dialog.showOpenDialog(win, { title: 'Choisir le jeu', properties: ['openFile'], filters: [{ name: 'Programmes', extensions: ['exe', 'lnk', 'bat', 'url'] }] });
+    return r.canceled ? null : r.filePaths[0];
+  });
+  ipcMain.handle('pick-image', async () => {
+    const r = await dialog.showOpenDialog(win, { title: 'Choisir une jaquette', properties: ['openFile'], filters: [{ name: 'Images', extensions: ['jpg', 'jpeg', 'png', 'webp'] }] });
+    return r.canceled ? null : r.filePaths[0];
+  });
+  ipcMain.handle('custom:add', (_e, { name, exe, args, cover }) => {
+    if (!exe || !fs.existsSync(exe)) throw new Error('Fichier introuvable');
+    const p = readPrefs();
+    const id = Date.now().toString(36);
+    let coverUrl = '';
+    if (cover && fs.existsSync(cover)) {
+      fs.mkdirSync(coversDir, { recursive: true });
+      const dest = path.join(coversDir, id + path.extname(cover).toLowerCase());
+      fs.copyFileSync(cover, dest);
+      coverUrl = 'steamart://local/' + encodeURIComponent(dest);
+    }
+    p.customGames = [...(p.customGames || []), { id, name: String(name || path.basename(exe, path.extname(exe))).trim(), exe, args: args || '', cover: coverUrl }];
+    writePrefs(p);
+    return 'custom:' + id;
+  });
+  ipcMain.handle('custom:remove', (_e, key) => {
+    const id = String(key).replace(/^custom:/, '');
+    const p = readPrefs();
+    p.customGames = (p.customGames || []).filter((c) => c.id !== id);
+    writePrefs(p);
+    return true;
+  });
+
+  // Réglages
+  // ---------- Fiche enrichie, mods, sauvegardes ----------
+  ipcMain.handle('store-details', async (_e, key) => {
+    const id = steamAppId(key);
+    if (!id) return { error: 'nosteam' };
+    try { return await store.storeDetails(id); } catch (e) { return { error: e.message }; }
+  });
+  ipcMain.handle('pc-specs', async (_e, key) => {
+    const s = await store.pcSpecs();
+    const g = games.get(String(key));
+    const dir = g && g.installDir ? g.installDir : (lib && lib.steamPath) || 'C:\\';
+    return { ...s, freeGb: store.freeGb(path.parse(dir).root) };
+  });
+  ipcMain.handle('workshop', async (_e, key) => {
+    const g = games.get(String(key));
+    if (!g || g.store !== 'steam' || !lib.steamPath) return [];
+    return workshopMods(lib.steamPath, g.appid);
+  });
+  ipcMain.handle('open-mod', (_e, id) => { if (/^\d+$/.test(String(id))) shell.openExternal(`https://steamcommunity.com/sharedfiles/filedetails/?id=${id}`); });
+  const all = () => [...games.values()];
+  ipcMain.handle('saves:find', async (_e, key) => {
+    const g = games.get(String(key));
+    if (!g) return { known: false };
+    try { return { ...(await saves.find(g, all(), lib.user.accountId)), backups: saves.list(g), dir: saves.gameDir(g) }; } catch (e) { return { error: e.message }; }
+  });
+  ipcMain.handle('saves:overview', async () => {
+    try {
+      const idx = await saves.buildIndex(all());
+      return all().filter((g) => idx[g.key] && (g.installed || g.lastPlayed)).map((g) => {
+        const b = saves.list(g);
+        return { key: g.key, name: g.name, cloud: !!(idx[g.key].cloud && Object.values(idx[g.key].cloud).some(Boolean)), last: b[0] ? b[0].time : 0, count: b.length };
+      }).sort((a, b) => b.last - a.last || a.name.localeCompare(b.name, 'fr'));
+    } catch (e) { return { error: e.message }; }
+  });
+  ipcMain.handle('saves:backup', async (_e, key) => {
+    const g = games.get(String(key));
+    return saves.backup(g, all(), lib.user.accountId, 'manuel');
+  });
+  ipcMain.handle('saves:restore', async (_e, key, id) => {
+    const g = games.get(String(key));
+    if (!/^[\d_-]+$/.test(String(id))) throw new Error('Instantané invalide');
+    if (running.includes(String(key))) throw new Error('Ferme le jeu avant de restaurer');
+    return saves.restore(g, id);
+  });
+  ipcMain.handle('saves:open', (_e, key) => {
+    const g = games.get(String(key));
+    const dir = g ? saves.gameDir(g) : settings().backupDir;
+    fs.mkdirSync(dir, { recursive: true });
+    shell.openPath(dir);
+  });
+  ipcMain.handle('pick-folder', async () => {
+    const r = await dialog.showOpenDialog(win, { title: 'Choisir un dossier', properties: ['openDirectory', 'createDirectory'] });
+    return r.canceled ? null : r.filePaths[0];
+  });
+
+  // ---------- Raccourcis, options de lancement, jaquettes ----------
+  ipcMain.handle('shortcut:create', (_e, key) => {
+    const g = games.get(String(key));
+    if (!g) throw new Error('Jeu introuvable');
+    return sys.createShortcut(app, shell, g);
+  });
+  ipcMain.handle('launch-opts:get', (_e, key) => launchOpts(String(key)));
+  ipcMain.handle('launch-opts:set', (_e, key, o) => {
+    const p = readPrefs();
+    p.launchOpts = p.launchOpts || {};
+    const clean = { args: String(o.args || '').slice(0, 500), open: (o.open || []).filter((x) => typeof x === 'string').slice(0, 5), close: (o.close || []).filter((x) => /^[\w .()-]+\.exe$/i.test(x)).slice(0, 10) };
+    if (!clean.args && !clean.open.length && !clean.close.length) delete p.launchOpts[key]; else p.launchOpts[key] = clean;
+    writePrefs(p);
+    return true;
+  });
+  ipcMain.handle('cover:set', async (_e, key) => {
+    const r = await dialog.showOpenDialog(win, { title: 'Choisir une jaquette (format portrait)', properties: ['openFile'], filters: [{ name: 'Images', extensions: ['jpg', 'jpeg', 'png', 'webp'] }] });
+    if (r.canceled) return null;
+    fs.mkdirSync(coversDir, { recursive: true });
+    const dest = path.join(coversDir, `cover-${String(key).replace(/[^\w-]/g, '_')}-${Date.now().toString(36)}${path.extname(r.filePaths[0]).toLowerCase()}`);
+    fs.copyFileSync(r.filePaths[0], dest);
+    const p = readPrefs();
+    p.coverOverrides = { ...(p.coverOverrides || {}), [key]: 'steamart://local/' + encodeURIComponent(dest) };
+    writePrefs(p);
+    return true;
+  });
+  ipcMain.handle('cover:reset', (_e, key) => { const p = readPrefs(); if (p.coverOverrides) delete p.coverOverrides[key]; writePrefs(p); return true; });
+
+  // ---------- Récap : export de la carte en image ----------
+  // ---------- Magasin Steam ----------
+  const ownedAppids = () => [...games.values()].map((g) => Number(g.store === 'steam' ? g.appid : g.steamAppId)).filter(Boolean);
+  const favTags = () => {
+    const c = new Map();
+    for (const g of games.values()) {
+      const w = 1 + Math.min(20, (g.playtime || 0) / 120); // les jeux auxquels tu joues comptent plus
+      (g.tags || []).slice(0, 6).forEach((t, i) => c.set(t, (c.get(t) || 0) + w * (6 - i)));
+    }
+    // On écarte les tags trop génériques
+    const generic = new Set([492, 19, 21, 4182, 3859, 3871, 4166, 1774, 4191, 597, 113, 7368, 1664, 3839, 4305]);
+    return [...c].filter(([t]) => !generic.has(t)).sort((a, b) => b[1] - a[1]).map(([t]) => t).slice(0, 6);
+  };
+  const wrap = (fn) => async (...a) => { try { return await fn(...a); } catch (e) { return { error: e.message }; } };
+  ipcMain.handle('store:featured', wrap(() => storefront.featured()));
+  ipcMain.handle('store:search', wrap((_e, opts) => storefront.search(opts || {})));
+  ipcMain.handle('store:foryou', wrap(async () => ({ tags: favTags().slice(0, 3), items: await storefront.forYou(favTags(), ownedAppids()) })));
+  ipcMain.handle('store:item', wrap(async (_e, appid) => (await storefront.items([appid]))[0] || null));
+  ipcMain.handle('store:details', wrap((_e, appid) => store.storeDetails(Number(appid))));
+  ipcMain.handle('store:owned', () => ownedAppids());
+  ipcMain.handle('store:howlong', wrap(async (_e, appid, name) => {
+    howLong = howLong || new gameinfo.HowLong(dataFile('hltb.json'));
+    return howLong.get(`steam-store:${appid}`, name);
+  }));
+  // Achat et liste de souhaits : dans l'appli Steam (le paiement ne passe jamais par le launcher)
+  ipcMain.handle('store:open', (_e, appid, kind) => {
+    const id = Number(appid);
+    if (!id) return false;
+    shell.openExternal(kind === 'web' ? `https://store.steampowered.com/app/${id}` : `steam://store/${id}`);
+    return true;
+  });
+  ipcMain.handle('journal', (_e, key) => journal.buildJournal(lib, [...games.values()], sessions.list, key || null));
+  ipcMain.handle('showcase', async () => { try { return await rarity.showcase(lib, [...games.values()]); } catch (e) { return { error: e.message }; } });
+  ipcMain.handle('ach-period', (_e, from, to) => journal.unlockedAchievements(lib, [...games.values()]).filter((a) => a.t >= from && a.t < to));
+  ipcMain.handle('ach-rarity', async (_e, items) => {
+    const pct = await rarity.percents([...new Set(items.map((a) => a.appid))]);
+    return items.map((a) => ({ ...a, global: (pct[a.appid] || {})[a.id] ?? null }));
+  });
+  ipcMain.handle('perf', (_e, key) => (perf ? perf.list(key) : []));
+  ipcMain.handle('pick-presentmon', async () => {
+    const r = await dialog.showOpenDialog(win, { title: 'Choisir PresentMon.exe', properties: ['openFile'], filters: [{ name: 'PresentMon', extensions: ['exe'] }] });
+    return r.canceled ? null : r.filePaths[0];
+  });
+  // Teinte dominante d'une image (jaquette) : réduite à 32×32, la teinte la plus présente parmi les pixels colorés
+  const tintCache = new Map();
+  ipcMain.handle('art-color', async (_e, url) => {
+    if (!url) return null;
+    if (tintCache.has(url)) return tintCache.get(url);
+    try {
+      const res = await net.fetch(url);
+      if (!res.ok) return null;
+      const img = nativeImage.createFromBuffer(Buffer.from(await res.arrayBuffer())).resize({ width: 32, height: 32, quality: 'good' });
+      const px = img.toBitmap(); // BGRA
+      const bins = Array.from({ length: 24 }, () => ({ w: 0, r: 0, g: 0, b: 0 }));
+      for (let i = 0; i < px.length; i += 4) {
+        const b = px[i], g = px[i + 1], r = px[i + 2];
+        const max = Math.max(r, g, b), min = Math.min(r, g, b);
+        const sat = max ? (max - min) / max : 0;
+        if (max < 40 || sat < 0.25) continue;
+        let h = 0;
+        if (max === r) h = ((g - b) / (max - min)) % 6; else if (max === g) h = (b - r) / (max - min) + 2; else h = (r - g) / (max - min) + 4;
+        const bin = bins[Math.floor(((h * 60 + 360) % 360) / 15)];
+        const w = sat * (max / 255);
+        bin.w += w; bin.r += r * w; bin.g += g * w; bin.b += b * w;
+      }
+      const best = bins.reduce((a, b) => (b.w > a.w ? b : a));
+      const out = best.w > 1.5 ? [Math.round(best.r / best.w), Math.round(best.g / best.w), Math.round(best.b / best.w)] : null;
+      tintCache.set(url, out);
+      return out;
+    } catch { return null; }
+  });
+  ipcMain.handle('save-video', async (_e, buf, name, ext) => {
+    const res = await dialog.showSaveDialog(win, { title: 'Enregistrer la vidéo du récap', defaultPath: path.join(app.getPath('videos'), `${name || 'recap'}.${ext}`), filters: [{ name: 'Vidéo', extensions: [ext] }] });
+    if (res.canceled) return null;
+    fs.writeFileSync(res.filePath, Buffer.from(buf));
+    return res.filePath;
+  });
+  ipcMain.handle('capture', async (_e, rect, name) => {
+    const r = { x: Math.round(rect.x), y: Math.round(rect.y), width: Math.round(rect.width), height: Math.round(rect.height) };
+    const img = await win.webContents.capturePage(r);
+    const res = await dialog.showSaveDialog(win, { title: 'Enregistrer le récap', defaultPath: path.join(app.getPath('pictures'), `${name || 'recap'}.png`), filters: [{ name: 'Image PNG', extensions: ['png'] }] });
+    if (res.canceled) return null;
+    fs.writeFileSync(res.filePath, img.toPNG());
+    return res.filePath;
+  });
+
+  // ---------- Export / import des données du launcher ----------
+  ipcMain.handle('data:export', async () => {
+    const res = await dialog.showSaveDialog(win, { title: 'Exporter mes données', defaultPath: path.join(app.getPath('documents'), `clre-launcher-${new Date().toISOString().slice(0, 10)}.json`), filters: [{ name: 'JSON', extensions: ['json'] }] });
+    if (res.canceled) return null;
+    const p = readPrefs();
+    const data = { app: 'CLRE-Launcher', version: 1, exportedAt: new Date().toISOString(), local: p.local || {}, customGames: p.customGames || [], launchOpts: p.launchOpts || {}, settings: p.settings || {}, sessions: sessions.list, epicStats: readJson('epic-stats.json') };
+    fs.writeFileSync(res.filePath, JSON.stringify(data, null, 2));
+    return res.filePath;
+  });
+  ipcMain.handle('data:import', async () => {
+    const res = await dialog.showOpenDialog(win, { title: 'Importer des données', properties: ['openFile'], filters: [{ name: 'JSON', extensions: ['json'] }] });
+    if (res.canceled) return null;
+    const d = JSON.parse(fs.readFileSync(res.filePaths[0], 'utf8'));
+    if (d.app !== 'CLRE-Launcher') throw new Error('Ce fichier ne vient pas de CLRE-Launcher');
+    const p = readPrefs();
+    const l = p.local || {};
+    const il = d.local || {};
+    p.local = {
+      ...il, ...l,
+      status: { ...(il.status || {}), ...(l.status || {}) },
+      notes: { ...(il.notes || {}), ...(l.notes || {}) },
+      favAdd: [...new Set([...(il.favAdd || []), ...(l.favAdd || [])])],
+      hidden: [...new Set([...(il.hidden || []), ...(l.hidden || [])])],
+      collections: [...(l.collections || []), ...(il.collections || []).filter((c) => !(l.collections || []).some((x) => x.id === c.id))],
+    };
+    p.customGames = [...(p.customGames || []), ...(d.customGames || []).filter((c) => !(p.customGames || []).some((x) => x.id === c.id))];
+    p.launchOpts = { ...(d.launchOpts || {}), ...(p.launchOpts || {}) };
+    writePrefs(p);
+    const seen = new Set(sessions.list.map((s) => `${s.key}@${s.start}`));
+    sessions.list.push(...(d.sessions || []).filter((s) => s && s.key && !seen.has(`${s.key}@${s.start}`)));
+    sessions.list.sort((a, b) => a.start - b.start);
+    sessions.save();
+    return { sessions: (d.sessions || []).length, file: res.filePaths[0] };
+  });
+
+  // ---------- Mise à jour du launcher ----------
+  let pendingUpdate = null;
+  ipcMain.handle('update:check', async () => {
+    try { return await sys.checkUpdate(settings().updateRepo, app.getVersion()); } catch (e) { return { error: e.message }; }
+  });
+  ipcMain.handle('update:download', async (_e, url) => {
+    if (!app.isPackaged) throw new Error('La mise à jour automatique ne marche que depuis le .exe');
+    const exe = process.env.PORTABLE_EXECUTABLE_FILE || process.execPath;
+    pendingUpdate = { tmp: await sys.downloadUpdate(url, exe), exe };
+    return true;
+  });
+  ipcMain.handle('update:install', () => {
+    if (!pendingUpdate) throw new Error('Aucune mise à jour téléchargée');
+    sys.installUpdate(pendingUpdate.tmp, pendingUpdate.exe);
+    quitting = true;
+    app.quit();
+  });
+  ipcMain.handle('app-version', () => app.getVersion());
+
+  ipcMain.handle('prefs:get', () => {
+    const p = readPrefs();
+    return { steamId: p.steamId, apiKey: p.apiKey ? '••••' + p.apiKey.slice(-4) : '', hasApiKey: !!p.apiKey, system: system(), settings: settings(), canAutostart: app.isPackaged };
+  });
+  ipcMain.handle('prefs:set', (_e, patch) => {
+    const p = readPrefs();
+    for (const [k, v] of Object.entries(patch || {})) {
+      if (k === 'system') { p.system = { ...system(), ...v }; continue; }
+      if (k === 'settings') { p.settings = { ...(p.settings || {}), ...v, notify: { ...((p.settings || {}).notify || {}), ...(v.notify || {}) }, overlay: { ...((p.settings || {}).overlay || {}), ...(v.overlay || {}) } }; continue; }
+      if (!['apiKey', 'steamId'].includes(k)) continue;
+      if (v === null || v === '') delete p[k]; else p[k] = v;
+    }
+    writePrefs(p);
+    applySystem();
+    if (presence) presence.push(true);
+    return true;
+  });
+  ipcMain.handle('local:get', () => readPrefs().local || {});
+  ipcMain.handle('local:set', (_e, local) => { const p = readPrefs(); p.local = local; writePrefs(p); return true; });
+  ipcMain.handle('fullscreen', (_e, on) => { if (win) win.setFullScreen(on === undefined ? !win.isFullScreen() : !!on); return win && win.isFullScreen(); });
+
+  createWindow();
+  tray = new Tray(trayIcon());
+  tray.setToolTip('CLRE-Launcher');
+  tray.on('click', showWindow);
+  updateTray();
+  applySystem();
+  playFromArgs(process.argv);
+  // Veille : promos toutes les 6 h, amis toutes les 3 min
+  setTimeout(checkPromos, 60e3);
+  setInterval(checkPromos, 6 * 3600e3);
+  setInterval(checkFriends, 3 * 60e3);
+  if (process.env.LAUNCHER_SNAP && !app.isPackaged) require('./dev-snap')(win, process.env.LAUNCHER_SNAP);
+});
+
+app.on('will-quit', () => { globalShortcut.unregisterAll(); overlay.destroy(); if (perf) perf.stopAll(); });
+app.on('window-all-closed', () => { if (quitting) app.quit(); });

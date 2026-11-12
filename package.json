@@ -1,0 +1,48 @@
+{
+  "name": "launcher",
+  "productName": "CLRE-Launcher",
+  "version": "1.1.0",
+  "description": "Lanceur de jeux qui synchronise ta bibliothèque Steam",
+  "main": "src/main.js",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win portable",
+    "icons": "electron scripts/build-icons.js"
+  },
+  "build": {
+    "appId": "local.clre-launcher",
+    "productName": "CLRE-Launcher",
+    "electronDist": "node_modules/electron/dist",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "src/**/*",
+      "!src/dev-snap.js",
+      "assets/*.png",
+      "package.json"
+    ],
+    "win": {
+      "target": "portable",
+      "icon": "assets/icon.ico",
+      "signAndEditExecutable": true
+    },
+    "portable": {
+      "artifactName": "CLRE-Launcher.exe"
+    },
+    "asarUnpack": [
+      "**/saves-worker.js",
+      "**/node_modules/js-yaml/**",
+      "**/node_modules/argparse/**"
+    ]
+  },
+  "devDependencies": {
+    "electron": "^33.2.1",
+    "electron-builder": "^26.18.0"
+  },
+  "dependencies": {
+    "hls.js": "^1.7.4",
+    "js-yaml": "^4.3.2"
+  }
+}

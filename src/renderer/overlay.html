@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'">
+<title>CLRE-Launcher · en jeu</title>
+<style>
+  html, body { margin: 0; height: 100%; background: transparent; overflow: hidden; font-family: 'Inter', 'Segoe UI Variable', 'Segoe UI', system-ui, sans-serif; -webkit-font-smoothing: antialiased; color: #f5f5f7; user-select: none; }
+  .card { position: absolute; top: 8px; right: 8px; left: 8px; padding: 14px 16px; border-radius: 16px;
+    background: rgba(22, 22, 24, 0.72); -webkit-backdrop-filter: saturate(180%) blur(24px); backdrop-filter: saturate(180%) blur(24px);
+    box-shadow: inset 0 0.5px 0 rgba(255, 255, 255, 0.16), inset 0 0 0 0.5px rgba(255, 255, 255, 0.08), 0 8px 28px rgba(0, 0, 0, 0.45);
+    opacity: 0; transform: translateY(-6px) scale(0.98); transition: opacity 200ms cubic-bezier(0.22, 1, 0.36, 1), transform 200ms cubic-bezier(0.22, 1, 0.36, 1); }
+  .card.on { opacity: 1; transform: none; }
+  .row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+  .clock { font-size: 30px; font-weight: 600; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+  .date { font-size: 12px; color: #a1a1a6; }
+  .game { margin-top: 6px; display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .lamp { width: 8px; height: 8px; border-radius: 50%; flex: none; background: #e9a23b; box-shadow: 0 0 0 2px rgba(22, 22, 24, 0.9), 0 0 0 3px #e9a23b; }
+  .game .t { overflow: hidden; text-overflow: ellipsis; }
+  .game .m { margin-left: auto; color: #a1a1a6; font-variant-numeric: tabular-nums; }
+  .msg { margin-top: 8px; padding-top: 8px; border-top: 0.5px solid rgba(255, 255, 255, 0.1); font-size: 12px; line-height: 17px; color: #f5d9a8; }
+  .hint { position: absolute; right: 16px; bottom: 8px; font-size: 10px; color: #8a8a90; }
+</style>
+</head>
+<body>
+<div class="card" id="card">
+  <div class="row"><span class="clock" id="clock">--:--</span><span class="date" id="date"></span></div>
+  <div class="game" id="game" hidden><span class="lamp"></span><span class="t" id="name"></span><span class="m" id="dur"></span></div>
+  <div class="msg" id="msg" hidden></div>
+</div>
+<script>
+  const $ = (id) => document.getElementById(id);
+  let info = null;
+  const pad = (n) => String(n).padStart(2, '0');
+  function dur(ms) { const m = Math.floor(ms / 60000); return m < 60 ? `${m} min` : `${Math.floor(m / 60)}h${pad(m % 60)}`; }
+  function tick() {
+    const d = new Date();
+    $('clock').textContent = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    $('date').textContent = d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+    if (info && info.game) $('dur').textContent = dur(Date.now() - info.start);
+  }
+  window.overlay.on((v) => {
+    info = v;
+    if (!v) { $('card').classList.remove('on'); return; }
+    $('game').hidden = !v.game;
+    $('name').textContent = v.game || '';
+    $('msg').hidden = !v.message;
+    $('msg').textContent = v.message || '';
+    tick();
+    requestAnimationFrame(() => $('card').classList.add('on'));
+  });
+  setInterval(tick, 1000);
+  tick();
+</script>
+</body>
+</html>

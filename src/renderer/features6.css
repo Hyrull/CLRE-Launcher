@@ -1,0 +1,45 @@
+/* Soirées jeu */
+.party-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(420px, 1fr)); gap: 16px; }
+.party-card { position: relative; min-height: 220px; border-radius: 16px; overflow: hidden; background: var(--card); color: #f5f5f7; box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.08), 0 8px 26px rgba(0, 0, 0, 0.3); display: flex; }
+.party-card.big { grid-column: 1 / -1; min-height: 300px; }
+.pc-bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.pc-shade { position: absolute; inset: 0; background: linear-gradient(0deg, rgba(10, 10, 12, 0.92) 0%, rgba(10, 10, 12, 0.6) 45%, rgba(10, 10, 12, 0.15) 100%), linear-gradient(90deg, rgba(10, 10, 12, 0.6), rgba(10, 10, 12, 0) 65%); }
+.pc-body { position: relative; margin-top: auto; width: 100%; padding: 20px 22px; display: flex; flex-direction: column; gap: 10px; }
+.pc-when { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: rgba(245, 245, 247, 0.85); }
+.party-card h3 { margin: 0; font-size: 26px; line-height: 1.1; font-weight: 700; letter-spacing: -0.02em; }
+.party-card.big h3 { font-size: 40px; }
+.pc-friends { display: flex; align-items: center; gap: 0; }
+.pc-friends img, .pc-friends span { width: 28px; height: 28px; margin-right: -8px; border-radius: 50%; border: 2px solid rgba(20, 20, 22, 0.9); object-fit: cover; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; background: #3a3a3c; }
+.pc-friends em { margin-left: 16px; font-style: normal; font-size: 13px; color: rgba(245, 245, 247, 0.8); }
+.pc-note { margin: 0; font-size: 13px; color: rgba(245, 245, 247, 0.75); }
+.party-card .actions { gap: 8px; margin-top: 4px; }
+.party-card .btn-glass { background: rgba(255, 255, 255, 0.14); color: #f5f5f7; }
+.party-card.live { box-shadow: inset 0 0 0 1px var(--accent), 0 8px 26px rgba(0, 0, 0, 0.3); }
+
+.party-empty { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 48px 24px; text-align: center; border-radius: 16px; background: var(--card); }
+.party-empty h2 { margin: 6px 0 0; font-size: 22px; letter-spacing: -0.02em; }
+.party-empty p { margin: 0 0 8px; max-width: 460px; color: var(--text-2); font-size: 14px; line-height: 21px; }
+.pe-ic { width: 56px; height: 56px; border-radius: 16px; display: flex; align-items: center; justify-content: center; background: var(--key); box-shadow: var(--key-edge); }
+.pe-ic svg { width: 28px; height: 28px; }
+
+/* Planificateur */
+.modal.planner-dlg { width: min(620px, calc(100vw - 32px)); }
+.planner { display: flex; flex-direction: column; gap: 16px; }
+.planner h2 { margin: 0; font-size: 20px; }
+.pl-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+.planner .field input[type="date"], .planner .field input[type="time"] { color-scheme: dark; }
+.pl-friends { display: flex; flex-wrap: wrap; gap: 8px; max-height: 168px; overflow-y: auto; padding: 2px; }
+.pl-friend { position: relative; display: inline-flex; align-items: center; gap: 8px; height: 34px; padding: 0 12px 0 4px; border: 0; border-radius: 17px; background: var(--key); box-shadow: var(--key-edge); color: var(--text); font-size: 13px; cursor: default; }
+.pl-friend img { width: 26px; height: 26px; border-radius: 50%; }
+.pl-friend i.on { position: absolute; left: 22px; top: 22px; width: 9px; height: 9px; border-radius: 50%; background: #30d158; border: 2px solid var(--card); }
+.pl-friend.on { background: color-mix(in srgb, var(--accent) 26%, transparent); box-shadow: inset 0 0 0 1px var(--accent); }
+.pl-common { display: flex; flex-direction: column; gap: 8px; }
+.pl-common:empty { display: none; }
+.pl-k { font-size: 12px; font-weight: 600; color: var(--muted); }
+.pl-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.pl-chips .tag-toggle.all { box-shadow: inset 0 0 0 1px var(--accent); }
+.planner small { font-size: 12px; color: var(--text-2); }
+
+@media (prefers-color-scheme: light) {
+  .planner .field input[type="date"], .planner .field input[type="time"] { color-scheme: light; }
+}

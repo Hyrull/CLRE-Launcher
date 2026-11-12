@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' steamart: https://*.steamstatic.com https://*.steamusercontent.com https://*.akamaihd.net https://*.epicgames.com https://images.gog-statics.com https://*.itch.zone data:; media-src 'self' blob: https://*.steamstatic.com; connect-src 'self' https://*.steamstatic.com; worker-src 'self' blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self'">
+<title>CLRE-Launcher</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..600&display=swap">
+<link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="theme-light.css">
+  <link rel="stylesheet" href="features3.css">
+  <link rel="stylesheet" href="features4.css">
+  <link rel="stylesheet" href="features5.css">
+  <link rel="stylesheet" href="settings.css">
+  <link rel="stylesheet" href="features6.css">
+  <link rel="stylesheet" href="ux2.css">
+</head>
+<body>
+<div class="titlebar" aria-hidden="true"></div>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <svg class="brand-mark" width="24" height="24" viewBox="0 0 256 256" aria-hidden="true"><rect x="8" y="8" width="240" height="240" rx="56" fill="#e9a23b"/><rect x="74" y="58" width="108" height="144" rx="16" fill="#111113" opacity="0.4" transform="rotate(-14 128 130)"/><rect x="74" y="58" width="108" height="144" rx="16" fill="#111113" transform="rotate(3 128 130)"/><path d="M114 108 L150 130 L114 152 Z" fill="#f5f5f7" stroke="#f5f5f7" stroke-width="12" stroke-linejoin="round" transform="rotate(3 128 130)"/></svg>
+      <span class="wordmark"><b>CLRE</b>-Launcher</span>
+    </div>
+    <nav aria-label="Bibliothèque" class="nav" id="nav-main"></nav>
+    <nav aria-label="Collections" class="nav" id="nav-collections"></nav>
+    <button type="button" class="nav-item add-game" data-act="add-game" title="Ajouter un jeu">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span class="label">Ajouter un jeu</span>
+    </button>
+    <div class="week-card" id="week-card"></div>
+  </aside>
+
+  <main class="content" id="content">
+    <header class="topbar">
+      <nav aria-label="Principal" class="segmented">
+        <button type="button" data-nav="shop">Magasin</button>
+        <button type="button" data-nav="home" class="active">Bibliothèque</button>
+        <button type="button" data-nav="friends">Amis</button>
+      </nav>
+      <div class="topbar-right">
+        <label class="search">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          <span class="sr-only">Rechercher</span>
+          <input type="search" id="search" placeholder="Rechercher" autocomplete="off">
+          <kbd>Ctrl</kbd><kbd>K</kbd>
+        </label>
+        <button type="button" class="icon-btn" data-act="couch" aria-label="Mode canapé à la manette" title="Mode canapé à la manette (Start)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 11h4M8 9v4M15 12h.01M18 10h.01"/><path d="M17.3 5H6.7a4 4 0 0 0-4 3.6l-.7 6.5a2.6 2.6 0 0 0 4.7 1.8L8.5 15h7l1.8 1.9a2.6 2.6 0 0 0 4.7-1.8l-.7-6.5a4 4 0 0 0-4-3.6Z"/></svg>
+        </button>
+        <button type="button" class="icon-btn" id="sync-btn" aria-label="Resynchroniser avec Steam" title="Resynchroniser avec Steam">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 0 1-15.5 6.2L3 16"/><path d="M3 12a9 9 0 0 1 15.5-6.2L21 8"/><path d="M21 3v5h-5"/><path d="M3 21v-5h5"/></svg>
+        </button>
+        <button type="button" class="avatar" id="profile-btn" aria-label="Compte et réglages">··</button>
+      </div>
+    </header>
+    <div id="view"></div>
+  </main>
+</div>
+
+<dialog id="settings" class="modal"></dialog>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script src="app.js"></script>
+<script src="features.js"></script>
+<script src="vendor/hls.min.js"></script>
+<script src="features2.js"></script>
+<script src="features3.js"></script>
+<script src="features4.js"></script>
+<script src="features5.js"></script>
+<script src="features6.js"></script>
+<script src="settings.js"></script>
+<script src="ux2.js"></script>
+</body>
+</html>
