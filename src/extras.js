@@ -48,30 +48,68 @@ class Sessions {
 }
 
 // ---------- Téléchargements Steam ----------
+// StateFlags de Steam (appmanifest_*.acf)
+const SF = {
+  FULLY_INSTALLED: 4, UPDATE_REQUIRED: 2, UPDATE_RUNNING: 256, UPDATE_PAUSED: 512, UPDATE_STARTED: 1024,
+  VALIDATING: 131072, ADDING_FILES: 262144, PREALLOCATING: 524288, DOWNLOADING: 1048576, STAGING: 2097152, COMMITTING: 4194304,
+};
+const SF_DOWNLOADING = SF.UPDATE_RUNNING | SF.DOWNLOADING | SF.PREALLOCATING | SF.ADDING_FILES | SF.VALIDATING;
+const SF_INSTALLING = SF.STAGING | SF.COMMITTING;
+
+// On relit un manifeste seulement s'il a changé (date de modification) : le relevé tourne toutes les 3 s.
+const acfCache = new Map(); // fichier -> { mtime, st }
+let foldersCache = { mtime: 0, list: [] };
+
+function steamFolders(steamPath) {
+  const f = path.join(steamPath, 'steamapps', 'libraryfolders.vdf');
+  let m = 0;
+  try { m = fs.statSync(f).mtimeMs; } catch { /* absent */ }
+  if (m !== foldersCache.mtime || !foldersCache.list.length) foldersCache = { mtime: m, list: libraryFolders(steamPath) };
+  return foldersCache.list;
+}
+
+// Téléchargements Steam, avec leur étape :
+// downloading / installing (Steam décompresse et copie) / paused / queued (dans la file de Steam) /
+// scheduled (mise à jour prévue par Steam, rien n'a commencé : on l'affiche à part).
 function steamDownloads(steamPath) {
   if (!steamPath) return [];
   const out = [];
-  for (const folder of libraryFolders(steamPath)) {
+  const seen = new Set();
+  for (const folder of steamFolders(steamPath)) {
     const dir = path.join(folder, 'steamapps');
     let files = [];
     try { files = fs.readdirSync(dir).filter((f) => /^appmanifest_\d+\.acf$/.test(f)); } catch { continue; }
     for (const f of files) {
-      const st = get(readVdf(path.join(dir, f)), 'AppState');
+      const file = path.join(dir, f);
+      seen.add(file);
+      let mtime = 0;
+      try { mtime = fs.statSync(file).mtimeMs; } catch { continue; }
+      let c = acfCache.get(file);
+      if (!c || c.mtime !== mtime) { c = { mtime, st: get(readVdf(file), 'AppState') }; acfCache.set(file, c); }
+      const st = c.st;
       if (!st) continue;
       const toDl = Number(st.BytesToDownload || 0), dl = Number(st.BytesDownloaded || 0);
       const toSt = Number(st.BytesToStage || 0), stg = Number(st.BytesStaged || 0);
       const flags = Number(st.StateFlags || 0);
-      const pending = (toDl > dl) || (toSt > stg) || (flags & 2) !== 0;
+      const pending = (toDl > dl) || (toSt > stg) || (flags & SF.UPDATE_REQUIRED) !== 0;
       if (!pending) continue;
       const total = toDl + toSt;
+      const phase = flags & SF_INSTALLING ? 'installing'
+        : flags & SF_DOWNLOADING ? 'downloading'
+        : flags & SF.UPDATE_PAUSED ? 'paused'
+        : (flags & SF.UPDATE_STARTED) || dl > 0 ? 'queued'
+        : 'scheduled';
       out.push({
-        key: String(st.appid), name: st.name,
+        key: String(st.appid), name: st.name, store: 'steam', phase,
+        kind: flags & SF.FULLY_INSTALLED ? 'update' : 'install',
         progress: total ? (dl + stg) / total : 0,
+        bytes: dl + stg, total,
         remaining: Math.max(0, total - dl - stg),
-        active: (flags & 1024) !== 0 || (flags & 1048576) !== 0,
+        active: phase === 'downloading' || phase === 'installing',
       });
     }
   }
+  for (const k of acfCache.keys()) if (!seen.has(k)) acfCache.delete(k);
   return out;
 }
 

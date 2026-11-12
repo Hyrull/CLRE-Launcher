@@ -204,15 +204,26 @@ async function sync() {
   return lib;
 }
 
+// Pendant un téléchargement, Steam réécrit sans arrêt ses manifestes et le dossier « downloading » :
+// ça ne doit pas relancer toute la synchro. On ne réagit qu'aux jeux ajoutés ou retirés (création ou
+// suppression d'un manifeste) et aux changements de bibliothèques ; la fin d'un téléchargement est
+// repérée par le relevé des téléchargements (pollDownloads).
+const IGNORED_STEAMAPPS = /^(downloading|temp|shadercache|workshop|compatdata|sourcemods)([\\/]|$)/i;
 function watch(paths) {
   watchers.forEach((w) => w.close());
   watchers = [];
   let timer;
+  const later = () => { clearTimeout(timer); timer = setTimeout(() => win && win.webContents.send('library-changed'), 1500); };
   for (const p of paths) {
+    const steamapps = /[\\/]steamapps$/i.test(p);
     try {
-      watchers.push(fs.watch(p, () => {
-        clearTimeout(timer);
-        timer = setTimeout(() => win && win.webContents.send('library-changed'), 1500);
+      watchers.push(fs.watch(p, (ev, name) => {
+        if (steamapps) {
+          const f = String(name || '');
+          if (IGNORED_STEAMAPPS.test(f)) return;
+          if (/^appmanifest_\d+\.acf$/i.test(f) && ev === 'change') return;
+        }
+        later();
       }));
     } catch { /* dossier absent */ }
   }
@@ -270,20 +281,40 @@ async function pollRunning() {
   }
 }
 
-let lastDownloads = '';
-const allDownloads = () => [...(lib && lib.steamPath ? extras.steamDownloads(lib.steamPath) : []), ...(gog ? gog.list() : []), ...(epicDl ? epicDl.list() : [])];
+let lastDownloads = [];
+let lastSig = '';
+// Vitesse Steam : Steam n'écrit que les octets reçus, on la calcule d'un relevé à l'autre (moyenne lissée)
+const steamRate = new Map(); // key -> { bytes, t, speed }
+function withSteamSpeed(list) {
+  const now = Date.now();
+  for (const d of list) {
+    const prev = steamRate.get(d.key);
+    let speed = 0;
+    if (prev && d.phase === 'downloading' && d.bytes >= prev.bytes && now > prev.t) {
+      const inst = ((d.bytes - prev.bytes) * 1000) / (now - prev.t);
+      speed = d.bytes === prev.bytes ? prev.speed * 0.6 : prev.speed ? prev.speed * 0.6 + inst * 0.4 : inst;
+      if (speed < 1024) speed = 0;
+    }
+    // Les octets ne bougent pas entre deux écritures du manifeste : on garde l'ancien point de départ
+    steamRate.set(d.key, prev && d.bytes === prev.bytes ? { ...prev, speed } : { bytes: d.bytes, t: now, speed });
+    d.speed = d.phase === 'downloading' ? Math.round(speed) : 0;
+  }
+  for (const k of steamRate.keys()) if (!list.some((d) => d.key === k)) steamRate.delete(k);
+  return list;
+}
+const allDownloads = () => [...(lib && lib.steamPath ? withSteamSpeed(extras.steamDownloads(lib.steamPath)) : []), ...(gog ? gog.list() : []), ...(epicDl ? epicDl.list() : [])];
 function pollDownloads() {
   if (!win) return;
   const list = allDownloads();
   const sig = JSON.stringify(list);
-  if (sig !== lastDownloads) {
-    const before = lastDownloads ? JSON.parse(lastDownloads) : [];
-    for (const d of before) {
-      if (d.active && !d.store && !list.some((x) => x.key === d.key)) notify('downloads', `${d.name} est prêt`, 'Téléchargement terminé, tu peux lancer le jeu', { view: 'game', id: d.key });
-    }
-    lastDownloads = sig;
-    win.webContents.send('downloads', list);
-  }
+  if (sig === lastSig) return;
+  // Un téléchargement Steam vraiment commencé qui disparaît de la liste : il est fini (GOG et Epic préviennent eux-mêmes)
+  const finished = lastDownloads.filter((d) => d.store === 'steam' && d.phase !== 'scheduled' && !list.some((x) => x.key === d.key));
+  for (const d of finished) notify('downloads', `${d.name} est prêt`, d.kind === 'update' ? 'Mise à jour terminée' : 'Téléchargement terminé, tu peux lancer le jeu', { view: 'game', id: d.key });
+  if (finished.length) win.webContents.send('library-changed');
+  lastDownloads = list;
+  lastSig = sig;
+  win.webContents.send('downloads', list);
 }
 
 // ---------- Veille en arrière-plan : promos de la liste de souhaits, amis ----------

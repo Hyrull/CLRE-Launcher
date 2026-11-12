@@ -20,7 +20,8 @@ state.local.status = state.local.status || {};
 state.local.notes = state.local.notes || {};
 
 const statusOf = (g) => (state.local.status || {})[g.key] || '';
-const dlOf = (g) => state.downloads.find((d) => d.key === g.key);
+// Les mises à jour seulement prévues par Steam ne s'affichent pas sur les jaquettes
+const dlOf = (g) => state.downloads.find((d) => d.key === g.key && d.phase !== 'scheduled');
 const fmtDate = (ts) => new Date(ts * 1000).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
 const fmtDur = (sec) => { const m = Math.round(sec / 60); if (m < 60) return `${m} min`; const h = Math.floor(m / 60), r = m % 60; return h >= 100 || !r ? `${Math.round(m / 60)}h` : `${h}h${String(r).padStart(2, '0')}`; };
 const needKey = (what) => emptyBox(`${what} demande ta clé Steam Web API`, 'Ajoute-la dans Compte et réglages, elle est gratuite et reste sur ton PC', `<button type="button" class="btn btn-ghost" data-act="settings">Ouvrir les réglages</button>`);
@@ -40,8 +41,7 @@ const loading = () => '<div class="skeleton" style="height:120px"></div>';
 function sidebarExtras(all) {
   const r = state.route;
   const item = (view, icon, label, count) => `<button type="button" class="nav-item ${r.view === view ? 'active' : ''}" data-nav="${view}" title="${esc(label)}">${icon}<span class="label">${esc(label)}</span>${count ? `<span class="count">${count}</span>` : ''}</button>`;
-  const dl = state.downloads.length;
-  return (dl ? item('downloads', ICONS.download, 'Téléchargements', dl) : '') +
+  return (state.downloads.length ? item('downloads', ICONS.download, 'Téléchargements', dlCount() || '') : '') +
     item('screenshots', ICONS.image, 'Captures') +
     item('storage', ICONS.disk, 'Stockage');
 }
@@ -57,7 +57,7 @@ function homeExtras(where) {
   const all = games();
   if (where === 'afterHero') {
     let html = '';
-    if (state.downloads.length) html += downloadsShelf(true);
+    html += downloadsShelf();
     const playing = all.filter((g) => statusOf(g) === 'playing').sort(byRecent);
     if (playing.length) {
       html += `<section class="stack">
@@ -95,27 +95,7 @@ function resumeCard(g) {
   </div>`;
 }
 
-// ---------- Téléchargements ----------
-function downloadRow(d) {
-  const g = byId(d.key) || { key: d.key, name: d.name, art: { header: '' }, appid: d.key };
-  const pct = Math.round(d.progress * 100);
-  const state_ = d.active ? `${pct} % · ${fmtSize(d.remaining)} restants` : (d.progress > 0 ? `En pause · ${pct} %` : `En attente · ${fmtSize(d.remaining)}`);
-  return `<div class="dl-row" data-open="${g.key}" role="button" tabindex="0">
-    <div class="dl-thumb" style="background:${fallbackBg(g)}"><img src="${esc(g.art.header)}" alt="" loading="lazy"></div>
-    <div class="dl-info"><span class="t">${esc(g.name)}</span>
-      <div class="meter dl-meter"><div class="${d.active ? 'on' : ''}" style="width:${Math.max(2, pct)}%"></div></div>
-      <span class="s">${state_}</span></div>
-  </div>`;
-}
-function downloadsShelf(compact) {
-  const list = [...state.downloads].sort((a, b) => b.active - a.active || b.progress - a.progress);
-  return `<section class="stack">
-    <div class="section-head"><h2 class="section">Téléchargements</h2><button type="button" class="link-btn" data-steam="steam://open/downloads">Ouvrir dans Steam</button></div>
-    <div class="dl-list">${list.slice(0, compact ? 3 : 50).map(downloadRow).join('')}</div>
-  </section>`;
-}
-VIEWS.downloads = () => `<div class="toolbar"><div class="stack-6"><h1>Téléchargements</h1><span class="sub">Suivi en direct depuis Steam</span></div></div>` +
-  (state.downloads.length ? downloadsShelf(false).replace('<h2 class="section">Téléchargements</h2>', '<span></span>') : emptyBox('Aucun téléchargement', 'Les installations et mises à jour Steam apparaissent ici en direct'));
+// ---------- Téléchargements : voir downloads.js ----------
 
 // ---------- Activité (Historique) ----------
 function activityHtml() {
@@ -442,18 +422,4 @@ document.addEventListener('input', (e) => {
   noteTimer = setTimeout(() => { state.local.notes = { ...state.local.notes, [k]: v }; if (!v) delete state.local.notes[k]; saveLocal(); }, 400);
 });
 
-api.onDownloads((list) => {
-  const before = state.downloads.length;
-  state.downloads = list || [];
-  const done = before && state.downloads.length < before;
-  if (done) { toast('Téléchargement terminé'); sync(true); return; }
-  if (['home', 'downloads'].includes(state.route.view) || before !== state.downloads.length) render({ quiet: true });
-  else if (state.lib) renderSidebar();
-  // Barres de progression sur les jaquettes visibles
-  for (const d of state.downloads) {
-    const bar = document.querySelector(`.card[data-open="${CSS.escape(d.key)}"] .cover-dl > div`);
-    if (bar) bar.style.width = `${Math.round(d.progress * 100)}%`;
-  }
-});
-api.onToast((m) => toast(m));
-api.downloads().then((l) => { state.downloads = l || []; if (state.lib) render({ quiet: true }); });
+

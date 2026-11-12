@@ -223,7 +223,8 @@ class Gog {
     return this.jobs.map((j) => {
       const total = j.total || 1;
       return {
-        key: j.key, name: j.name, store: 'gog', phase: j.state, error: j.error || '',
+        key: j.key, name: j.name, store: 'gog', phase: j.state, error: j.error || '', kind: j.update ? 'update' : 'install',
+        bytes: j.bytes, total: j.total,
         progress: j.state === 'installing' ? 1 : Math.min(1, j.bytes / total),
         remaining: Math.max(0, total - j.bytes), active: j.state === 'downloading' || j.state === 'installing', speed: j.speed || 0,
       };

@@ -369,7 +369,7 @@ function presenceCtx() {
     if (r.view === 'recap' && typeof recapRange === 'function') c.extra = `${{ week: 'Semaine', month: 'Mois', year: 'Année' }[state.recap.mode] || ''} · ${recapRange().label}`;
     if (r.view === 'showcase') { const sc = state.cache.showcase; if (sc && sc.total) c.extra = `${sc.total} succès débloqués`; }
     if (r.view === 'tags' && typeof tagCounts === 'function') c.extra = `${tagCounts().length} genres dans sa bibliothèque`;
-    if (r.view === 'downloads') c.extra = `${state.downloads.length} en cours`;
+    if (r.view === 'downloads') c.extra = `${dlCount()} en cours`;
     if (r.view === 'wishlist') { const w = state.cache.wishlist; if (w && w.list) c.extra = `${w.list.length} jeux en attente`; }
     if (r.view === 'status') c.extra = STATUSES[r.id];
     if (r.view === 'mycoll') { const m = myCollections().find((x) => x.id === r.id); c.extra = m && m.name; }

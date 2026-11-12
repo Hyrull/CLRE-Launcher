@@ -220,7 +220,8 @@ class EpicDl {
   // ---------- File de téléchargement ----------
   list() {
     return this.jobs.map((j) => ({
-      key: j.key, name: j.name, store: 'epic', phase: j.state, error: j.error || '',
+      key: j.key, name: j.name, store: 'epic', phase: j.state, error: j.error || '', kind: j.update ? 'update' : 'install',
+      bytes: j.dlSize ? Math.round(j.dlSize * (j.progress || 0)) : 0, total: j.dlSize || 0,
       progress: j.state === 'installing' ? 1 : j.progress || 0,
       remaining: j.dlSize ? Math.max(0, j.dlSize * (1 - (j.progress || 0))) : 0,
       active: j.state === 'downloading' || j.state === 'installing', speed: j.speed || 0,

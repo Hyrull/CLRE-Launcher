@@ -270,13 +270,12 @@ renderSidebar = function () {
     const isOpen = !closed[id] || views.includes(r.view);
     return `<div class="nav-sec ${isOpen ? 'open' : ''}"><div class="nav-sec-head"><button type="button" class="nav-sec-toggle" data-nav-sec="${id}" aria-expanded="${isOpen}">${esc(title)}<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button>${extra}</div><div class="nav-sec-body">${body}</div></div>`;
   };
-  const dl = state.downloads.length;
   $('#nav-main').innerHTML =
     item('home', ICONS.star, 'Pour toi') +
     item('all', ICONS.grid, 'Tous les jeux', all.length) +
     item('installed', ICONS.drive, 'Installés', all.filter((g) => g.installed).length) +
     item('favorites', ICONS.heart, 'Favoris', all.filter(isFav).length) +
-    (dl ? item('downloads', ICONS.download, 'Téléchargements', dl) : '');
+    (state.downloads.length ? item('downloads', ICONS.download, 'Téléchargements', dlCount() || '') : '');
 
   const counts = Object.fromEntries(Object.keys(STATUSES).map((s) => [s, all.filter((g) => statusOf(g) === s).length]));
   const cols = myCollections();
