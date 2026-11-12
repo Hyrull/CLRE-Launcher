@@ -14,7 +14,8 @@ const { execFile, spawn } = require('child_process');
 const { pathToFileURL } = require('url');
 const { loadLibrary, regDword } = require('./steam');
 const { loadEpic, epicUri, EPIC_DATA } = require('./epic');
-const { loadPlatforms, applyArt, resolveArt } = require('./platforms');
+const { loadPlatforms, applyArt, resolveArt, base } = require('./platforms');
+const { Gog } = require('./gog');
 const { loadMorePlatforms } = require('./platforms2');
 const extras = require('./extras');
 const gameinfo = require('./gameinfo');
@@ -55,6 +56,7 @@ const settings = () => {
     discordBrowse: s.discordBrowse !== false,
     updateRepo: s.updateRepo || '',
     backupDir: s.backupDir || path.join(app.getPath('documents'), 'CLRE-Launcher', 'Sauvegardes'),
+    gogDir: s.gogDir || path.join(process.env.SystemDrive || 'C:', '\\', 'GOG Games'),
     autoBackup: s.autoBackup !== false,
   };
 };
@@ -68,6 +70,7 @@ let lib = null;
 let running = [];
 let sessions;
 let saves;
+let gog = null;
 const discord = new sys.Discord();
 const POLL_MS = 5000;
 
@@ -101,6 +104,11 @@ async function sync() {
   let more = [];
   try { more = await loadMorePlatforms(); } catch { more = []; }
   const others = [...loadPlatforms(prefs.customGames || []), ...more];
+  // Jeux GOG possédés mais pas installés (compte GOG connecté dans le launcher)
+  if (gog) {
+    const have = new Set(others.filter((g) => g.store === 'gog').map((g) => g.platformId));
+    for (const o of await gog.ownedGames()) if (!have.has(o.id)) others.push(base('gog', o.id, o.title));
+  }
   const artCache = readJson('art-cache.json');
   applyArt(others, artCache);
 
@@ -232,14 +240,15 @@ async function pollRunning() {
 }
 
 let lastDownloads = '';
+const allDownloads = () => [...(lib && lib.steamPath ? extras.steamDownloads(lib.steamPath) : []), ...(gog ? gog.list() : [])];
 function pollDownloads() {
-  if (!lib || !lib.steamPath || !win) return;
-  const list = extras.steamDownloads(lib.steamPath);
+  if (!win) return;
+  const list = allDownloads();
   const sig = JSON.stringify(list);
   if (sig !== lastDownloads) {
     const before = lastDownloads ? JSON.parse(lastDownloads) : [];
     for (const d of before) {
-      if (d.active && !list.some((x) => x.key === d.key)) notify('downloads', `${d.name} est prêt`, 'Téléchargement terminé, tu peux lancer le jeu', { view: 'game', id: d.key });
+      if (d.active && d.store !== 'gog' && !list.some((x) => x.key === d.key)) notify('downloads', `${d.name} est prêt`, 'Téléchargement terminé, tu peux lancer le jeu', { view: 'game', id: d.key });
     }
     lastDownloads = sig;
     win.webContents.send('downloads', list);
@@ -331,6 +340,11 @@ function action(key, kind) {
     case 'gog':
       if (kind === 'play' && g.exe) return launchExe(g, extra);
       if (kind === 'store') return search('https://www.gog.com/fr/games?query=');
+      // Installation directe, sans GOG Galaxy, quand le compte GOG est connecté
+      if (kind === 'install' && gog) {
+        if (!gog.auth) return { needLogin: true };
+        return gog.enqueue(g.platformId, g.name).catch((e) => ({ error: e.message, needLogin: e.code === 'nologin' }));
+      }
       return open(`goggalaxy://openGameView/${g.platformId}`);
     case 'ubisoft':
       if (kind === 'store') return search('https://store.ubisoft.com/fr/search?q=');
@@ -557,6 +571,15 @@ app.whenReady().then(() => {
   setInterval(checkRecaps, 6 * 3600 * 1000);
   saves = new Saves({ dataDir: app.getPath('userData'), documents: app.getPath('documents'), getBackupDir: () => settings().backupDir });
   const coversDir = dataFile('covers');
+  gog = new Gog({
+    dataDir: app.getPath('userData'),
+    getDir: () => settings().gogDir,
+    onChange: () => pollDownloads(),
+    onDone: (j) => {
+      notify('downloads', `${j.name} est installé`, 'Tu peux lancer le jeu', { view: 'game', id: j.key });
+      if (win) win.webContents.send('library-changed');
+    },
+  });
 
   protocol.handle('steamart', (req) => {
     const file = path.normalize(decodeURIComponent(new URL(req.url).pathname.slice(1)));
@@ -582,7 +605,22 @@ app.whenReady().then(() => {
   });
 
   // Données en plus
-  ipcMain.handle('downloads', () => (lib && lib.steamPath ? extras.steamDownloads(lib.steamPath) : []));
+  ipcMain.handle('downloads', () => allDownloads());
+  // ---------- GOG sans Galaxy ----------
+  ipcMain.handle('gog:status', () => gog.status());
+  ipcMain.handle('gog:login', async () => { const s = await gog.login(win); if (win) win.webContents.send('library-changed'); return s; });
+  ipcMain.handle('gog:login-browser', () => shell.openExternal(gog.authUrl()));
+  ipcMain.handle('gog:login-code', async (_e, text) => { const s = await gog.loginWithPasted(text); if (win) win.webContents.send('library-changed'); return s; });
+  ipcMain.handle('gog:logout', () => { const s = gog.logout(); if (win) win.webContents.send('library-changed'); return s; });
+  for (const k of ['pause', 'resume', 'cancel']) ipcMain.handle(`gog:${k}`, (_e, key) => gog[k](String(key)));
+  ipcMain.handle('gog:pick-dir', async () => {
+    const r = await dialog.showOpenDialog(win, { title: 'Dossier d’installation des jeux GOG', defaultPath: settings().gogDir, properties: ['openDirectory', 'createDirectory'] });
+    if (r.canceled) return null;
+    const p = readPrefs();
+    p.settings = { ...(p.settings || {}), gogDir: r.filePaths[0] };
+    writePrefs(p);
+    return r.filePaths[0];
+  });
   ipcMain.handle('sessions', () => sessions.list);
   ipcMain.handle('disks', () => extras.disks([...games.values()]));
   ipcMain.handle('screenshots', (_e, key) => {

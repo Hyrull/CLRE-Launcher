@@ -150,4 +150,4 @@ function loadPlatforms(customList) {
   return [...loadGog(), ...loadUbisoft(), ...loadEa(), ...loadCustom(customList)];
 }
 
-module.exports = { loadPlatforms, applyArt, resolveArt };
+module.exports = { loadPlatforms, applyArt, resolveArt, base };
