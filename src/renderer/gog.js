@@ -81,12 +81,40 @@ async function gogInstall(g) {
   });
 }
 
+function gogUninstall(g) {
+  modal(`<h2>Désinstaller ${esc(g.name)} ?</h2>
+    <p class="sub">Les fichiers du jeu et de ses DLC seront supprimés de ${esc(g.installDir || 'ton disque')}, sans passer par GOG Galaxy. Windows te demandera une autorisation.</p>
+    <div class="m-actions"><button type="button" class="btn btn-ghost" data-close>Annuler</button><button type="submit" class="btn btn-light">Désinstaller</button></div>`,
+  (dlg, form) => {
+    form.onsubmit = async (e) => {
+      e.preventDefault();
+      dlg.close();
+      toast(`Désinstallation de ${g.name}…`);
+      const r = await api.uninstall(g.key);
+      if (r && r.error) { toast(r.error); return; }
+      toast(`${g.name} désinstallé`);
+      sync(true);
+    };
+  });
+}
+
+// « Mettre à jour » sur un jeu GOG ou Epic géré par le launcher : la mise à jour part dans Téléchargements
+async function storeUpdate(g) {
+  toast(`Préparation de la mise à jour de ${g.name}…`);
+  const r = await api.play(g.key);
+  if (r && r.error) { toast(r.error); return; }
+  if (!r) { toast(`Lancement de ${g.name}…`); return; } // compte déconnecté : on lance la version installée
+  toast(`Mise à jour de ${g.name} ajoutée aux téléchargements`);
+}
+
 const _doActionGog = doAction;
 // eslint-disable-next-line no-global-assign
 doAction = async function (act, id, el) {
-  if (act === 'install') {
-    const g = id ? byId(id) : null;
-    if (g && g.store === 'gog') return gogInstall(g);
+  const g = id ? byId(id) : null;
+  if (g && g.store === 'gog') {
+    if (act === 'install') return gogInstall(g);
+    if (act === 'uninstall') return gogUninstall(g);
+    if (act === 'play' && g.needsUpdate) return storeUpdate(g);
   }
   if (act === 'gog-pause') return api.gogPause(id);
   if (act === 'gog-resume') return api.gogResume(id);

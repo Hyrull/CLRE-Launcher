@@ -15,6 +15,7 @@ const CLIENT_SECRET = '9d85c43b1482497dbbce61f6e4aa173a433796eeae2ca8c5f6129f2dc
 const REDIRECT = 'https://embed.gog.com/on_login_success?origin=client';
 const EMBED = 'https://embed.gog.com';
 const OWNED_TTL = 10 * 60e3;
+const UPDATE_TTL = 6 * 3600e3;
 
 const sizeOf = (s) => {
   const m = String(s || '').replace(',', '.').match(/([\d.]+)\s*([KMGT]?B)/i);
@@ -28,6 +29,8 @@ class Gog {
   constructor({ dataDir, getDir, onChange, onDone }) {
     this.authFile = path.join(dataDir, 'gog-auth.bin');
     this.queueFile = path.join(dataDir, 'gog-queue.json');
+    this.updatesFile = path.join(dataDir, 'gog-updates.json');
+    try { this.updates = JSON.parse(fs.readFileSync(this.updatesFile, 'utf8')) || {}; } catch { this.updates = {}; }
     this.getDir = getDir;
     this.onChange = onChange || (() => {});
     this.onDone = onDone || (() => {});
@@ -171,10 +174,48 @@ class Gog {
     const d = await this.api(`${EMBED}/account/gameDetails/${id}.json`);
     // GOG renvoie une liste vide quand le jeu n'est pas sur le compte connecté
     if (Array.isArray(d) || !d.title) throw new Error(`Ce jeu n’est pas sur ton compte GOG${this.auth && this.auth.username ? ` (${this.auth.username})` : ''}`);
-    const langs = (d.downloads || []).filter((x) => Array.isArray(x) && x[1] && (x[1].windows || []).length);
-    const pick = langs.find(([l]) => /fran/i.test(l)) || langs.find(([l]) => /english/i.test(l)) || langs[0];
-    if (!pick) throw new Error('Pas d’installateur Windows pour ce jeu');
-    return { title: d.title, files: pick[1].windows.map((f) => ({ url: f.manualUrl, size: sizeOf(f.size), name: f.name })) };
+    const pickWin = (downloads) => {
+      const langs = (downloads || []).filter((x) => Array.isArray(x) && x[1] && (x[1].windows || []).length);
+      const pick = langs.find(([l]) => /fran/i.test(l)) || langs.find(([l]) => /english/i.test(l)) || langs[0];
+      return pick ? pick[1].windows : [];
+    };
+    const base = pickWin(d.downloads);
+    if (!base.length) throw new Error('Pas d’installateur Windows pour ce jeu');
+    // Groupe 0 : le jeu ; groupes suivants : les DLC possédés, installés dans le même dossier
+    const files = base.map((f) => ({ url: f.manualUrl, size: sizeOf(f.size), name: f.name, group: 0 }));
+    (d.dlcs || []).forEach((dlc, i) => {
+      for (const f of pickWin(dlc.downloads)) files.push({ url: f.manualUrl, size: sizeOf(f.size), name: dlc.title || f.name, group: i + 1 });
+    });
+    return { title: d.title, version: base[0].version || '', dlcs: (d.dlcs || []).length, files };
+  }
+
+  // ---------- Mises à jour ----------
+  // On compare le build installé (registre GOG) avec le dernier build public, et la version installée avec
+  // celle de l'installateur hors-ligne : on ne propose une mise à jour que si l'installateur téléchargeable
+  // est vraiment différent de ce qui est installé.
+  updateFlag(id) { const u = this.updates[String(id)]; return !!(u && u.update); }
+
+  async checkUpdates(games) {
+    if (!this.auth) return false;
+    let changed = false;
+    for (const g of games) {
+      const id = String(g.platformId);
+      const c = this.updates[id];
+      if (!g.buildId || (c && c.buildId === g.buildId && Date.now() - c.t < UPDATE_TTL)) continue;
+      try {
+        const b = await (await fetch(`https://content-system.gog.com/products/${id}/os/windows/builds?generation=2`)).json();
+        const latest = (b.items || []).find((x) => !x.branch);
+        let update = false;
+        if (latest && String(latest.build_id) !== String(g.buildId)) {
+          const info = await this.installerFiles(id).catch(() => null);
+          update = !!(info && info.version && info.version !== g.ver);
+        }
+        if (!!(c && c.update) !== update) changed = true;
+        this.updates[id] = { t: Date.now(), buildId: g.buildId, update };
+      } catch { /* hors ligne */ }
+    }
+    try { fs.writeFileSync(this.updatesFile, JSON.stringify(this.updates)); } catch { /* rien */ }
+    return changed;
   }
 
   // ---------- File de téléchargement ----------
@@ -193,7 +234,7 @@ class Gog {
     this.onChange();
   }
 
-  async enqueue(id, name) {
+  async enqueue(id, name, opts = {}) {
     id = String(id);
     const key = `gog:${id}`;
     const ex = this.jobs.find((j) => j.key === key);
@@ -204,11 +245,12 @@ class Gog {
     fs.mkdirSync(root, { recursive: true });
     const free = (() => { try { const s = fs.statfsSync(root); return s.bavail * s.bsize; } catch { return null; } })();
     // Installateur + jeu installé : il faut environ deux fois la taille
-    if (free != null && total && free < total * 2.1) throw new Error(`Pas assez de place sur ${path.parse(root).root} : il faut environ ${Math.ceil(total * 2.1 / 1e9)} Go`);
+    const need = total * (opts.installDir ? 1.1 : 2.1);
+    if (free != null && total && free < need) throw new Error(`Pas assez de place sur ${path.parse(root).root} : il faut environ ${Math.ceil(need / 1e9)} Go`);
     const title = name || info.title;
     const job = {
-      key, id, name: title, state: 'queued', error: '', bytes: 0, total,
-      dlDir: path.join(root, '.clre-downloads', id), installDir: path.join(root, safeName(title)),
+      key, id, name: title, state: 'queued', error: '', bytes: 0, total, update: !!opts.installDir,
+      dlDir: path.join(root, '.clre-downloads', id), installDir: opts.installDir || path.join(root, safeName(title)),
       files: info.files.map((f) => ({ ...f, done: false, got: 0 })),
     };
     this.jobs.push(job);
@@ -271,11 +313,17 @@ class Gog {
     }
     j.state = 'installing'; j.speed = 0;
     this.save();
-    const setup = j.files.map((f) => f.path).find((p) => /\.exe$/i.test(p));
-    if (!setup) throw new Error('Installateur introuvable dans le téléchargement');
-    await this.install(setup, j.installDir, j.id);
+    // Un installateur par groupe (jeu puis DLC) : le premier .exe du groupe, les .bin l'accompagnent
+    const groups = [...new Set(j.files.map((f) => f.group || 0))];
+    const setups = groups.map((gr) => j.files.filter((f) => (f.group || 0) === gr).map((f) => f.path).find((p) => /\.exe$/i.test(p))).filter(Boolean);
+    if (!setups.length) throw new Error('Installateur introuvable dans le téléchargement');
+    await this.install(setups, j.installDir, j.id);
     try { fs.rmSync(j.dlDir, { recursive: true, force: true }); } catch { /* rien */ }
     this.jobs = this.jobs.filter((x) => x !== j);
+    if (j.update) {
+      this.updates[j.id] = { t: Date.now(), buildId: '', update: false };
+      try { fs.writeFileSync(this.updatesFile, JSON.stringify(this.updates)); } catch { /* rien */ }
+    }
     this.onDone(j);
   }
 
@@ -314,17 +362,41 @@ class Gog {
   // Certains installateurs finissent avec un code non nul (ex. 0xC000013A) alors que tout s'est bien passé.
   static installed(dir, id) { return fs.existsSync(path.join(dir, `goggame-${id}.info`)); }
 
-  install(setup, dir, id) {
-    const args = `/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP- /NOICONS /DIR="${dir}"`;
-    const ps = `$ErrorActionPreference='Stop'; try { $p = Start-Process -FilePath ${psQuote(setup)} -ArgumentList ${psQuote(args)} -Verb RunAs -Wait -PassThru; exit $p.ExitCode } catch { exit 1223 }`;
-    return new Promise((resolve, reject) => {
-      execFile('powershell.exe', ['-NoProfile', '-NonInteractive', '-EncodedCommand', Buffer.from(ps, 'utf16le').toString('base64')], { windowsHide: true }, (err) => {
-        const code = err ? err.code : 0;
-        if (Gog.installed(dir, id)) return resolve();
-        if (!code) return resolve();
-        reject(new Error(code === 1223 ? 'Installation annulée : Windows n’a pas eu l’autorisation' : `L’installateur a échoué (code ${code})`));
-      });
+  // Lance un script PowerShell avec les droits administrateur : une seule autorisation Windows pour tout le script.
+  // Renvoie le code de sortie (1223 = autorisation refusée).
+  static elevated(script) {
+    const inner = Buffer.from(script, 'utf16le').toString('base64');
+    const ps = `$ErrorActionPreference='Stop'; try { $p = Start-Process -FilePath 'powershell.exe' -ArgumentList '-NoProfile','-NonInteractive','-WindowStyle','Hidden','-EncodedCommand',${psQuote(inner)} -Verb RunAs -WindowStyle Hidden -Wait -PassThru; exit $p.ExitCode } catch { exit 1223 }`;
+    return new Promise((resolve) => {
+      execFile('powershell.exe', ['-NoProfile', '-NonInteractive', '-EncodedCommand', Buffer.from(ps, 'utf16le').toString('base64')], { windowsHide: true }, (err) => resolve(err ? err.code : 0));
     });
+  }
+
+  async install(setups, dir, id) {
+    const args = `/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP- /NOICONS /DIR="${dir}"`;
+    const script = setups.map((s) => `$p = Start-Process -FilePath ${psQuote(s)} -ArgumentList ${psQuote(args)} -Wait -PassThru; if ($null -eq $first) { $first = $p.ExitCode }`).join('\n') + '\nexit $first';
+    const code = await Gog.elevated(script);
+    if (Gog.installed(dir, id) || !code) return;
+    throw new Error(code === 1223 ? 'Installation annulée : Windows n’a pas eu l’autorisation' : `L’installateur a échoué (code ${code})`);
+  }
+
+  // Désinstallation sans GOG Galaxy : désinstalleurs Inno du jeu et des DLC (unins000.exe, unins001.exe…),
+  // puis on retire du registre GOG les entrées restantes du jeu et de ses DLC.
+  async uninstall(dir, id) {
+    id = String(id);
+    let unins = [];
+    try { unins = fs.readdirSync(dir).filter((f) => /^unins\d+\.exe$/i.test(f)).sort().reverse(); } catch { /* dossier absent */ }
+    const info = path.join(dir, `goggame-${id}.info`);
+    const reg = `if (-not (Test-Path -LiteralPath ${psQuote(info)})) { Get-ChildItem 'HKLM:\\SOFTWARE\\WOW6432Node\\GOG.com\\Games' -ErrorAction SilentlyContinue | Where-Object { $v = Get-ItemProperty -LiteralPath $_.PSPath; $v.gameID -eq '${id}' -or $v.dependsOn -eq '${id}' } | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue }`;
+    if (!unins.length) {
+      if (fs.existsSync(info)) throw new Error('Désinstalleur GOG introuvable dans le dossier du jeu');
+      await Gog.elevated(reg); // dossier déjà supprimé à la main : on nettoie juste le registre
+      return;
+    }
+    const script = [...unins.map((u) => `Start-Process -FilePath ${psQuote(path.join(dir, u))} -ArgumentList '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART' -Wait`), reg].join('\n');
+    const code = await Gog.elevated(script);
+    if (fs.existsSync(info)) throw new Error(code === 1223 ? 'Désinstallation annulée : Windows n’a pas eu l’autorisation' : 'La désinstallation a échoué');
+    try { if (!fs.readdirSync(dir).length) fs.rmdirSync(dir); } catch { /* rien */ }
   }
 }
 

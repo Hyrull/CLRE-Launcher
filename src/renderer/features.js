@@ -176,7 +176,7 @@ VIEWS.storage = () => {
   const row = (g) => `<div class="row-item store-row" data-open="${g.key}" tabindex="0">
     <img src="${esc(g.art.header)}" alt="" loading="lazy"><span class="t"><span>${esc(g.name)}</span></span>
     <span class="m">${fmtSize(g.sizeOnDisk)}</span><span class="m">${g.lastPlayed ? fmtRel(g.lastPlayed) : 'Jamais lancé'}</span><span class="m">${esc(storeOf(g))}</span>
-    <span>${g.store === 'steam' || g.store === 'epic' ? `<button type="button" class="btn btn-ghost" data-act="uninstall" data-id="${g.key}">Désinstaller</button>` : ''}</span></div>`;
+    <span>${['steam', 'epic', 'gog'].includes(g.store) ? `<button type="button" class="btn btn-ghost" data-act="uninstall" data-id="${g.key}">Désinstaller</button>` : ''}</span></div>`;
   return `<div class="toolbar"><div class="stack-6"><h1>Stockage</h1><span class="sub">${inst.length} jeux installés · ${fmtSize(inst.reduce((s, g) => s + g.sizeOnDisk, 0))}</span></div></div>
     ${Array.isArray(disks) ? `<div class="disks">${disks.map((d) => {
       const other = Math.max(0, d.total - d.free - d.used);

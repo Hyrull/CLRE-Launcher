@@ -17,6 +17,7 @@ const LEGENDARY = {
 const REDIRECT = 'https://www.epicgames.com/id/api/redirect?clientId=34a02cf8f4414e29b15921876da36f9a&responseType=code';
 const AUTH_URL = `https://www.epicgames.com/id/login?redirectUrl=${encodeURIComponent(REDIRECT)}`;
 const OWNED_TTL = 15 * 60e3;
+const UPDATE_TTL = 6 * 3600e3;
 const MIB = 1024 * 1024;
 
 const psQuote = (s) => `'${String(s).replace(/'/g, "''")}'`;
@@ -33,6 +34,9 @@ class EpicDl {
     this.owned = null;
     this.ownedAt = 0;
     this.refreshing = null;
+    this.updates = new Set();
+    this.updatesAt = 0;
+    this.checking = null;
     try { this.owned = JSON.parse(fs.readFileSync(this.ownedFile, 'utf8')); } catch { this.owned = null; }
     this.current = null; // { job, child }
     try {
@@ -40,7 +44,7 @@ class EpicDl {
     } catch { this.jobs = []; }
     // Déjà installés (launcher fermé au mauvais moment) : rien à reprendre
     const inst = this.installedMap();
-    this.jobs = this.jobs.filter((j) => !inst[j.appName]);
+    this.jobs = this.jobs.filter((j) => j.update || !inst[j.appName]);
   }
 
   // ---------- Legendary ----------
@@ -179,6 +183,25 @@ class EpicDl {
     return this.owned || [];
   }
 
+  // Mises à jour des jeux installés par le launcher : Legendary compare la version installée à celle d'Epic
+  needsUpdate(appName) { return this.updates.has(appName); }
+  checkUpdates(onChange) {
+    if (!this.user() || !this.hasBin() || !Object.keys(this.installedMap()).length) return;
+    if (this.checking || Date.now() - this.updatesAt < UPDATE_TTL) return;
+    this.checking = this.leg(['list-installed', '--check-updates', '--tsv']).then((r) => {
+      if (r.code !== 0) return;
+      const next = new Set();
+      const rows = r.out.split(/\r?\n/).filter(Boolean).map((l) => l.split('\t'));
+      const head = rows.shift() || [];
+      const iApp = head.indexOf('App name'), iUpd = head.indexOf('Update available');
+      for (const row of rows) if (row[iUpd] === 'True') next.add(row[iApp]);
+      const changed = [...next].sort().join('|') !== [...this.updates].sort().join('|');
+      this.updates = next;
+      this.updatesAt = Date.now();
+      if (changed && onChange) onChange();
+    }).catch(() => {}).finally(() => { this.checking = null; });
+  }
+
   installedMap() { try { return JSON.parse(fs.readFileSync(path.join(this.cfg, 'installed.json'), 'utf8')) || {}; } catch { return {}; } }
   isInstalled(appName) { return !!this.installedMap()[appName]; }
 
@@ -208,7 +231,7 @@ class EpicDl {
     this.onChange();
   }
 
-  async enqueue(appName, name) {
+  async enqueue(appName, name, opts = {}) {
     if (!this.user()) throw Object.assign(new Error('Connecte ton compte Epic'), { code: 'nologin' });
     await this.ensureBin();
     const o = (this.owned || []).find((x) => x.appName === appName);
@@ -218,7 +241,7 @@ class EpicDl {
     if (ex) { if (ex.state !== 'downloading' && ex.state !== 'installing') { ex.state = 'queued'; ex.error = ''; this.save(); this.next(); } return { queued: true }; }
     const root = this.getDir();
     fs.mkdirSync(root, { recursive: true });
-    this.jobs.push({ key, appName, name: name || (o && o.title) || appName, state: 'queued', error: '', progress: 0, dlSize: 0, installPath: '', base: root });
+    this.jobs.push({ key, appName, name: name || (o && o.title) || appName, state: 'queued', error: '', progress: 0, dlSize: 0, installPath: '', base: root, update: !!opts.update });
     this.save();
     this.next();
     return { queued: true };
@@ -247,7 +270,7 @@ class EpicDl {
     if (running) { j.stopping = true; this.kill(this.current.child); }
     this.jobs = this.jobs.filter((x) => x !== j);
     const clean = () => {
-      if (this.isInstalled(j.appName)) return;
+      if (j.update || this.isInstalled(j.appName)) return;
       try { if (j.installPath && j.installPath.toLowerCase().startsWith(String(j.base || '').toLowerCase())) fs.rmSync(j.installPath, { recursive: true, force: true }); } catch { /* rien */ }
       try { fs.rmSync(path.join(this.cfg, 'tmp', `${j.appName}.resume`), { force: true }); } catch { /* rien */ }
     };
@@ -273,13 +296,15 @@ class EpicDl {
       else if (/Finished installation process|Download size is 0/.test(l)) { j.state = 'installing'; j.speed = 0; }
       if (Date.now() - lastTick > 1000) { lastTick = Date.now(); this.onChange(); }
     };
-    const { child, done } = this.spawnLeg(['-y', 'install', j.appName, '--base-path', j.base || this.getDir(), '--skip-sdl'], onLine);
+    const args = j.update ? ['-y', 'update', j.appName, '--skip-sdl'] : ['-y', 'install', j.appName, '--base-path', j.base || this.getDir(), '--skip-sdl'];
+    const { child, done } = this.spawnLeg(args, onLine);
     this.current = { job: j, child, done };
     done.then(async (r) => {
       if (j.stopping) return; // pause ou annulation
       const inst = this.installedMap()[j.appName];
       if (r.code === 0 && inst) {
         j.state = 'installing'; j.speed = 0; this.onChange();
+        if (j.update) this.updates.delete(j.appName);
         await this.prereqs(inst).catch(() => { /* le jeu marche souvent sans, on n'échoue pas pour ça */ });
         this.jobs = this.jobs.filter((x) => x !== j);
         this.onDone(j);

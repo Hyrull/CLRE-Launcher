@@ -2,23 +2,26 @@
 
 Un launcher de jeux pour Windows qui réunit toute ta bibliothèque au même endroit : Steam, Epic Games, GOG, Ubisoft Connect, EA app, Xbox / Game Pass PC, Battle.net, Riot, Amazon Games, itch.io, et les jeux que tu ajoutes toi-même.
 
-Il lit directement les fichiers que chaque plateforme garde sur ton PC. Tu n'as aucun compte à connecter, et tes données restent sur ta machine.
+Il lit directement les fichiers que chaque plateforme garde sur ton PC : pour tout afficher et lancer, tu n'as aucun compte à connecter, et tes données restent sur ta machine.
+
+Il sait aussi **installer tes jeux GOG et Epic sans GOG Galaxy ni le Epic Games Launcher**. Là, et seulement là, il faut connecter ton compte GOG ou Epic.
 
 ---
 
 ## Sommaire
 
 1. [Installer et lancer](#installer-et-lancer)
-2. [Plateformes reconnues](#plateformes-reconnues)
-3. [Tour de l'interface](#tour-de-linterface)
-4. [La fiche d'un jeu](#la-fiche-dun-jeu)
-5. [Toutes les fonctions](#toutes-les-fonctions)
-6. [Réglages](#réglages)
-7. [Ce qui demande une petite configuration](#ce-qui-demande-une-petite-configuration)
-8. [Raccourcis](#raccourcis)
-9. [Tes données](#tes-données)
-10. [Limites connues](#limites-connues)
-11. [Pour les développeurs](#pour-les-développeurs)
+2. [Installer des jeux GOG et Epic sans leur launcher](#installer-des-jeux-gog-et-epic-sans-leur-launcher)
+3. [Plateformes reconnues](#plateformes-reconnues)
+4. [Tour de l'interface](#tour-de-linterface)
+5. [La fiche d'un jeu](#la-fiche-dun-jeu)
+6. [Toutes les fonctions](#toutes-les-fonctions)
+7. [Réglages](#réglages)
+8. [Ce qui demande une petite configuration](#ce-qui-demande-une-petite-configuration)
+9. [Raccourcis](#raccourcis)
+10. [Tes données](#tes-données)
+11. [Limites connues](#limites-connues)
+12. [Pour les développeurs](#pour-les-développeurs)
 
 ---
 
@@ -31,13 +34,43 @@ Une seule fenêtre peut tourner à la fois : relancer l'exe ramène simplement l
 
 ---
 
+## Installer des jeux GOG et Epic sans leur launcher
+
+Sur un jeu GOG ou Epic pas installé, **Installer** le télécharge et l'installe directement depuis CLRE-Launcher. Le jeu apparaît ensuite dans **Téléchargements** avec sa progression, sa vitesse, et les boutons Pause, Reprendre et Annuler. Un téléchargement interrompu reprend où il en était, même après avoir fermé le launcher.
+
+**Connexion.** La première installation te demande de connecter ton compte (ou va dans Réglages, pages **GOG** et **Epic Games**) :
+- **Se connecter** ouvre la page de connexion officielle dans une fenêtre du launcher, qui se ferme toute seule ;
+- **Ouvrir dans le navigateur** sert si tu te connectes avec Google, Apple, Facebook… : tu te connectes dans ton navigateur, puis tu colles dans le launcher l'adresse (GOG) ou le texte (Epic) de la page finale.
+
+Ton mot de passe n'est jamais vu par le launcher : il ne garde qu'un jeton de connexion sur ton PC (chiffré par Windows pour GOG).
+
+### GOG
+- Le launcher télécharge l'**installateur officiel** du jeu (le même que sur gog.com) et l'installe en silence. Windows te demande une autorisation à la fin : c'est l'installateur de GOG qui en a besoin.
+- Les **DLC** que tu possèdes s'installent avec le jeu, avec une seule autorisation Windows.
+- **Désinstaller** passe par le désinstalleur du jeu, sans GOG Galaxy.
+- **Mises à jour** : le launcher compare ce qui est installé avec la dernière version publiée par GOG (toutes les 6 h). Le bouton devient « Mettre à jour » quand un nouvel installateur existe.
+- Dossier par défaut : `C:\GOG Games`, à changer dans Réglages, GOG.
+
+### Epic Games
+- Le launcher passe par [Legendary](https://github.com/legendary-gl/legendary), un outil open-source (GPLv3) qui sert aussi de moteur à Heroic. Il le télécharge une seule fois depuis GitHub (17 Mo) à ta première connexion, et vérifie son empreinte SHA-256 avant de s'en servir.
+- Les jeux installés ainsi **se lancent et se désinstallent sans le Epic Games Launcher**. Les composants Windows dont un jeu a besoin (Visual C++, DirectX) sont installés après lui, avec une autorisation Windows.
+- **Mises à jour** : vérifiées toutes les 6 h ; le bouton devient « Mettre à jour ».
+- Les jeux déjà installés avec le Epic Games Launcher continuent de passer par lui. Tu peux aussi choisir « Via Epic Games Launcher » au moment d'installer.
+- Dossier par défaut : `C:\Epic Games`, à changer dans Réglages, Epic Games.
+
+### Ce qui reste impossible
+- **Steam** : les jeux ont presque tous besoin du client Steam pour se lancer, donc l'installation passe toujours par Steam.
+- **Ubisoft Connect, EA app, Battle.net, Xbox / Game Pass, Riot** : il n'existe pas de moyen fiable d'installer leurs jeux sans leur client. C'est aussi le cas des jeux Epic publiés par Ubisoft ou EA.
+
+---
+
 ## Plateformes reconnues
 
 | Plateforme | Ce qui est lu | Lancement | Temps de jeu |
 |---|---|---|---|
 | **Steam** | Bibliothèque, jeux installés, temps de jeu, collections, téléchargements, succès, captures | `steam://` | Celui de Steam |
-| **Epic Games** | Jeux installés et possédés | Epic Games Launcher | Mesuré par CLRE |
-| **GOG** | Jeux installés (Galaxy) | Exécutable du jeu | Mesuré par CLRE |
+| **Epic Games** | Jeux installés et possédés | Epic Games Launcher, ou CLRE pour les jeux qu'il a installés | Mesuré par CLRE |
+| **GOG** | Jeux installés, et tous tes jeux si ton compte est connecté | Exécutable du jeu | Mesuré par CLRE |
 | **Ubisoft Connect** | Jeux installés | `uplay://` | Mesuré par CLRE |
 | **EA app** | Jeux installés | `origin2://` | Mesuré par CLRE |
 | **Xbox / Game Pass PC** | Jeux du Microsoft Store et du Game Pass installés | Directement | Mesuré par CLRE |
@@ -220,6 +253,7 @@ Ton profil Discord affiche « Joue à … » pour tous tes jeux, quelle que soit
 Ouvre-les avec le rond en haut à droite (« Compte et réglages »).
 
 - **Compte Steam** : choix du compte si plusieurs utilisent ce PC, et clé Steam Web API (optionnelle).
+- **GOG** et **Epic Games** : connexion du compte, et dossier où installer les jeux.
 - **Système** :
   - garder le launcher dans la barre des tâches à la fermeture ;
   - le raccourci `Ctrl Alt L` ;
@@ -284,10 +318,10 @@ Publie tes versions de `CLRE-Launcher.exe` dans les *Releases* d'un dépôt GitH
 
 Rien n'est envoyé vers un serveur à toi ou à nous. Le launcher contacte seulement des services publics :
 - le magasin et l'API Steam ;
-- l'API GOG ;
-- l'Epic Games Store, pour les jeux gratuits ;
+- l'API GOG, et les serveurs de téléchargement GOG si tu installes un jeu ;
+- l'Epic Games Store, pour les jeux gratuits, et les serveurs d'Epic si tu installes un jeu (par Legendary) ;
 - HowLongToBeat ;
-- GitHub, si tu as activé les mises à jour ;
+- GitHub, si tu as activé les mises à jour, et une fois pour télécharger Legendary ;
 - la base Ludusavi.
 
 Tout est rangé dans `%APPDATA%\launcher` :
@@ -300,6 +334,10 @@ Tout est rangé dans `%APPDATA%\launcher` :
 | `art-cache.json` | Jaquettes trouvées pour les jeux hors Steam |
 | `hltb.json` | Durées HowLongToBeat |
 | `ach-global.json` | Statistiques mondiales des succès |
+| `gog-auth.bin` | Jeton de connexion GOG, chiffré par Windows |
+| `gog-queue.json`, `epic-queue.json` | Téléchargements en cours |
+| `legendary\` | Connexion Epic et jeux installés par Legendary |
+| `tools\` | Legendary |
 
 Les copies de sauvegardes vont dans `Documents\CLRE-Launcher\Sauvegardes`, ou le dossier que tu as choisi.
 
@@ -316,6 +354,8 @@ Les copies de sauvegardes vont dans `Documents\CLRE-Launcher\Sauvegardes`, ou le
 - **Riot** : pas d'image de jaquette publique. Ajoute une jaquette perso depuis la fiche du jeu.
 - **EA app** : elle ne dit pas où les jeux sont installés, donc c'est elle qui lance le jeu ou propose de l'installer.
 - **Options de lancement (arguments)** : elles ne fonctionnent pas pour Epic, Ubisoft et EA, qui ne les acceptent pas.
+- **Installations GOG** : elles passent par les installateurs hors-ligne. Les versions bêta et les « branches » de GOG Galaxy ne sont pas proposées.
+- **Mises à jour GOG** : un jeu installé par GOG Galaxy peut aussi être mis à jour par CLRE ; l'installateur s'installe alors par-dessus.
 
 ---
 
@@ -352,6 +392,8 @@ src/
   preload.js         Pont sécurisé entre la fenêtre et le processus principal (window.launcher)
   steam.js           Lecture de Steam (VDF, appinfo.vdf binaire, temps de jeu, collections)
   epic.js            Lecture d'Epic Games
+  epicdl.js          Installation, lancement et mises à jour Epic sans le Epic Games Launcher (Legendary)
+  gog.js             Connexion GOG, installation, DLC, désinstallation et mises à jour sans GOG Galaxy
   platforms.js       GOG, Ubisoft, EA, jeux ajoutés, recherche des jaquettes
   platforms2.js      Xbox / Game Pass, Battle.net, Riot, Amazon Games, itch.io
   extras.js          Sessions, téléchargements, captures, actus, amis, liste de souhaits, disques
@@ -370,6 +412,8 @@ src/
     features.js      Activité, captures, stockage, amis, liste de souhaits, mode canapé
     features2.js     Fiche enrichie, collections, filtres, récap, sauvegardes, durée de vie, jeux gratuits
     features3.js     Bannières vivantes, teinte du jeu, écran de lancement, journal, vitrine, story, performances
+    gog.js           Installation GOG : connexion, confirmation, téléchargements, réglages
+    epicdl.js        Installation Epic : connexion, confirmation, désinstallation, réglages
     styles.css       Thème sombre
     theme-light.css  Thème clair
     features3.css    Styles de la 3e vague
@@ -392,4 +436,4 @@ Conception de l'interface : passe *unslop* de @heydamir (CC BY 4.0).
 
 ## Licence
 
-Code publié sous licence [MIT](LICENSE). CLRE-Launcher n'est affilié à aucune des plateformes citées ; leurs noms et logos appartiennent à leurs propriétaires.
+Code publié sous licence [MIT](LICENSE). Legendary, téléchargé à part pour les installations Epic, reste sous sa propre licence (GPLv3) et n'est pas inclus dans ce dépôt. CLRE-Launcher n'est affilié à aucune des plateformes citées ; leurs noms et logos appartiennent à leurs propriétaires.

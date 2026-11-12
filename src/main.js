@@ -121,11 +121,12 @@ async function sync() {
       let g = byApp.get(app);
       if (!g) { g = fromOwned({ appName: app, title: i.title || app }); byApp.set(app, g); epic.games.push(g); }
       Object.assign(g, {
-        installed: true, viaLegendary: true, installDir: i.install_path, library: path.dirname(i.install_path),
+        installed: true, viaLegendary: true, needsUpdate: epicDl.needsUpdate(app), installDir: i.install_path, library: path.dirname(i.install_path),
         sizeOnDisk: Number(i.install_size || 0) || g.sizeOnDisk,
         processNames: [...new Set([...g.processNames, ...(i.executable ? [path.basename(i.executable).toLowerCase()] : [])])],
       });
     }
+    epicDl.checkUpdates(() => win && win.webContents.send('library-changed'));
   }
   let more = [];
   try { more = await loadMorePlatforms(); } catch { more = []; }
@@ -134,6 +135,10 @@ async function sync() {
   if (gog) {
     const have = new Set(others.filter((g) => g.store === 'gog').map((g) => g.platformId));
     for (const o of await gog.ownedGames()) if (!have.has(o.id)) others.push(base('gog', o.id, o.title));
+    // Mises à jour GOG : résultat connu tout de suite, vérification en fond (au plus toutes les 6 h par jeu)
+    const gogInstalled = others.filter((g) => g.store === 'gog' && g.installed);
+    for (const g of gogInstalled) g.needsUpdate = gog.updateFlag(g.platformId);
+    gog.checkUpdates(gogInstalled).then((changed) => { if (changed && win) win.webContents.send('library-changed'); }).catch(() => {});
   }
   const artCache = readJson('art-cache.json');
   applyArt(others, artCache);
@@ -157,7 +162,7 @@ async function sync() {
   for (const g of all) {
     if (g.needsUpdate && status[g.key] === 'playing' && !notifiedUpdates.has(g.key)) {
       notifiedUpdates.add(g.key);
-      notify('updates', `Mise à jour pour ${g.name}`, 'Steam va la télécharger avant ta prochaine partie', { view: 'game', id: g.key });
+      notify('updates', `Mise à jour pour ${g.name}`, g.store === 'steam' ? 'Steam va la télécharger avant ta prochaine partie' : 'Clique sur « Mettre à jour » dans le launcher', { view: 'game', id: g.key });
     }
   }
   // Succès lus en local : compteur par jeu Steam
@@ -360,6 +365,7 @@ function action(key, kind) {
   switch (g.store) {
     case 'epic':
       // Installés par le launcher (Legendary) : lancement et désinstallation sans le Epic Games Launcher
+      if (g.viaLegendary && kind === 'play' && g.needsUpdate) return epicDl.enqueue(g.appName, g.name, { update: true }).catch((e) => ({ error: e.message }));
       if (g.viaLegendary && kind === 'play') return epicDl.launch(g.appName);
       if (g.viaLegendary && kind === 'uninstall') return epicDl.uninstall(g.appName).then(() => { if (win) win.webContents.send('library-changed'); return { ok: true }; }).catch((e) => ({ error: e.message }));
       if (kind === 'play') return open(epicUri(g, 'launch'));
@@ -372,8 +378,15 @@ function action(key, kind) {
       if (kind === 'store') return search('https://store.epicgames.com/browse?q=');
       return open('com.epicgames.launcher://store/library');
     case 'gog':
+      // Mise à jour disponible : le bouton « Mettre à jour » réinstalle par-dessus avec le dernier installateur
+      if (kind === 'play' && g.needsUpdate && gog && gog.auth) {
+        return gog.enqueue(g.platformId, g.name, { installDir: g.installDir }).catch((e) => ({ error: e.message }));
+      }
       if (kind === 'play' && g.exe) return launchExe(g, extra);
       if (kind === 'store') return search('https://www.gog.com/fr/games?query=');
+      if (kind === 'uninstall' && gog) {
+        return gog.uninstall(g.installDir, g.platformId).then(() => { if (win) win.webContents.send('library-changed'); return { ok: true }; }).catch((e) => ({ error: e.message }));
+      }
       // Installation directe, sans GOG Galaxy, quand le compte GOG est connecté
       if (kind === 'install' && gog) {
         if (!gog.auth) return { needLogin: true };

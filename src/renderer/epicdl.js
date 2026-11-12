@@ -106,6 +106,7 @@ doAction = async function (act, id, el) {
   if (g && g.store === 'epic') {
     if (act === 'install') return epicInstall(g);
     if (act === 'uninstall' && g.viaLegendary) return epicUninstall(g);
+    if (act === 'play' && g.viaLegendary && g.needsUpdate) return storeUpdate(g);
   }
   if (act === 'epic-pause') return api.epicPause(id);
   if (act === 'epic-resume') return api.epicResume(id);

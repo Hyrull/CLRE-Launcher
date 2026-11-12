@@ -42,6 +42,7 @@ function loadGog() {
     games.push(base('gog', v.gameID, v.gameName, {
       installed: exists(v.path), installDir: v.path || '', library: v.path ? path.dirname(v.path) : '',
       exe, workingDir: v.workingDir || v.path, launchParam: v.launchParam || '',
+      buildId: v.buildId || '', ver: v.ver || v.version || '',
       processNames: exe ? [path.basename(exe).toLowerCase()] : [],
     }));
   }
