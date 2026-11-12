@@ -98,32 +98,33 @@ doAction = async function (act, id, el) {
 const _downloadRowGog = downloadRow;
 // eslint-disable-next-line no-global-assign
 downloadRow = function (d) {
-  if (d.store !== 'gog') return _downloadRowGog(d);
+  if (d.store !== 'gog' && d.store !== 'epic') return _downloadRowGog(d);
+  const st = d.store;
   const g = byId(d.key) || { key: d.key, name: d.name, art: { header: '' } };
   const pct = Math.round(d.progress * 100);
   const line = {
     downloading: `${pct} % · ${fmtSize(d.remaining)} restants${d.speed ? ` · ${fmtSize(d.speed)}/s` : ''}`,
     queued: `En attente · ${pct} %`,
     paused: `En pause · ${pct} %`,
-    installing: 'Installation… (accepte l’autorisation de Windows)',
+    installing: st === 'gog' ? 'Installation… (accepte l’autorisation de Windows)' : 'Finalisation de l’installation…',
     error: d.error || 'Erreur',
   }[d.phase] || '';
   const btn = (act, label) => `<button type="button" class="btn btn-ghost" data-act="${act}" data-id="${esc(d.key)}">${label}</button>`;
   const btns = d.phase === 'installing' ? '' : [
-    d.phase === 'downloading' || d.phase === 'queued' ? btn('gog-pause', 'Pause') : btn('gog-resume', d.phase === 'error' ? 'Réessayer' : 'Reprendre'),
-    btn('gog-cancel', 'Annuler'),
+    d.phase === 'downloading' || d.phase === 'queued' ? btn(`${st}-pause`, 'Pause') : btn(`${st}-resume`, d.phase === 'error' ? 'Réessayer' : 'Reprendre'),
+    btn(`${st}-cancel`, 'Annuler'),
   ].join('');
   return `<div class="dl-row" data-open="${esc(g.key)}" role="button" tabindex="0">
     <div class="dl-thumb" style="background:${fallbackBg(g)}"><img src="${esc(g.art.header || g.art.hero || '')}" alt="" loading="lazy"></div>
-    <div class="dl-info"><span class="t">${esc(g.name)} <small class="sub">GOG</small></span>
+    <div class="dl-info"><span class="t">${esc(g.name)} <small class="sub">${st === 'gog' ? 'GOG' : 'Epic'}</small></span>
       <div class="meter dl-meter"><div class="${d.active ? 'on' : ''}" style="width:${Math.max(2, pct)}%"></div></div>
       <span class="s">${esc(line)}</span></div>
     <div class="actions">${btns}</div>
   </div>`;
 };
 
-VIEWS.downloads = () => `<div class="toolbar"><div class="stack-6"><h1>Téléchargements</h1><span class="sub">Suivi en direct de Steam et des installations GOG</span></div></div>` +
-  (state.downloads.length ? downloadsShelf(false).replace('<h2 class="section">Téléchargements</h2>', '<span></span>') : emptyBox('Aucun téléchargement', 'Les installations Steam et GOG apparaissent ici en direct'));
+VIEWS.downloads = () => `<div class="toolbar"><div class="stack-6"><h1>Téléchargements</h1><span class="sub">Suivi en direct de Steam et des installations GOG et Epic</span></div></div>` +
+  (state.downloads.length ? downloadsShelf(false).replace('<h2 class="section">Téléchargements</h2>', '<span></span>') : emptyBox('Aucun téléchargement', 'Les installations Steam, GOG et Epic apparaissent ici en direct'));
 
 // ---------- Réglages : page GOG ----------
 PREF_CATS.splice(PREF_CATS.findIndex((c) => c.id === 'data'), 0, {

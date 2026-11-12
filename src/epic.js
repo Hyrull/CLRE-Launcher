@@ -110,4 +110,4 @@ function epicUri(g, action) {
   return `com.epicgames.launcher://apps/${encodeURIComponent(`${g.namespace}:${g.catalogItemId}:${g.appName}`)}?action=${action}&silent=true`;
 }
 
-module.exports = { loadEpic, epicUri, EPIC_DATA: DATA };
+module.exports = { loadEpic, epicUri, makeGame, EPIC_DATA: DATA };

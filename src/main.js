@@ -13,7 +13,8 @@ const fs = require('fs');
 const { execFile, spawn } = require('child_process');
 const { pathToFileURL } = require('url');
 const { loadLibrary, regDword } = require('./steam');
-const { loadEpic, epicUri, EPIC_DATA } = require('./epic');
+const { loadEpic, epicUri, makeGame: makeEpicGame, EPIC_DATA } = require('./epic');
+const { EpicDl } = require('./epicdl');
 const { loadPlatforms, applyArt, resolveArt, base } = require('./platforms');
 const { Gog } = require('./gog');
 const { loadMorePlatforms } = require('./platforms2');
@@ -57,6 +58,7 @@ const settings = () => {
     updateRepo: s.updateRepo || '',
     backupDir: s.backupDir || path.join(app.getPath('documents'), 'CLRE-Launcher', 'Sauvegardes'),
     gogDir: s.gogDir || path.join(process.env.SystemDrive || 'C:', '\\', 'GOG Games'),
+    epicDir: s.epicDir || path.join(process.env.SystemDrive || 'C:', '\\', 'Epic Games'),
     autoBackup: s.autoBackup !== false,
   };
 };
@@ -71,6 +73,7 @@ let running = [];
 let sessions;
 let saves;
 let gog = null;
+let epicDl = null;
 const discord = new sys.Discord();
 const POLL_MS = 5000;
 
@@ -100,7 +103,30 @@ async function sync() {
     steamError = e.message;
     lib = { steamPath: null, user: { name: '?', id64: null }, users: [], games: [], collections: [], watchPaths: [] };
   }
-  const epic = loadEpic(readJson('epic-stats.json'));
+  const epicStats = readJson('epic-stats.json');
+  const epic = loadEpic(epicStats);
+  // Jeux Epic gérés sans le Epic Games Launcher (Legendary) : possédés et installés
+  if (epicDl) {
+    const byApp = new Map(epic.games.map((g) => [g.appName, g]));
+    const owned = epicDl.ownedGames(() => win && win.webContents.send('library-changed'));
+    const fromOwned = (o) => makeEpicGame({ id: o.catalogItemId, namespace: o.namespace, title: o.title, developer: o.developer, keyImages: o.keyImages }, null, o.appName, epicStats);
+    for (const o of owned) {
+      if (byApp.has(o.appName)) { byApp.get(o.appName).thirdParty = o.thirdParty; continue; }
+      const g = fromOwned(o);
+      g.thirdParty = o.thirdParty;
+      byApp.set(o.appName, g);
+      epic.games.push(g);
+    }
+    for (const [app, i] of Object.entries(epicDl.installedMap())) {
+      let g = byApp.get(app);
+      if (!g) { g = fromOwned({ appName: app, title: i.title || app }); byApp.set(app, g); epic.games.push(g); }
+      Object.assign(g, {
+        installed: true, viaLegendary: true, installDir: i.install_path, library: path.dirname(i.install_path),
+        sizeOnDisk: Number(i.install_size || 0) || g.sizeOnDisk,
+        processNames: [...new Set([...g.processNames, ...(i.executable ? [path.basename(i.executable).toLowerCase()] : [])])],
+      });
+    }
+  }
   let more = [];
   try { more = await loadMorePlatforms(); } catch { more = []; }
   const others = [...loadPlatforms(prefs.customGames || []), ...more];
@@ -240,7 +266,7 @@ async function pollRunning() {
 }
 
 let lastDownloads = '';
-const allDownloads = () => [...(lib && lib.steamPath ? extras.steamDownloads(lib.steamPath) : []), ...(gog ? gog.list() : [])];
+const allDownloads = () => [...(lib && lib.steamPath ? extras.steamDownloads(lib.steamPath) : []), ...(gog ? gog.list() : []), ...(epicDl ? epicDl.list() : [])];
 function pollDownloads() {
   if (!win) return;
   const list = allDownloads();
@@ -248,7 +274,7 @@ function pollDownloads() {
   if (sig !== lastDownloads) {
     const before = lastDownloads ? JSON.parse(lastDownloads) : [];
     for (const d of before) {
-      if (d.active && d.store !== 'gog' && !list.some((x) => x.key === d.key)) notify('downloads', `${d.name} est prêt`, 'Téléchargement terminé, tu peux lancer le jeu', { view: 'game', id: d.key });
+      if (d.active && !d.store && !list.some((x) => x.key === d.key)) notify('downloads', `${d.name} est prêt`, 'Téléchargement terminé, tu peux lancer le jeu', { view: 'game', id: d.key });
     }
     lastDownloads = sig;
     win.webContents.send('downloads', list);
@@ -333,7 +359,15 @@ function action(key, kind) {
   const extra = kind === 'play' ? beforeLaunch(g.key) : '';
   switch (g.store) {
     case 'epic':
+      // Installés par le launcher (Legendary) : lancement et désinstallation sans le Epic Games Launcher
+      if (g.viaLegendary && kind === 'play') return epicDl.launch(g.appName);
+      if (g.viaLegendary && kind === 'uninstall') return epicDl.uninstall(g.appName).then(() => { if (win) win.webContents.send('library-changed'); return { ok: true }; }).catch((e) => ({ error: e.message }));
       if (kind === 'play') return open(epicUri(g, 'launch'));
+      if (kind === 'install-egl') return open(epicUri(g, 'install'));
+      if (kind === 'install' && epicDl) {
+        if (!epicDl.user()) return { needLogin: true };
+        return epicDl.enqueue(g.appName, g.name).catch((e) => ({ error: e.message, needLogin: e.code === 'nologin' }));
+      }
       if (kind === 'install') return open(epicUri(g, 'install'));
       if (kind === 'store') return search('https://store.epicgames.com/browse?q=');
       return open('com.epicgames.launcher://store/library');
@@ -580,6 +614,15 @@ app.whenReady().then(() => {
       if (win) win.webContents.send('library-changed');
     },
   });
+  epicDl = new EpicDl({
+    dataDir: app.getPath('userData'),
+    getDir: () => settings().epicDir,
+    onChange: () => pollDownloads(),
+    onDone: (j) => {
+      notify('downloads', `${j.name} est installé`, 'Tu peux lancer le jeu', { view: 'game', id: j.key });
+      if (win) win.webContents.send('library-changed');
+    },
+  });
 
   protocol.handle('steamart', (req) => {
     const file = path.normalize(decodeURIComponent(new URL(req.url).pathname.slice(1)));
@@ -613,6 +656,22 @@ app.whenReady().then(() => {
   ipcMain.handle('gog:login-code', async (_e, text) => { const s = await gog.loginWithPasted(text); if (win) win.webContents.send('library-changed'); return s; });
   ipcMain.handle('gog:logout', () => { const s = gog.logout(); if (win) win.webContents.send('library-changed'); return s; });
   for (const k of ['pause', 'resume', 'cancel']) ipcMain.handle(`gog:${k}`, (_e, key) => gog[k](String(key)));
+  // ---------- Epic sans le Epic Games Launcher ----------
+  ipcMain.handle('epic:status', () => epicDl.status());
+  ipcMain.handle('epic:login', async () => { const s = await epicDl.login(win); if (win) win.webContents.send('library-changed'); return s; });
+  ipcMain.handle('epic:login-browser', () => shell.openExternal(epicDl.authUrl()));
+  ipcMain.handle('epic:login-code', async (_e, text) => { await epicDl.ensureBin(); const s = await epicDl.loginWithPasted(text); if (win) win.webContents.send('library-changed'); return s; });
+  ipcMain.handle('epic:logout', async () => { const s = await epicDl.logout(); if (win) win.webContents.send('library-changed'); return s; });
+  ipcMain.handle('epic:install-egl', (_e, key) => action(key, 'install-egl'));
+  for (const k of ['pause', 'resume', 'cancel']) ipcMain.handle(`epic:${k}`, (_e, key) => epicDl[k](String(key)));
+  ipcMain.handle('epic:pick-dir', async () => {
+    const r = await dialog.showOpenDialog(win, { title: 'Dossier d’installation des jeux Epic', defaultPath: settings().epicDir, properties: ['openDirectory', 'createDirectory'] });
+    if (r.canceled) return null;
+    const p = readPrefs();
+    p.settings = { ...(p.settings || {}), epicDir: r.filePaths[0] };
+    writePrefs(p);
+    return r.filePaths[0];
+  });
   ipcMain.handle('gog:pick-dir', async () => {
     const r = await dialog.showOpenDialog(win, { title: 'Dossier d’installation des jeux GOG', defaultPath: settings().gogDir, properties: ['openDirectory', 'createDirectory'] });
     if (r.canceled) return null;
