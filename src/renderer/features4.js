@@ -37,12 +37,12 @@ function shopCard(x) {
 const shopRow = (title, list, more) => (list && list.length ? `<section class="stack"><div class="section-head"><h2 class="section">${title}</h2>${more ? `<button type="button" class="link-btn" data-shop-tab="${more}">Tout voir</button>` : ''}</div>
   <div class="shop-row">${list.slice(0, 12).map(shopCard).join('')}</div></section>` : '');
 
-function shopHead() {
+function shopHead(active = state.shop.tab) {
   const s = state.shop;
   const tags = tagCounts().slice(0, 60);
   return `<div class="toolbar shop-toolbar"><div class="stack-6"><h1>Magasin</h1><span class="sub">Le magasin Steam, à ta façon · l’achat se fait dans Steam</span></div>
 </div>
-    <div class="shop-tabs"><div class="seg-chips" role="tablist">${SHOP_TABS.map(([id, l]) => `<button type="button" role="tab" class="${s.tab === id ? 'on' : ''}" data-shop-tab="${id}">${l}</button>`).join('')}</div>
+    <div class="shop-tabs"><div class="seg-chips" role="tablist">${SHOP_TABS.map(([id, l]) => `<button type="button" role="tab" class="${active === id ? 'on' : ''}" aria-selected="${active === id}" data-shop-tab="${id}">${l}</button>`).join('')}</div>
     <label class="filter ${s.tag ? 'on' : ''}"><select data-shop-tag>${[['', 'Tag : Tous'], ...tags.map(([id]) => [String(id), tagName(id)])].map(([v, l]) => `<option value="${v}" ${s.tag === v ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></label></div>`;
 }
 
@@ -75,8 +75,8 @@ function heroGo(n) {
 
 VIEWS.shop = () => {
   const s = state.shop;
+  if (s.tab === 'wish') s.tab = 'home'; // la liste de souhaits est une vue à part (ancien état)
   const head = shopHead();
-  if (s.tab === 'wish') { setTimeout(() => go({ view: 'wishlist' }), 0); return head + (typeof skelGrid === 'function' ? skelGrid() : loading()); }
   // Recherche, tag, promos, gratuits : grille
   if (s.q || s.tag || ['specials', 'free'].includes(s.tab)) {
     const opts = { term: s.q, tags: s.tag ? [Number(s.tag)] : [], specials: s.tab === 'specials', free: s.tab === 'free', sort: s.q ? 'relevance' : 'reviews', count: s.count };
@@ -182,6 +182,7 @@ function shopTrailer() {
     v.className = 'bg-video'; v.muted = true; v.loop = true; v.playsInline = true;
     v.addEventListener('playing', () => v.classList.add('on'));
     S3.videos.set(key, v);
+    trimVideos();
   }
   const img = hero.querySelector('img.bg');
   if (img && v.parentNode !== hero) img.after(v);
@@ -235,6 +236,7 @@ document.addEventListener('click', (e) => {
   if (t.dataset.shop) return go({ view: 'shopapp', id: t.dataset.shop });
   if (t.dataset.shopDot) { heroGo(Number(t.dataset.shopDot)); return undefined; }
   if (t.dataset.shopTagbtn) { state.shop = { ...state.shop, tab: 'home', q: '', tag: t.dataset.shopTagbtn, count: 40 }; return go({ view: 'shop' }); }
+  if (t.dataset.shopTab === 'wish') return go({ view: 'wishlist' });
   state.shop = { ...state.shop, tab: t.dataset.shopTab, q: '', tag: '', count: 40 };
   if (state.route.view !== 'shop') return go({ view: 'shop' });
   return render({ quiet: true });
@@ -253,7 +255,7 @@ api.onLibraryChanged && api.onLibraryChanged(() => refreshOwned());
 
 // La liste de souhaits garde l'en-tête du magasin
 const _wishView = VIEWS.wishlist;
-VIEWS.wishlist = () => { state.shop.tab = 'wish'; return shopHead() + _wishView().replace(/^<div class="toolbar">[\s\S]*?<\/button><\/div>/, ''); };
+VIEWS.wishlist = () => { return shopHead('wish') + _wishView().replace(/^<div class="toolbar">[\s\S]*?<\/button><\/div>/, ''); };
 
 // ---------- Barre latérale épurée : l'essentiel en haut, le reste en sections repliables ----------
 const NAV_DEFAULT_CLOSED = { tools: true, browse: true, steamcoll: true };

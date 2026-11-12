@@ -348,8 +348,11 @@ function openOnboarding(force) {
   requestAnimationFrame(() => el.classList.add('on'));
 }
 // Une fois la bibliothèque chargée, au tout premier lancement
+// (s'arrête au bout de 2 minutes : avant, il tournait sans fin si la bibliothèque restait vide)
+const obStart = Date.now();
 const obTimer = setInterval(() => {
   if (state.lib && state.lib.games && state.lib.games.length) { clearInterval(obTimer); setTimeout(() => openOnboarding(false), 600); }
+  else if (Date.now() - obStart > 120e3) clearInterval(obTimer);
 }, 500);
 // Les images déjà en cache au moment du rendu sont marquées tout de suite
 const _render5 = render;

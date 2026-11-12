@@ -1,6 +1,7 @@
 // Tags du magasin Steam (Roguelike, Coop, Monde ouvert…) : noms en français et tags par jeu.
 // Jeux Steam : lus dans appinfo.vdf. Autres jeux reliés à une fiche Steam : demandés une fois au magasin.
 const fs = require('fs');
+const { writeAtomic } = require('./fsutil');
 
 class Tags {
   constructor(namesFile, cacheFile) {
@@ -16,7 +17,7 @@ class Tags {
       if (!r.ok) return this.names.map;
       const list = await r.json();
       this.names = { t: Date.now() / 1000, map: Object.fromEntries(list.map((x) => [x.tagid, x.name])) };
-      fs.writeFileSync(this.namesFile, JSON.stringify(this.names));
+      writeAtomic(this.namesFile, JSON.stringify(this.names));
     } catch { /* hors ligne */ }
     return this.names.map;
   }
@@ -49,7 +50,7 @@ class Tags {
         for (const id of ids) if (!this.cache[id]) { this.cache[id] = []; changed = true; } // pas de fiche : on ne redemande pas
       } catch { /* hors ligne */ }
     }
-    if (changed) try { fs.writeFileSync(this.cacheFile, JSON.stringify(this.cache)); } catch {}
+    if (changed) try { writeAtomic(this.cacheFile, JSON.stringify(this.cache)); } catch {}
     return changed;
   }
 }

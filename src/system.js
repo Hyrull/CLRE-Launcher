@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const net = require('net');
 const os = require('os');
+const crypto = require('crypto');
 const { spawn } = require('child_process');
 
 // ---------- Statut Discord (Rich Presence via le canal local de l'app Discord) ----------
@@ -86,31 +87,54 @@ async function checkUpdate(repo, current) {
   if (r.status === 404) return { error: 'Aucune version publiée sur ce dépôt' };
   if (!r.ok) return { error: `GitHub indisponible (HTTP ${r.status})` };
   const rel = await r.json();
-  const asset = (rel.assets || []).find((a) => /\.exe$/i.test(a.name));
-  return { latest: rel.tag_name, current, available: newer(rel.tag_name, current) && !!asset, url: asset && asset.browser_download_url, notes: (rel.body || '').slice(0, 600), name: rel.name || rel.tag_name };
+  const assets = rel.assets || [];
+  const exe = assets.find((a) => /\.exe$/i.test(a.name));
+  const out = { latest: rel.tag_name, current, available: newer(rel.tag_name, current) && !!exe, notes: (rel.body || '').slice(0, 600), name: rel.name || rel.tag_name };
+  if (!out.available) return out;
+  // Empreinte SHA-256 : celle que GitHub calcule pour chaque fichier publié,
+  // ou à défaut un fichier « <nom>.sha256 » / « SHA256SUMS » joint à la release.
+  let sha256 = /^sha256:([a-f0-9]{64})$/i.exec(exe.digest || '')?.[1];
+  if (!sha256) {
+    const sums = assets.find((a) => a.name.toLowerCase() === `${exe.name.toLowerCase()}.sha256`) || assets.find((a) => /^sha256sums/i.test(a.name));
+    if (sums && sums.size < 64 * 1024) {
+      const t = await (await fetch(sums.browser_download_url, { headers: { 'User-Agent': 'CLRE-Launcher' } })).text();
+      const line = t.split(/\r?\n/).find((l) => l.toLowerCase().includes(exe.name.toLowerCase())) || t;
+      sha256 = /\b([a-f0-9]{64})\b/i.exec(line)?.[1];
+    }
+  }
+  if (!sha256) return { ...out, available: false, error: `La version ${rel.tag_name} n'a pas d'empreinte SHA-256 : mise à jour refusée par sécurité` };
+  out.asset = { repo, url: exe.browser_download_url, size: exe.size, sha256: sha256.toLowerCase() };
+  return out;
 }
 
-async function downloadUpdate(url, exePath) {
-  if (!/^https:\/\/(github\.com|objects\.githubusercontent\.com|release-assets\.githubusercontent\.com)\//.test(url)) throw new Error('Adresse de téléchargement inattendue');
-  const r = await fetch(url, { headers: { 'User-Agent': 'CLRE-Launcher' } });
+// `asset` vient de checkUpdate (côté main), jamais du renderer.
+async function downloadUpdate(asset, exePath) {
+  const prefix = `https://github.com/${asset.repo}/releases/download/`;
+  if (!String(asset.url).toLowerCase().startsWith(prefix.toLowerCase())) throw new Error('Adresse de téléchargement inattendue');
+  const r = await fetch(asset.url, { headers: { 'User-Agent': 'CLRE-Launcher' } });
   if (!r.ok) throw new Error(`Téléchargement impossible (HTTP ${r.status})`);
+  const buf = Buffer.from(await r.arrayBuffer());
+  if (asset.size && buf.length !== asset.size) throw new Error('Téléchargement incomplet, réessaie');
+  const got = crypto.createHash('sha256').update(buf).digest('hex');
+  if (got !== asset.sha256) throw new Error('Le fichier téléchargé ne correspond pas à l\'empreinte publiée : mise à jour annulée');
   const tmp = exePath.replace(/\.exe$/i, '.update.exe');
-  fs.writeFileSync(tmp, Buffer.from(await r.arrayBuffer()));
+  fs.writeFileSync(tmp, buf);
   return tmp;
 }
 
+const psQuote = (s) => `'${String(s).replace(/'/g, "''")}'`;
+
 // Remplace l'exe portable une fois le launcher fermé, puis le relance.
+// PowerShell (commande encodée en UTF-16) gère les chemins accentués, contrairement à un .cmd.
 function installUpdate(tmp, exePath) {
-  const cmd = path.join(os.tmpdir(), 'clre-update.cmd');
-  fs.writeFileSync(cmd, [
-    '@echo off',
-    `:wait`,
-    `tasklist /fi "PID eq ${process.pid}" | find "${process.pid}" >nul && (timeout /t 1 /nobreak >nul & goto wait)`,
-    `move /y "${tmp}" "${exePath}" >nul`,
-    `start "" "${exePath}"`,
-    `del "%~f0"`,
-  ].join('\r\n'));
-  spawn('cmd.exe', ['/c', cmd], { detached: true, stdio: 'ignore', windowsHide: true }).unref();
+  const script = [
+    `try { Wait-Process -Id ${process.pid} -Timeout 60 -ErrorAction Stop } catch {}`,
+    // L'exe portable reste verrouillé quelques secondes, le temps que son lanceur se ferme.
+    `for ($i = 0; $i -lt 60; $i++) { try { Move-Item -LiteralPath ${psQuote(tmp)} -Destination ${psQuote(exePath)} -Force -ErrorAction Stop; break } catch { Start-Sleep -Milliseconds 500 } }`,
+    `Start-Process -FilePath ${psQuote(exePath)}`,
+  ].join('\n');
+  spawn('powershell.exe', ['-NoProfile', '-NonInteractive', '-WindowStyle', 'Hidden', '-EncodedCommand', Buffer.from(script, 'utf16le').toString('base64')],
+    { detached: true, stdio: 'ignore', windowsHide: true }).unref();
 }
 
 module.exports = { Discord, createShortcut, checkUpdate, downloadUpdate, installUpdate };

@@ -1,5 +1,6 @@
 // Journal de jeu (sessions, succès débloqués, captures) et vitrine des succès rares.
 const fs = require('fs');
+const { readJsonSafe, writeJsonAtomic } = require('./fsutil');
 const gameinfo = require('./gameinfo');
 const extras = require('./extras');
 
@@ -32,8 +33,8 @@ function buildJournal(lib, games, sessions, onlyKey) {
 
 // Pourcentages mondiaux mis en cache 7 jours (un appel public par jeu)
 class Rarity {
-  constructor(file) { this.file = file; try { this.db = JSON.parse(fs.readFileSync(file, 'utf8')); } catch { this.db = {}; } this.busy = null; }
-  save() { try { fs.writeFileSync(this.file, JSON.stringify(this.db)); } catch {} }
+  constructor(file) { this.file = file; this.db = readJsonSafe(file, {}); this.busy = null; }
+  save() { try { writeJsonAtomic(this.file, this.db); } catch {} }
   async percents(appids) {
     const now = Date.now() / 1000;
     const todo = appids.filter((id) => !this.db[id] || this.db[id].t < now - 7 * 86400);

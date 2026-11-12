@@ -3,6 +3,7 @@
 const os = require('os');
 const fs = require('fs');
 const { execFile } = require('child_process');
+const { PS_UTF8 } = require('./reg');
 
 const cache = new Map();
 
@@ -54,7 +55,7 @@ let specs = null;
 function pcSpecs() {
   if (specs) return Promise.resolve(specs);
   return new Promise((resolve) => {
-    const ps = 'Get-CimInstance Win32_VideoController | ForEach-Object { $_.Name + "|" + $_.AdapterRAM }; "OS|" + (Get-CimInstance Win32_OperatingSystem).Caption';
+    const ps = PS_UTF8 + 'Get-CimInstance Win32_VideoController | ForEach-Object { $_.Name + "|" + $_.AdapterRAM }; "OS|" + (Get-CimInstance Win32_OperatingSystem).Caption';
     execFile('powershell', ['-NoProfile', '-Command', ps], { windowsHide: true, timeout: 15000 }, (err, out) => {
       const lines = String(out || '').split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
       const gpus = lines.filter((l) => !l.startsWith('OS|')).map((l) => l.split('|')[0]).filter((n) => n && !/basic display|remote|virtual/i.test(n));

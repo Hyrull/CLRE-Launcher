@@ -2,6 +2,7 @@ const { app, BrowserWindow, ipcMain, shell, protocol, net, Tray, Menu, nativeIma
 const { Overlay } = require('./overlay');
 const { Perf } = require('./perf');
 const journal = require('./journal');
+const { readJsonSafe, writeJsonAtomic } = require('./fsutil');
 const { Tags } = require('./tags');
 const storefront = require('./storefront');
 const { Presence } = require('./presence');
@@ -12,7 +13,7 @@ const path = require('path');
 const fs = require('fs');
 const { execFile, spawn } = require('child_process');
 const { pathToFileURL } = require('url');
-const { loadLibrary, regDword } = require('./steam');
+const { loadLibrary, regDwordAsync } = require('./steam');
 const { loadEpic, epicUri, makeGame: makeEpicGame, EPIC_DATA } = require('./epic');
 const { EpicDl } = require('./epicdl');
 const { loadPlatforms, applyArt, resolveArt, base } = require('./platforms');
@@ -35,10 +36,13 @@ if (!app.requestSingleInstanceLock()) { app.quit(); process.exit(0); }
 protocol.registerSchemesAsPrivileged([{ scheme: 'steamart', privileges: { standard: true, secure: true, supportFetchAPI: true } }]);
 
 const dataFile = (name) => path.join(app.getPath('userData'), name);
-function readJson(name, fallback = {}) { try { return JSON.parse(fs.readFileSync(dataFile(name), 'utf8')); } catch { return fallback; } }
-function writeJson(name, v) { fs.mkdirSync(app.getPath('userData'), { recursive: true }); fs.writeFileSync(dataFile(name), JSON.stringify(v, null, 2)); }
-const readPrefs = () => readJson('prefs.json');
-const writePrefs = (p) => writeJson('prefs.json', p);
+function readJson(name, fallback = {}) { return readJsonSafe(dataFile(name), fallback); }
+function writeJson(name, v) { writeJsonAtomic(dataFile(name), v, true); }
+// prefs.json n'est écrit que par le launcher : on le garde en mémoire au lieu de le relire
+// plusieurs fois par relevé. Chaque appel reçoit une copie, qu'il peut modifier sans risque.
+let prefsCache = null;
+const readPrefs = () => structuredClone(prefsCache || (prefsCache = readJson('prefs.json')));
+const writePrefs = (p) => { writeJson('prefs.json', p); prefsCache = structuredClone(p); };
 const system = () => ({ closeToTray: true, autostart: false, shortcut: true, ...(readPrefs().system || {}) });
 // Réglages des fonctions en plus (notifications, Discord, sauvegardes, mises à jour)
 const settings = () => {
@@ -93,6 +97,31 @@ function notify(kind, title, body, route) {
   n.show();
 }
 
+// ---------- Doublons entre plateformes ----------
+// Un jeu Ubisoft, EA ou Battle.net acheté sur Steam (ou Epic) s'enregistre aussi chez son éditeur.
+// On garde l'entrée Steam / Epic, qui sait lancer et mettre à jour le jeu, et on masque la copie.
+const normDir = (d) => (d ? path.resolve(String(d)).replace(/[\\/]+$/, '').toLowerCase() : '');
+function dedupeStores(all) {
+  const primary = all.filter((g) => g.store === 'steam' || g.store === 'epic');
+  const dirs = new Map();
+  for (const g of primary) if (g.installDir) dirs.set(normDir(g.installDir), g);
+  const names = new Map();
+  for (const g of primary) if (g.name) names.set(normName(g.name), g);
+  const steamCommon = /[\\/]steamapps[\\/]common[\\/]/i;
+  return all.filter((g) => {
+    if (g.store === 'steam' || g.store === 'epic' || g.store === 'custom' || g.store === 'gog') return true;
+    const dir = normDir(g.installDir);
+    let twin = dir && dirs.get(dir);
+    // Installé dans un dossier Steam : forcément la version Steam, même si son nom diffère.
+    if (!twin && dir && steamCommon.test(dir + path.sep)) twin = names.get(normName(g.name)) || { alsoOn: [] };
+    // EA ne dit pas où le jeu est installé : on se fie au nom.
+    if (!twin && g.store === 'ea') twin = names.get(normName(g.name));
+    if (!twin) return true;
+    if (twin.key) twin.alsoOn = [...new Set([...(twin.alsoOn || []), g.store])];
+    return false;
+  });
+}
+
 // ---------- Synchronisation de toutes les plateformes ----------
 async function sync() {
   const prefs = readPrefs();
@@ -134,7 +163,9 @@ async function sync() {
   // Jeux GOG possédés mais pas installés (compte GOG connecté dans le launcher)
   if (gog) {
     const have = new Set(others.filter((g) => g.store === 'gog').map((g) => g.platformId));
-    for (const o of await gog.ownedGames()) if (!have.has(o.id)) others.push(base('gog', o.id, o.title));
+    let owned = [];
+    try { owned = await gog.ownedGames(); } catch (e) { console.warn('GOG : jeux possédés indisponibles :', e.message); }
+    for (const o of owned || []) if (!have.has(o.id)) others.push(base('gog', o.id, o.title));
     // Mises à jour GOG : résultat connu tout de suite, vérification en fond (au plus toutes les 6 h par jeu)
     const gogInstalled = others.filter((g) => g.store === 'gog' && g.installed);
     for (const g of gogInstalled) g.needsUpdate = gog.updateFlag(g.platformId);
@@ -152,7 +183,7 @@ async function sync() {
     g.lastPlayed = Math.max(g.lastPlayed, t.last);
   }
 
-  const all = [...lib.games, ...epic.games, ...others];
+  const all = dedupeStores([...lib.games, ...epic.games, ...others]);
   if (steamError && !all.length) throw new Error(steamError);
   // Jaquettes choisies à la main
   const covers = prefs.coverOverrides || {};
@@ -216,8 +247,12 @@ function watch(paths) {
   const later = () => { clearTimeout(timer); timer = setTimeout(() => win && win.webContents.send('library-changed'), 1500); };
   for (const p of paths) {
     const steamapps = /[\\/]steamapps$/i.test(p);
+    const userConfig = /[\\/]userdata[\\/]\d+[\\/]config$/i.test(p);
     try {
       watchers.push(fs.watch(p, (ev, name) => {
+        // Steam écrit sans arrêt dans userdata/<id>/config : seuls le temps de jeu (localconfig.vdf)
+        // et les collections (cloudstorage) intéressent la bibliothèque.
+        if (userConfig && !/^(localconfig\.vdf|cloudstorage)([\\/]|$)/i.test(String(name || ''))) return;
         if (steamapps) {
           const f = String(name || '');
           if (IGNORED_STEAMAPPS.test(f)) return;
@@ -239,15 +274,21 @@ function listProcesses() {
   });
 }
 
+// Un relevé à la fois : si tasklist est lent, le suivant attend au lieu de s'empiler.
+let polling = false;
+async function pollRunningSafe() {
+  if (polling) return;
+  polling = true;
+  try { await pollRunning(); } catch (e) { console.warn('Relevé des jeux lancés :', e.message); } finally { polling = false; }
+}
+
 async function pollRunning() {
   const now = [];
-  const steamId = regDword('RunningAppID');
-  if (steamId) now.push(String(steamId));
   const watched = [...games.values()].filter((g) => g.store !== 'steam' && g.installed && g.processNames && g.processNames.length);
-  if (watched.length) {
-    const procs = await listProcesses();
-    for (const g of watched) if (g.processNames.some((p) => procs.has(p))) now.push(g.key);
-  }
+  // Registre Steam et liste des processus lus en même temps, sans bloquer l'interface
+  const [steamId, procs] = await Promise.all([regDwordAsync('RunningAppID'), watched.length ? listProcesses() : null]);
+  if (steamId) now.push(String(steamId));
+  if (procs) for (const g of watched) if (g.processNames.some((p) => procs.has(p))) now.push(g.key);
   const names = Object.fromEntries(now.map((k) => [k, (games.get(k) || {}).name || k]));
   sessions.tick(now, names);
 
@@ -375,16 +416,40 @@ function beforeLaunch(key) {
     if (/^[\w .()-]+\.exe$/i.test(proc)) execFile('taskkill', ['/IM', proc], { windowsHide: true }, () => {});
   }
   for (const exe of o.open || []) {
-    if (fs.existsSync(exe)) spawn(exe, [], { cwd: path.dirname(exe), detached: true, stdio: 'ignore' }).unref();
+    if (fs.existsSync(exe)) startFile(exe, '', path.dirname(exe), () => {});
   }
   return o.args || '';
 }
 
+// Démarre un programme selon son type :
+// - .exe : directement, avec ses arguments ;
+// - .lnk / .url : comme un double-clic dans l'Explorateur (le raccourci porte ses propres arguments) ;
+// - .bat / .cmd : via cmd.exe (Node refuse de les lancer directement depuis la version 20.12).
+function startFile(file, argStr, cwd, onError) {
+  const ext = path.extname(file).toLowerCase();
+  if (ext === '.lnk' || ext === '.url') {
+    shell.openPath(file).then((err) => { if (err) onError(err); });
+    return;
+  }
+  const args = String(argStr || '').trim().match(/(?:[^\s"]+|"[^"]*")+/g) || [];
+  try {
+    let child;
+    if (ext === '.bat' || ext === '.cmd') {
+      // Les caractères spéciaux de cmd.exe dans les arguments pourraient enchaîner d'autres commandes.
+      if (/[&|<>^%]/.test(argStr || '') || /["%]/.test(file)) { onError('caractère non pris en charge dans les arguments'); return; }
+      const line = `/d /s /c ""${file}"${args.length ? ' ' + args.join(' ') : ''}"`;
+      child = spawn('cmd.exe', [line], { cwd, detached: true, stdio: 'ignore', windowsVerbatimArguments: true });
+    } else {
+      child = spawn(file, args.map((a) => a.replace(/^"|"$/g, '')), { cwd, detached: true, stdio: 'ignore' });
+    }
+    child.on('error', (e) => onError(e.message));
+    child.unref();
+  } catch (e) { onError(e.message); }
+}
+
 function launchExe(g, extra = '') {
-  const args = `${g.args || g.launchParam || ''} ${extra}`.trim().match(/(?:[^\s"]+|"[^"]*")+/g) || [];
-  const child = spawn(g.exe, args.map((a) => a.replace(/^"|"$/g, '')), { cwd: g.workingDir || path.dirname(g.exe), detached: true, stdio: 'ignore' });
-  child.on('error', () => win && win.webContents.send('toast', `Impossible de lancer ${g.name}`));
-  child.unref();
+  startFile(g.exe, `${g.args || g.launchParam || ''} ${extra}`, g.workingDir || path.dirname(g.exe),
+    () => win && win.webContents.send('toast', `Impossible de lancer ${g.name}`));
 }
 
 function action(key, kind) {
@@ -616,7 +681,7 @@ function createWindow() {
   win.on('close', (e) => {
     if (!quitting && system().closeToTray) { e.preventDefault(); win.hide(); }
   });
-  setInterval(pollRunning, POLL_MS);
+  setInterval(pollRunningSafe, POLL_MS);
   setInterval(pollDownloads, 3000);
 }
 
@@ -678,11 +743,20 @@ app.whenReady().then(() => {
   const prefs = () => readPrefs();
   const steamAppId = (key) => { const g = games.get(String(key)); return g ? (g.store === 'steam' ? g.appid : g.steamAppId) : null; };
 
-  ipcMain.handle('library', () => sync());
+  // Une seule synchro à la fois : un appel pendant une synchro en cours reçoit le même résultat.
+  let syncing = null;
+  ipcMain.handle('library', () => syncing || (syncing = sync().finally(() => { syncing = null; })));
   for (const kind of ['play', 'install', 'uninstall', 'store', 'details']) ipcMain.handle(kind, (_e, key) => action(key, kind));
   ipcMain.handle('open-store-home', () => shell.openExternal('steam://store'));
   ipcMain.handle('open-friends', () => shell.openExternal('steam://open/friends'));
-  ipcMain.handle('open-url', (_e, url) => { if (/^https:\/\/([a-z0-9-]+\.)*(steampowered|steamcommunity|steamstatic|akamaihd)\.(com|net)\//.test(String(url)) || /^steam:\/\//.test(String(url))) shell.openExternal(url); });
+  // Liens web (actus, Epic, HowLongToBeat, sites officiels) et liens steam://.
+  // On n'ouvre que https et steam : jamais file:, ms-*, ou un autre protocole qui lancerait un programme.
+  ipcMain.handle('open-url', (_e, url) => {
+    let u;
+    try { u = new URL(String(url)); } catch { return false; }
+    if (u.protocol === 'steam:' || (u.protocol === 'https:' && !u.username && !u.password)) { shell.openExternal(u.href); return true; }
+    return false;
+  });
   ipcMain.handle('open-folder', (_e, key) => {
     const g = games.get(String(key));
     if (g && g.installDir && fs.existsSync(g.installDir)) shell.openPath(g.installDir);
@@ -1042,13 +1116,22 @@ app.whenReady().then(() => {
 
   // ---------- Mise à jour du launcher ----------
   let pendingUpdate = null;
+  // L'adresse et l'empreinte du fichier restent ici : le renderer ne peut pas choisir ce qui est téléchargé.
+  let checkedUpdate = null;
   ipcMain.handle('update:check', async () => {
-    try { return await sys.checkUpdate(settings().updateRepo, app.getVersion()); } catch (e) { return { error: e.message }; }
+    checkedUpdate = null;
+    try {
+      const u = await sys.checkUpdate(settings().updateRepo, app.getVersion());
+      if (u.available) checkedUpdate = u.asset;
+      const { asset, ...pub } = u;
+      return pub;
+    } catch (e) { return { error: e.message }; }
   });
-  ipcMain.handle('update:download', async (_e, url) => {
+  ipcMain.handle('update:download', async () => {
     if (!app.isPackaged) throw new Error('La mise à jour automatique ne marche que depuis le .exe');
+    if (!checkedUpdate) throw new Error('Vérifie d\'abord s\'il existe une nouvelle version');
     const exe = process.env.PORTABLE_EXECUTABLE_FILE || process.execPath;
-    pendingUpdate = { tmp: await sys.downloadUpdate(url, exe), exe };
+    pendingUpdate = { tmp: await sys.downloadUpdate(checkedUpdate, exe), exe };
     return true;
   });
   ipcMain.handle('update:install', () => {
@@ -1094,5 +1177,5 @@ app.whenReady().then(() => {
   if (process.env.LAUNCHER_SNAP && !app.isPackaged) require('./dev-snap')(win, process.env.LAUNCHER_SNAP);
 });
 
-app.on('will-quit', () => { globalShortcut.unregisterAll(); overlay.destroy(); if (perf) perf.stopAll(); });
+app.on('will-quit', () => { if (sessions && sessions.open.size) sessions.save(); globalShortcut.unregisterAll(); overlay.destroy(); if (perf) perf.stopAll(); });
 app.on('window-all-closed', () => { if (quitting) app.quit(); });

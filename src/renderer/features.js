@@ -365,13 +365,22 @@ function setCouch(on) {
   toast(on ? 'Mode canapé · A valider · B retour · Start pour quitter' : 'Mode canapé désactivé');
   setTimeout(() => moveFocus('down'), 100);
 }
-const pad = { prev: [], repeat: 0, last: 0 };
+const pad = { prev: [], repeat: 0, last: 0, armed: [], running: false };
+// Un stick ne compte qu'après être passé par le centre : un stick qui dérive, ou un axe qui reste
+// bloqué d'un côté (manette non standard), ne fait plus défiler la barre latérale tout seul.
+function stickAxis(i, v) {
+  if (Math.abs(v) < 0.3) pad.armed[i] = true;
+  return pad.armed[i] ? v : 0;
+}
 function pollPad(t) {
   const gp = [...(navigator.getGamepads ? navigator.getGamepads() : [])].find(Boolean);
-  if (gp) {
+  if (!gp) { pad.running = false; return; } // plus de manette : la boucle s'arrête jusqu'à la prochaine
+  // Fenêtre en arrière-plan (tu joues avec la manette) : le launcher ignore les touches.
+  if (!document.hasFocus()) { pad.prev = gp.buttons.map((x) => x.pressed); pad.dir = null; requestAnimationFrame(pollPad); return; }
+  {
     const b = gp.buttons.map((x) => x.pressed);
     const pressed = (i) => b[i] && !pad.prev[i];
-    const ax = gp.axes[0] || 0, ay = gp.axes[1] || 0;
+    const ax = stickAxis(0, gp.axes[0] || 0), ay = stickAxis(1, gp.axes[1] || 0);
     const dir = b[12] || ay < -0.5 ? 'up' : b[13] || ay > 0.5 ? 'down' : b[14] || ax < -0.5 ? 'left' : b[15] || ax > 0.5 ? 'right' : null;
     if (dir) {
       document.body.classList.add('pad');
@@ -386,8 +395,15 @@ function pollPad(t) {
   }
   requestAnimationFrame(pollPad);
 }
-requestAnimationFrame(pollPad);
-window.addEventListener('gamepadconnected', () => toast('Manette détectée · Start pour le mode canapé'));
+// La boucle ne tourne que lorsqu'une manette est branchée (avant : 60 fois par seconde en permanence).
+function startPad() {
+  if (pad.running) return;
+  pad.running = true;
+  pad.armed = [];
+  requestAnimationFrame(pollPad);
+}
+if ([...(navigator.getGamepads ? navigator.getGamepads() : [])].some(Boolean)) startPad();
+window.addEventListener('gamepadconnected', () => { startPad(); toast('Manette détectée · Start pour le mode canapé'); });
 document.addEventListener('keydown', (e) => {
   if (!state.couch || /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) return;
   const dir = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right' }[e.key];
@@ -410,8 +426,8 @@ document.addEventListener('click', (e) => {
     return;
   }
   if (t.dataset.shot) { api.openScreenshot(t.dataset.shot); return; }
-  if (t.dataset.url) { api.openUrl(t.dataset.url); return; }
-  if (t.dataset.steam) api.openUrl(t.dataset.steam);
+  const url = t.dataset.url || t.dataset.steam;
+  if (url) api.openUrl(url).then((ok) => { if (ok === false) toast('Ce lien ne peut pas être ouvert'); });
 }, true);
 
 let noteTimer;
@@ -419,7 +435,11 @@ document.addEventListener('input', (e) => {
   if (!e.target.dataset.note) return;
   clearTimeout(noteTimer);
   const k = e.target.dataset.note, v = e.target.value;
-  noteTimer = setTimeout(() => { state.local.notes = { ...state.local.notes, [k]: v }; if (!v) delete state.local.notes[k]; saveLocal(); }, 400);
+  // L'état suit chaque frappe : un redessin de la fiche (infos qui finissent de charger) garde tout le texte.
+  // Seul l'enregistrement sur le disque attend une pause de 400 ms.
+  state.local.notes = { ...state.local.notes, [k]: v };
+  if (!v) delete state.local.notes[k];
+  noteTimer = setTimeout(saveLocal, 400);
 });
 
 

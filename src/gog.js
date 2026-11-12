@@ -5,6 +5,7 @@
 // lance en mode silencieux. Il s'enregistre dans le registre GOG, donc la synchro le voit tout seul.
 const fs = require('fs');
 const path = require('path');
+const { writeAtomic } = require('./fsutil');
 const { Readable, Transform } = require('stream');
 const { pipeline } = require('stream/promises');
 const { execFile } = require('child_process');
@@ -63,7 +64,7 @@ class Gog {
     this.auth = a;
     if (!a) { try { fs.unlinkSync(this.authFile); } catch { /* déjà absent */ } return; }
     const txt = JSON.stringify(a);
-    fs.writeFileSync(this.authFile, safeStorage.isEncryptionAvailable() ? safeStorage.encryptString(txt) : Buffer.from(txt));
+    writeAtomic(this.authFile, safeStorage.isEncryptionAvailable() ? safeStorage.encryptString(txt) : Buffer.from(txt));
   }
   status() {
     return { connected: !!this.auth, username: (this.auth && this.auth.username) || '', dir: this.getDir() };
@@ -214,7 +215,7 @@ class Gog {
         this.updates[id] = { t: Date.now(), buildId: g.buildId, update };
       } catch { /* hors ligne */ }
     }
-    try { fs.writeFileSync(this.updatesFile, JSON.stringify(this.updates)); } catch { /* rien */ }
+    try { writeAtomic(this.updatesFile, JSON.stringify(this.updates)); } catch { /* rien */ }
     return changed;
   }
 
@@ -231,7 +232,7 @@ class Gog {
     });
   }
   save() {
-    try { fs.writeFileSync(this.queueFile, JSON.stringify(this.jobs.map(({ speed, ...j }) => j), null, 2)); } catch { /* rien */ }
+    try { writeAtomic(this.queueFile, JSON.stringify(this.jobs.map(({ speed, ...j }) => j), null, 2)); } catch { /* rien */ }
     this.onChange();
   }
 
@@ -323,7 +324,7 @@ class Gog {
     this.jobs = this.jobs.filter((x) => x !== j);
     if (j.update) {
       this.updates[j.id] = { t: Date.now(), buildId: '', update: false };
-      try { fs.writeFileSync(this.updatesFile, JSON.stringify(this.updates)); } catch { /* rien */ }
+      try { writeAtomic(this.updatesFile, JSON.stringify(this.updates)); } catch { /* rien */ }
     }
     this.onDone(j);
   }
@@ -334,6 +335,19 @@ class Gog {
     // Le lien GOG redirige vers le CDN ; le nom du fichier est dans l'adresse finale
     const have = f.path && fs.existsSync(f.path) ? fs.statSync(f.path).size : 0;
     const r = await fetch(`${EMBED}${f.url}`, { headers: have ? { ...head, Range: `bytes=${have}-` } : head, signal });
+    // 416 : on demande la suite d'un fichier déjà complet (le launcher s'est arrêté juste avant de le noter « fini »).
+    if (r.status === 416 && have) {
+      try { await r.body?.cancel(); } catch { /* rien */ }
+      const total = Number((/\/(\d+)\s*$/.exec(r.headers.get('content-range') || '') || [])[1] || 0);
+      if (!total || total === have) {
+        j.total += have - f.size; f.size = have;
+        j.bytes += have - f.got; f.got = have;
+        return;
+      }
+      // Fichier local plus grand que celui de GOG : il est abîmé, on le retélécharge en entier.
+      fs.rmSync(f.path, { force: true });
+      return this.download(j, f, signal);
+    }
     if (!r.ok) throw new Error(`Téléchargement refusé par GOG (HTTP ${r.status})`);
     const partial = r.status === 206;
     if (!f.path) f.path = path.join(j.dlDir, safeName(decodeURIComponent(path.basename(new URL(r.url).pathname))) || `setup-${j.id}.exe`);

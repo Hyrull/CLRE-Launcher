@@ -245,18 +245,23 @@ function openGallery(key, index) {
 }
 
 // ---------- Trailers (HLS) ----------
+// Lecteurs HLS des bandes-annonces lancées : détruits dès que la vidéo quitte la page
+// (changement de fiche, redessin), sinon le téléchargement et le tampon continuaient en fond.
+const trailerPlayers = new Map(); // <video> -> Hls
 new MutationObserver(() => {
+  for (const [v, h] of trailerPlayers) if (!v.isConnected) { h.destroy(); trailerPlayers.delete(v); }
   document.querySelectorAll('video[data-hls]:not([data-ready])').forEach((v) => {
     v.dataset.ready = '1';
     v.addEventListener('play', () => {
       if (v.dataset.loaded) return;
       v.dataset.loaded = '1';
       if (v.dataset.hls && window.Hls && Hls.isSupported()) {
-        const h = new Hls({ capLevelToPlayerSize: true });
+        const h = new Hls({ capLevelToPlayerSize: true, maxBufferLength: 30 });
         h.loadSource(v.dataset.hls);
         h.attachMedia(v);
-        h.on(Hls.Events.MANIFEST_PARSED, () => v.play());
-      } else if (v.dataset.mp4) { v.src = v.dataset.mp4; v.play(); }
+        h.on(Hls.Events.MANIFEST_PARSED, () => v.play().catch(() => {}));
+        trailerPlayers.set(v, h);
+      } else if (v.dataset.mp4) { v.src = v.dataset.mp4; v.play().catch(() => {}); }
     }, { once: false });
   });
 }).observe(document.getElementById('view'), { childList: true, subtree: true });
@@ -469,7 +474,7 @@ new MutationObserver(() => {
     st.innerHTML = `Nouvelle version ${esc(u.latest)} disponible. <button type="button" class="link-btn" id="dl-update">Télécharger et installer</button>`;
     $('#dl-update', dlg).onclick = async () => {
       st.textContent = 'Téléchargement…';
-      try { await api.downloadUpdate(u.url); st.textContent = 'Prêt. Le launcher va redémarrer'; setTimeout(() => api.installUpdate(), 800); } catch (e) { st.textContent = cleanErr(e); }
+      try { await api.downloadUpdate(); st.textContent = 'Prêt. Le launcher va redémarrer'; setTimeout(() => api.installUpdate(), 800); } catch (e) { st.textContent = cleanErr(e); }
     };
   };
 }).observe($('#settings'), { childList: true, subtree: true, attributes: true, attributeFilter: ['open'] });

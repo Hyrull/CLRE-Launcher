@@ -4,7 +4,8 @@
 // ajoute les jeux possédés jamais lancés sur ce PC.
 const fs = require('fs');
 const path = require('path');
-const { execFileSync } = require('child_process');
+const { execFile, execFileSync } = require('child_process');
+const { regQuery } = require('./reg');
 
 // ---------- VDF texte ----------
 function parseVdf(text) {
@@ -60,9 +61,18 @@ function get(obj, ...keys) {
 function parseAppInfo(file, wanted) {
   let buf;
   try { buf = fs.readFileSync(file); } catch { return new Map(); }
+  // Fichier vide, tronqué (Steam le réécrit) ou format inconnu : on garde ce qui a pu être lu,
+  // au lieu de faire disparaître toute la bibliothèque Steam.
+  const out = new Map();
+  try { parseAppInfoBuf(buf, wanted, out); } catch (e) { console.warn('appinfo.vdf illisible en partie :', e.message); }
+  return out;
+}
+
+function parseAppInfoBuf(buf, wanted, out) {
+  if (buf.length < 16) return;
   const magic = buf.readUInt32LE(0);
   const v29 = magic === 0x07564429;
-  if (!v29 && magic !== 0x07564428) return new Map();
+  if (!v29 && magic !== 0x07564428) throw new Error(`format inconnu (0x${magic.toString(16)})`);
   let off = 8;
   let strings = null;
   if (v29) {
@@ -72,8 +82,7 @@ function parseAppInfo(file, wanted) {
     let p = tableOff + 4;
     for (let k = 0; k < count; k++) { const e = buf.indexOf(0, p); strings[k] = buf.toString('utf8', p, e); p = e + 1; }
   }
-  const out = new Map();
-  const readCStr = (p) => { const e = buf.indexOf(0, p); return [buf.toString('utf8', p, e), e + 1]; };
+  const readCStr =(p) => { const e = buf.indexOf(0, p); return [buf.toString('utf8', p, e), e + 1]; };
   function readKV(p, end) {
     const obj = {};
     while (p < end) {
@@ -96,6 +105,7 @@ function parseAppInfo(file, wanted) {
     if (appid === 0) break;
     const size = buf.readUInt32LE(off); off += 4;
     const end = off + size;
+    if (end > buf.length) break; // fichier tronqué
     if (!wanted || wanted.has(appid)) {
       try {
         const [kv] = readKV(off + 60, end);
@@ -105,13 +115,12 @@ function parseAppInfo(file, wanted) {
     }
     off = end;
   }
-  return out;
 }
 
 // ---------- Localisation de Steam ----------
 function findSteamPath() {
   try {
-    const out = execFileSync('reg', ['query', 'HKCU\\Software\\Valve\\Steam', '/v', 'SteamPath'], { encoding: 'utf8', windowsHide: true });
+    const out = regQuery('HKCU\\Software\\Valve\\Steam', ['/v', 'SteamPath']);
     const m = out.match(/SteamPath\s+REG_SZ\s+(.+)/);
     if (m) return path.normalize(m[1].trim());
   } catch { /* pas de registre */ }
@@ -125,6 +134,16 @@ function regDword(name) {
     const m = out.match(/REG_DWORD\s+0x([0-9a-f]+)/i);
     return m ? parseInt(m[1], 16) : 0;
   } catch { return 0; }
+}
+
+// Même lecture, sans bloquer le processus principal (relevé toutes les 5 s).
+function regDwordAsync(name) {
+  return new Promise((resolve) => {
+    execFile('reg', ['query', 'HKCU\\Software\\Valve\\Steam', '/v', name], { encoding: 'utf8', windowsHide: true, timeout: 4000 }, (err, out) => {
+      const m = !err && /REG_DWORD\s+0x([0-9a-f]+)/i.exec(out || '');
+      resolve(m ? parseInt(m[1], 16) : 0);
+    });
+  });
 }
 
 const STEAM64_BASE = 76561197960265728n;
@@ -345,4 +364,4 @@ function artFor(steamPath, appid) {
   return art;
 }
 
-module.exports = { loadLibrary, findSteamPath, parseVdf, parseAppInfo, regDword, readVdf, get, libraryFolders };
+module.exports = { loadLibrary, findSteamPath, parseVdf, parseAppInfo, regDword, regDwordAsync, readVdf, get, libraryFolders };

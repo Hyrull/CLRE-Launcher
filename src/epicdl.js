@@ -4,6 +4,7 @@
 // %APPDATA%\launcher\legendary, séparées d'une éventuelle installation de Legendary ou de Heroic.
 const fs = require('fs');
 const path = require('path');
+const { writeAtomic } = require('./fsutil');
 const crypto = require('crypto');
 const { spawn, execFile } = require('child_process');
 const { BrowserWindow } = require('electron');
@@ -176,7 +177,7 @@ class EpicDl {
         const changed = JSON.stringify(list) !== JSON.stringify(this.owned);
         this.owned = list;
         this.ownedAt = Date.now();
-        try { fs.writeFileSync(this.ownedFile, JSON.stringify(list)); } catch { /* rien */ }
+        try { writeAtomic(this.ownedFile, JSON.stringify(list)); } catch { /* rien */ }
         if (changed && onFresh) onFresh();
       }).catch(() => {}).finally(() => { this.refreshing = null; });
     }
@@ -228,7 +229,7 @@ class EpicDl {
     }));
   }
   save() {
-    try { fs.writeFileSync(this.queueFile, JSON.stringify(this.jobs.map(({ speed, ...j }) => j), null, 2)); } catch { /* rien */ }
+    try { writeAtomic(this.queueFile, JSON.stringify(this.jobs.map(({ speed, ...j }) => j), null, 2)); } catch { /* rien */ }
     this.onChange();
   }
 

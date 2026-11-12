@@ -3,6 +3,7 @@
 // succès et amis demandent la clé Web API.
 const fs = require('fs');
 const path = require('path');
+const { readJsonSafe, writeJsonAtomic } = require('./fsutil');
 const { readVdf, get, libraryFolders } = require('./steam');
 
 const now = () => Math.floor(Date.now() / 1000);
@@ -11,30 +12,30 @@ const now = () => Math.floor(Date.now() / 1000);
 class Sessions {
   constructor(file) {
     this.file = file;
-    try { this.list = JSON.parse(fs.readFileSync(file, 'utf8')); } catch { this.list = []; }
+    this.list = readJsonSafe(file, []);
     if (!Array.isArray(this.list)) this.list = [];
     this.open = new Map(); // key -> session en cours
   }
-  save() { try { fs.writeFileSync(this.file, JSON.stringify(this.list)); } catch { /* disque plein ? */ } }
+  save() { this.savedAt = Date.now(); try { writeJsonAtomic(this.file, this.list); } catch { /* disque plein ? */ } }
   // Appelé à chaque relevé avec les clés des jeux qui tournent.
   tick(runningKeys, names) {
     const t = now();
-    let dirty = false;
+    let changed = false; // une session commence ou se termine : on enregistre tout de suite
     for (const key of runningKeys) {
       let s = this.open.get(key);
-      if (!s) { s = { key, name: names[key] || key, start: t, end: t }; this.list.push(s); this.open.set(key, s); }
+      if (!s) { s = { key, name: names[key] || key, start: t, end: t }; this.list.push(s); this.open.set(key, s); changed = true; }
       s.end = t;
-      dirty = true;
     }
     for (const [key, s] of this.open) {
       if (runningKeys.includes(key)) continue;
       s.end = t;
       this.open.delete(key);
-      dirty = true;
+      changed = true;
     }
     // On ne garde pas les sessions de moins d'une minute (lancements ratés)
     this.list = this.list.filter((s) => this.open.has(s.key) && s === this.open.get(s.key) || s.end - s.start >= 60);
-    if (dirty) this.save();
+    // Pendant une partie, seule l'heure de fin avance : une écriture par minute suffit.
+    if (changed || (this.open.size && Date.now() - (this.savedAt || 0) >= 60000)) this.save();
   }
   totals() {
     const out = {};

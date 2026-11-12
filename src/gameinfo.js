@@ -1,6 +1,7 @@
 // Succès Steam lus en local (sans clé API), durée pour finir (HowLongToBeat) et notes.
 const fs = require('fs');
 const path = require('path');
+const { readJsonSafe, writeJsonAtomic } = require('./fsutil');
 const { parseBinKV } = require('./binkv');
 
 const ICON = (appid, f) => (f ? `https://cdn.akamai.steamstatic.com/steamcommunity/public/images/apps/${appid}/${f}` : '');
@@ -92,8 +93,8 @@ function pick(name, list) {
     || list.find((x) => norm(x.game_name).startsWith(n) || n.startsWith(norm(x.game_name))) || list[0] || null;
 }
 class HowLong {
-  constructor(file) { this.file = file; try { this.db = JSON.parse(fs.readFileSync(file, 'utf8')); } catch { this.db = {}; } }
-  save() { try { fs.writeFileSync(this.file, JSON.stringify(this.db)); } catch {} }
+  constructor(file) { this.file = file; this.db = readJsonSafe(file, {}); }
+  save() { try { writeJsonAtomic(this.file, this.db); } catch {} }
   async get(key, name) {
     const hit = this.db[key];
     const now = Date.now() / 1000;

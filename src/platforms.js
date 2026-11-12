@@ -3,11 +3,11 @@
 // puis mis en cache dans art-cache.json.
 const fs = require('fs');
 const path = require('path');
-const { execFileSync } = require('child_process');
+const { regQuery, safeLoad } = require('./reg');
 
 function regTree(key) {
   try {
-    const out = execFileSync('reg', ['query', key, '/s'], { encoding: 'utf8', windowsHide: true, maxBuffer: 4 * 1024 * 1024 });
+    const out = regQuery(key, ['/s']);
     const tree = {};
     let cur = null;
     for (const line of out.split(/\r?\n/)) {
@@ -148,7 +148,7 @@ async function resolveArt(games, cache) {
 }
 
 function loadPlatforms(customList) {
-  return [...loadGog(), ...loadUbisoft(), ...loadEa(), ...loadCustom(customList)];
+  return [...safeLoad('GOG', loadGog), ...safeLoad('Ubisoft', loadUbisoft), ...safeLoad('EA', loadEa), ...safeLoad('jeux ajoutés', () => loadCustom(customList))];
 }
 
 module.exports = { loadPlatforms, applyArt, resolveArt, base };

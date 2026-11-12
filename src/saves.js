@@ -2,6 +2,7 @@
 // (https://github.com/mtkennerly/ludusavi-manifest) qui dit où chaque jeu range ses fichiers.
 const fs = require('fs');
 const path = require('path');
+const { writeAtomic } = require('./fsutil');
 const os = require('os');
 const { Worker } = require('worker_threads');
 
@@ -27,7 +28,7 @@ class Saves {
     try {
       const r = await fetch(MANIFEST_URL);
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
-      fs.writeFileSync(this.manifestFile, Buffer.from(await r.arrayBuffer()));
+      writeAtomic(this.manifestFile, Buffer.from(await r.arrayBuffer()));
     } catch (e) {
       if (age === Infinity) throw new Error(`Impossible de télécharger la base des sauvegardes (${e.message})`);
     }
@@ -54,7 +55,7 @@ class Saves {
         w.once('error', reject);
       });
       this.index = { sig, mtime: fs.statSync(this.manifestFile).mtimeMs, data };
-      fs.writeFileSync(this.indexFile, JSON.stringify(this.index));
+      writeAtomic(this.indexFile, JSON.stringify(this.index));
       return data;
     })();
     try { return await this.indexing; } finally { this.indexing = null; }

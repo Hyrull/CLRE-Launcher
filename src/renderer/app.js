@@ -102,7 +102,14 @@ const ICONS = {
 
 // ---------- Données ----------
 const games = () => (state.lib ? state.lib.games.filter((g) => !g.hidden && !(state.local.hidden || []).includes(g.key)) : []);
-const byId = (id) => state.lib && state.lib.games.find((g) => g.key === String(id));
+// Index par clé, refait seulement quand la bibliothèque change (byId est appelé dans des boucles :
+// journal, activité, historique… une recherche linéaire à chaque fois coûtait cher).
+let byIdIndex = { lib: null, map: null };
+const byId = (id) => {
+  if (!state.lib) return state.lib;
+  if (byIdIndex.lib !== state.lib) byIdIndex = { lib: state.lib, map: new Map(state.lib.games.map((g) => [g.key, g])) };
+  return byIdIndex.map.get(String(id));
+};
 function isFav(g) {
   if (state.local.favAdd.includes(g.key)) return true;
   if (state.local.favRemove.includes(g.key)) return false;
@@ -465,7 +472,7 @@ $('#content').addEventListener('scroll', updateToolbar, { passive: true });
 // Retrouve l'élément qui avait le focus après un redessin (utile à la manette)
 function focusKey(el) {
   if (!el || el === document.body) return null;
-  for (const a of ['data-open', 'data-act', 'data-nav', 'data-tab', 'data-status', 'data-mood', 'data-scope']) {
+  for (const a of ['data-note', 'data-open', 'data-act', 'data-nav', 'data-tab', 'data-status', 'data-mood', 'data-scope']) {
     if (el.hasAttribute(a)) return `[${a}="${CSS.escape(el.getAttribute(a))}"]${el.dataset.id ? `[data-id="${CSS.escape(el.dataset.id)}"]` : ''}`;
   }
   return el.id ? '#' + CSS.escape(el.id) : null;
@@ -475,11 +482,21 @@ function render(opts = {}) {
   const v = state.route.view;
   const el = $('#view');
   if (!state.lib) { el.innerHTML = state.error ? viewError(state.error) : viewLoading(); return; }
-  const focused = focusKey(document.activeElement);
+  const active = document.activeElement;
+  const focused = focusKey(active);
+  // Champ de saisie en cours (note perso…) : on garde le focus et la position du curseur.
+  const typing = active && el.contains(active) && /^(TEXTAREA|INPUT)$/.test(active.tagName) && typeof active.selectionStart === 'number'
+    ? { start: active.selectionStart, end: active.selectionEnd, scroll: active.scrollTop } : null;
   renderSidebar();
   el.innerHTML = VIEWS[v] ? VIEWS[v]() : v === 'home' ? viewHome() : v === 'game' ? viewGame() : viewList();
-  if (!opts.quiet) { el.classList.remove('view-enter'); void el.offsetWidth; el.classList.add('view-enter'); }
-  if (focused && opts.quiet) { const f = document.querySelector(focused); if (f) f.focus({ preventScroll: true }); }
+  if (!opts.quiet && !typing) { el.classList.remove('view-enter'); void el.offsetWidth; el.classList.add('view-enter'); }
+  if (focused && (opts.quiet || typing)) {
+    const f = document.querySelector(focused);
+    if (f) {
+      f.focus({ preventScroll: true });
+      if (typing && typeof f.setSelectionRange === 'function') { try { f.setSelectionRange(typing.start, typing.end); f.scrollTop = typing.scroll; } catch { /* type sans curseur */ } }
+    }
+  }
   document.querySelectorAll('.segmented [data-nav]').forEach((b) => b.classList.toggle('active', b.dataset.nav === v || (b.dataset.nav === 'home' && !['wishlist', 'friends'].includes(v))));
   // L'art du jeu passe sous la barre d'outils, qui devient translucide une fois l'art dépassé
   const hero = $('#game-hero') || $('#home-hero');
@@ -517,8 +534,20 @@ function toast(msg) {
   toastTimer = setTimeout(() => t.classList.remove('show'), 2600);
 }
 
-async function sync(silent) {
-  if (state.syncing) return;
+// Une synchro demandée pendant qu'une autre tourne renvoie la même promesse (l'appelant attend
+// vraiment la nouvelle bibliothèque), puis une synchro discrète est relancée à la fin pour ne rien rater.
+let syncRun = null, syncAgain = false;
+function sync(silent) {
+  if (syncRun) { syncAgain = true; return syncRun; }
+  syncRun = syncOnce(silent).finally(() => {
+    syncRun = null;
+    if (syncAgain) { syncAgain = false; return sync(true); }
+    return undefined;
+  });
+  return syncRun;
+}
+
+async function syncOnce(silent) {
   state.syncing = true;
   $('#sync-btn').classList.add('spinning');
   try {
@@ -538,7 +567,7 @@ async function sync(silent) {
   } finally {
     state.syncing = false;
     $('#sync-btn').classList.remove('spinning');
-    render();
+    render({ quiet: !!silent }); // synchro discrète : pas d'animation d'entrée
   }
 }
 

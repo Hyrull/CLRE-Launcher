@@ -4,6 +4,18 @@
    steamish, sidebarExtras, gameTabs, gameTabContent, doAction, settingsSystem, readExtraSettings, recapRange, platIcon, storeOf, modal */
 
 const S3 = { tintKey: null, videos: new Map(), splash: null };
+// Vidéos de fond (fiches de jeu et du magasin) : on en garde 4 au plus. Les plus anciennes sont
+// arrêtées et leur lecteur HLS détruit, sinon chaque fiche visitée gardait sa vidéo et son tampon en mémoire.
+function trimVideos(max = 4) {
+  while (S3.videos.size > max) {
+    const [k, old] = S3.videos.entries().next().value;
+    old.pause();
+    if (old._hls) old._hls.destroy();
+    old.removeAttribute('src'); old.load();
+    old.remove();
+    S3.videos.delete(k);
+  }
+}
 Object.assign(ICONS, {
   journal: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5V5a2 2 0 0 1 2-2h12v18H6a2 2 0 0 1-2-1.5Z"/><path d="M4 19.5A2 2 0 0 1 6 18h12M9 7h5M9 11h5"/></svg>',
   trophy: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4h10v5a5 5 0 0 1-10 0Z"/><path d="M7 6H4.5a2.5 2.5 0 0 0 2.5 4M17 6h2.5a2.5 2.5 0 0 1-2.5 4M12 14v3.5M8.5 20h7"/></svg>',
@@ -59,7 +71,7 @@ function liveBanner(hero, g) {
     v.addEventListener('playing', () => v.classList.add('on'));
     v.dataset.at = String(Date.now());
     S3.videos.set(g.key, v);
-    if (S3.videos.size > 4) { const [k, old] = S3.videos.entries().next().value; old.pause(); old.removeAttribute('src'); if (old._hls) old._hls.destroy(); S3.videos.delete(k); }
+    trimVideos();
   }
   const img = hero.querySelector('img.bg');
   if (img && v.parentNode !== hero) img.after(v);

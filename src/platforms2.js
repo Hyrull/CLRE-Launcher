@@ -2,7 +2,8 @@
 const fs = require('fs');
 const path = require('path');
 const zlib = require('zlib');
-const { execFile, execFileSync } = require('child_process');
+const { execFile } = require('child_process');
+const { PS_UTF8, safeLoad, regQueryAsync } = require('./reg');
 
 const exists = (p) => { try { return !!p && fs.existsSync(p); } catch { return false; } };
 function base(store, id, name, extra = {}) {
@@ -16,12 +17,15 @@ function base(store, id, name, extra = {}) {
 }
 
 // Programmes installés (clés Uninstall, 32 et 64 bits, machine et utilisateur)
-function uninstallEntries() {
+// Les trois lectures tournent en parallèle et sans bloquer ; le résultat est gardé 5 minutes,
+// car Steam déclenche des synchros bien plus souvent que l'on installe un programme.
+let uninstallCache = { t: 0, list: null };
+async function uninstallEntries() {
+  if (uninstallCache.list && Date.now() - uninstallCache.t < 5 * 60 * 1000) return uninstallCache.list;
   const roots = ['HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall', 'HKLM\\SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall', 'HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall'];
+  const texts = await Promise.all(roots.map((r) => regQueryAsync(r, ['/s']).catch(() => '')));
   const out = [];
-  for (const root of roots) {
-    let txt = '';
-    try { txt = execFileSync('reg', ['query', root, '/s'], { encoding: 'utf8', windowsHide: true, maxBuffer: 16 * 1024 * 1024 }); } catch { continue; }
+  for (const txt of texts) {
     let cur = null;
     for (const line of txt.split(/\r?\n/)) {
       if (/^HKEY_/.test(line)) { cur = { _key: line.trim() }; out.push(cur); continue; }
@@ -29,6 +33,7 @@ function uninstallEntries() {
       if (m && cur) cur[m[1]] = m[2].trim();
     }
   }
+  uninstallCache = { t: Date.now(), list: out };
   return out;
 }
 
@@ -119,7 +124,7 @@ function loadItch() {
 }
 
 // ---------- Xbox / Game Pass PC (paquets avec MicrosoftGame.config) ----------
-const PS_XBOX = `
+const PS_XBOX = PS_UTF8 + `
 $ErrorActionPreference='SilentlyContinue'
 $out = foreach ($p in Get-AppxPackage) {
   if ($p.IsFramework -or $p.SignatureKind -eq 'System') { continue }
@@ -154,11 +159,11 @@ function loadXbox() {
 }
 
 async function loadMorePlatforms() {
-  const entries = uninstallEntries();
-  const sync = [...loadBattleNet(entries), ...loadAmazon(entries), ...loadRiot(), ...loadItch()];
-  let xbox = [];
-  try { xbox = await loadXbox(); } catch { xbox = []; }
-  return [...sync, ...xbox];
+  const xboxP = loadXbox().catch(() => []); // PowerShell (lent) en parallèle du registre
+  let entries = [];
+  try { entries = await uninstallEntries(); } catch (e) { console.warn('Registre (programmes installés) illisible :', e.message); }
+  const sync = [...safeLoad('Battle.net', () => loadBattleNet(entries)), ...safeLoad('Amazon', () => loadAmazon(entries)), ...safeLoad('Riot', loadRiot), ...safeLoad('itch.io', loadItch)];
+  return [...sync, ...await xboxP];
 }
 
 module.exports = { loadMorePlatforms };
