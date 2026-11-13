@@ -66,7 +66,7 @@ const isRunning = (g) => state.running.includes(g.key);
 // Epic n'enregistre pas le temps de jeu : on ne compte que ce que le launcher a mesuré.
 const playtimeLabel = (g) => (g.store === 'epic' && !g.playtime ? 'Pas encore suivi' : fmtPlaytime(g.playtime));
 // Fond de secours quand une image manque : un seul neutre, jamais un dégradé de teintes.
-function fallbackBg() { return 'linear-gradient(160deg, #262628 0%, #19191b 100%)'; }
+function fallbackBg() { return 'var(--art-fallback-flat)'; }
 // La veilleuse : ambre quand le jeu est prêt à lancer, avec un anneau quand il tourne.
 const lamp = (g) => (isRunning(g) ? '<span class="lamp live" aria-hidden="true"></span>' : g.installed ? '<span class="lamp" aria-hidden="true"></span>' : '');
 function caption(g) {
@@ -146,8 +146,8 @@ function coverCard(g, sub) {
   const quick = g.installed
     ? `<span class="quick" data-act="play" data-id="${g.key}" role="button" tabindex="-1">${ICONS.play}Jouer</span>`
     : `<span class="quick install" data-act="install" data-id="${g.key}" role="button" tabindex="-1">${ICONS.download}Installer</span>`;
-  return `<button type="button" class="card ${g.installed || g.managed ? "" : "dim"}" data-open="${g.key}" title="${esc(g.name)}">
-    <div class="cover" style="background:${fallbackBg(g)}">
+  return `<button type="button" data-part="game-card" class="card ${g.installed || g.managed ? "" : "dim"}" data-open="${g.key}" title="${esc(g.name)}">
+    <div class="cover" data-part="cover" style="background:${fallbackBg(g)}">
       <span class="fallback">${esc(g.name)}</span>
       <img src="${esc(g.art.cover)}" alt="" loading="lazy">
       <div class="shade"></div>
@@ -331,7 +331,7 @@ function viewHome() {
     const { kicker, text: reason } = spotlightText(spot);
     spotHtml = `
     <section aria-label="${esc(kicker)}" class="spotlight-frame" id="home-hero" data-hero-key="${spot.key}">
-      <div class="spotlight" style="background:${fallbackBg(spot)}">
+      <div class="spotlight" data-part="spotlight" style="background:${fallbackBg(spot)}">
         <img class="bg" src="${esc(spot.art.hero)}" alt="">
         <div class="shade"></div>
         <div class="body">
@@ -387,7 +387,7 @@ function viewHome() {
     <section class="stack">
       <div class="section-head"><h2 class="section">Reprendre là où tu t’es arrêté</h2><button type="button" class="link-btn" data-nav="history">Historique</button></div>
       <div class="resume">${resume.map((g) => `
-        <div class="resume-card" data-open="${g.key}" role="button" tabindex="0">
+        <div class="resume-card" data-part="resume-card" data-open="${g.key}" role="button" tabindex="0">
           <div class="thumb" style="background:${fallbackBg(g)}"><img src="${esc(g.art.cover)}" alt="" loading="lazy"></div>
           <div class="info">
             <span class="t">${esc(g.name)}</span>
@@ -409,7 +409,7 @@ function viewHome() {
         <p class="section-sub">${backlog.length} jeu${backlog.length > 1 ? 'x' : ''} qui t’attendent${backlog.filter((g) => g.reviewPct >= 85).length ? `, dont ${backlog.filter((g) => g.reviewPct >= 85).length} très bien notés` : ''}</p>
       </div>
       <div class="tiles">${backlog.slice(0, 6).map((g) => `
-        <article class="tile" data-open="${g.key}" style="background:${fallbackBg(g)}">
+        <article class="tile" data-part="tile" data-open="${g.key}" style="background:${fallbackBg(g)}">
           <img src="${esc(g.art.header)}" alt="" loading="lazy">
           <div class="shade"></div>
           <div class="row">
@@ -503,7 +503,7 @@ function viewGame() {
   const controller = { full: 'Prise en charge complète', partial: 'Prise en charge partielle' }[g.controller] || 'Non indiquée';
   const fav = isFav(g);
   return `
-    <section class="game-hero" id="game-hero" data-hero-key="${g.key}" style="background:${fallbackBg(g)}">
+    <section class="game-hero" data-part="game-hero" id="game-hero" data-hero-key="${g.key}" style="background:${fallbackBg(g)}">
       <img class="bg" src="${esc(g.art.hero)}" alt="" data-alt="${esc(g.art.header)}">
       <div class="shade"></div>
       <div class="inner">
@@ -595,6 +595,7 @@ function render(opts = {}) {
   // Champ de saisie en cours (note perso…) : on garde le focus et la position du curseur.
   const typing = active && el.contains(active) && /^(TEXTAREA|INPUT)$/.test(active.tagName) && typeof active.selectionStart === 'number'
     ? { start: active.selectionStart, end: active.selectionEnd, scroll: active.scrollTop } : null;
+  document.body.dataset.view = v;
   renderSidebar();
   el.innerHTML = VIEWS[v] ? VIEWS[v]() : v === 'home' ? viewHome() : v === 'game' ? viewGame() : viewList();
   if (!opts.quiet && !typing) { el.classList.remove('view-enter'); void el.offsetWidth; el.classList.add('view-enter'); }

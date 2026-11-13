@@ -14,14 +14,13 @@ Object.assign(ICONS, {
 });
 Object.assign(state.cache, { store: {}, specs: {}, mods: {}, saves: {} });
 state.recap = { mode: 'month', offset: 0 };
-// Une seule couleur d'accent : le blanc. (Les anciens choix enregistrés sont ignorés.)
-const ACCENT = '#f5f5f7';
+// L'accent vient du thème (variable --accent) ; les anciens choix enregistrés sont ignorés.
 const steamish = (g) => g.store === 'steam' || !!g.steamAppId;
 
 // ---------- Personnalisation ----------
 function applyLook() {
   const l = state.local;
-  document.documentElement.style.setProperty('--accent', ACCENT);
+  document.documentElement.style.removeProperty('--accent');
   document.body.classList.remove('cover-s', 'cover-m', 'cover-l');
   document.body.classList.add(`cover-${l.coverSize || 'm'}`);
 }

@@ -1,12 +1,12 @@
 // Réglages façon « Réglages Système » de macOS : catégories à gauche avec icônes, listes groupées à droite,
 // interrupteurs, recherche. On réorganise la page existante (mêmes champs, même enregistrement).
-/* global state, api, esc, openSettings, toast, doAction */
+/* global state, api, esc, openSettings, toast, doAction, applyTheme */
 
 const PI = (d) => `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
 const PREF_CATS = [
   { id: 'account', title: 'Compte Steam', color: '#0a84ff', icon: PI('<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>'), legends: [], intro: 'Ta bibliothèque est lue directement dans les fichiers de Steam. Rien à connecter.' },
   { id: 'general', title: 'Général', color: '#8e8e93', icon: PI('<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/>'), legends: ['Système'], intro: 'Comment le launcher se comporte avec Windows.' },
-  { id: 'look', title: 'Apparence', color: '#5e5ce6', icon: PI('<circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 0 0 18Z" fill="currentColor"/>'), legends: ['Apparence', 'Effets'], intro: 'Taille des jaquettes et effets visuels.' },
+  { id: 'look', title: 'Apparence', color: '#5e5ce6', icon: PI('<circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 0 0 18Z" fill="currentColor"/>'), legends: ['Apparence', 'Effets'], intro: 'Thème, taille des jaquettes et effets visuels.' },
   { id: 'notif', title: 'Notifications', color: '#ff453a', icon: PI('<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/>'), legends: ['Notifications Windows'], intro: 'Choisis ce qui mérite de t’interrompre.' },
   { id: 'ingame', title: 'En jeu', color: '#30d158', icon: PI('<path d="M6 11h4M8 9v4M15 12h.01M18 10h.01"/><path d="M17.3 5H6.7a4 4 0 0 0-4 3.6l-.7 6.5a2.6 2.6 0 0 0 4.7 1.8L8.5 15h7l1.8 1.9a2.6 2.6 0 0 0 4.7-1.8l-.7-6.5a4 4 0 0 0-4-3.6Z"/>'), legends: ['Infos en jeu', 'Performances'], intro: 'Infos par-dessus le jeu, rappel de pause et mesure des performances.' },
   { id: 'saves', title: 'Sauvegardes', color: '#40c8e0', icon: PI('<path d="M21 8v13H3V8"/><path d="M1 3h22v5H1z"/><path d="M10 12h4"/>'), legends: ['Sauvegardes de jeux'], intro: 'Des copies de sécurité de tes sauvegardes, faites toutes seules.' },
@@ -93,6 +93,8 @@ function buildPrefs(dlg) {
       el.classList.add('row-ctl');
     }
   });
+  buildThemePicker(panes.look);
+
   // À propos
   panes.about.insertAdjacentHTML('afterbegin', '');
   const about = document.createElement('div');
@@ -151,9 +153,149 @@ function buildPrefs(dlg) {
     if (!q) show(prefCat);
   });
   // Indique qu'il reste quelque chose à enregistrer
-  form.addEventListener('input', (e) => { if (e.target.id !== 'prefs-q') form.classList.add('dirty'); });
-  form.addEventListener('change', (e) => { if (e.target.id !== 'prefs-q') form.classList.add('dirty'); });
+  // (le thème s'applique tout de suite : il n'attend pas « Enregistrer »)
+  const counts = (e) => e.target.id !== 'prefs-q' && !e.target.closest('.theme-group');
+  form.addEventListener('input', (e) => { if (counts(e)) form.classList.add('dirty'); });
+  form.addEventListener('change', (e) => { if (counts(e)) form.classList.add('dirty'); });
   show(prefCat);
+}
+
+// ---------- Thème : choix immédiat, sans passer par « Enregistrer » ----------
+const errText = (e) => String((e && e.message) || e).replace(/^Error invoking remote method '[^']+': (Error: )?/, '');
+function buildThemePicker(pane) {
+  if (!api.themesList) return;
+  const group = document.createElement('div');
+  group.className = 'group theme-group';
+  group.innerHTML = `<div class="group-title">Thème</div><div class="theme-list" role="radiogroup" aria-label="Thème"></div><div class="theme-extra"></div>
+    <div class="group-title theme-cat-title">Catalogue de la communauté</div><div class="theme-catalog"></div>
+    <div class="theme-drop" aria-hidden="true">Dépose l’archive .zip du thème</div>`;
+  pane.insertBefore(group, pane.querySelector('.prefs-head').nextSibling);
+  const list = group.querySelector('.theme-list');
+  const extra = group.querySelector('.theme-extra');
+  const catalogBox = group.querySelector('.theme-catalog');
+  let data = null;
+  let catalog = null; // null = pas encore chargé
+  let busy = '';
+
+  const swatchStyle = (t) => {
+    const v = t.schemes.default || t.schemes[Object.keys(t.schemes)[0]] || {};
+    const bg = v['--bg'] || (v['--bg-rgb'] ? `rgb(${v['--bg-rgb']})` : 'var(--bg)');
+    const ac = v['--accent'] || 'var(--accent)';
+    return `background: linear-gradient(135deg, ${bg} 0 62%, ${ac} 62% 100%)`.replace(/"/g, '');
+  };
+
+  const draw = () => {
+    const { themes, active } = data;
+    list.innerHTML = themes.map((t) => `<button type="button" class="theme-card${t.id === active.id ? ' on' : ''}" role="radio" aria-checked="${t.id === active.id}" data-theme-id="${esc(t.id)}" ${t.compatible ? '' : 'disabled title="Écrit pour une version plus récente du launcher"'}>
+        <span class="theme-prev">${t.preview ? `<img src="clre-theme://${esc(t.id)}/${esc(t.preview)}" alt="" loading="lazy">` : `<span class="theme-swatch" style="${swatchStyle(t)}"></span>`}</span>
+        <span class="theme-name">${esc(t.name)}</span>
+        <span class="theme-by">${t.author ? `par ${esc(t.author)}` : t.builtin ? 'Intégré' : ''}${t.compatible ? '' : ' · incompatible'}</span>
+      </button>`).join('');
+    const cur = themes.find((t) => t.id === active.id);
+    const schemes = cur ? Object.keys(cur.schemes) : [];
+    extra.innerHTML = `${schemes.length > 1 ? `<label class="row"><span class="row-label">Couleurs</span><select class="select row-ctl" data-theme-scheme>${schemes.map((n) => `<option value="${esc(n)}"${n === active.scheme ? ' selected' : ''}>${esc(n === 'default' ? 'Par défaut' : n)}</option>`).join('')}</select></label>` : ''}
+      ${cur ? cur.options.map((o) => `<label class="row row-switch"><span class="row-label">${esc(o.label)}</span><input type="checkbox" data-theme-opt="${esc(o.id)}"${active.options.includes(o.id) ? ' checked' : ''}></label>`).join('') : ''}
+      ${cur && !cur.builtin ? `<div class="row"><span class="row-label">${esc(cur.name)}${cur.version ? ` <span class="theme-ver">v${esc(cur.version)}</span>` : ''}</span><button type="button" class="btn btn-ghost row-ctl" data-theme-act="remove" data-id="${esc(cur.id)}">Supprimer</button>${cur.description ? `<small class="row-help">${esc(cur.description)}</small>` : ''}</div>` : ''}
+      <div class="row"><span class="row-label">Ajouter un thème</span><span class="row-ctl theme-btns"><button type="button" class="btn btn-ghost" data-theme-act="import">Importer un .zip</button><button type="button" class="btn btn-ghost" data-theme-act="folder">Ouvrir le dossier</button><button type="button" class="btn btn-ghost" data-theme-act="reload">Actualiser</button></span>
+        <small class="row-help">Tu peux aussi déposer l’archive ici. Le thème actif se recharge tout seul quand tu modifies ses fichiers. ${active.safeMode ? 'Mode sans échec : le thème choisi est ignoré jusqu’au prochain choix.' : 'En cas de souci : clic droit sur l’icône de la barre des tâches, « Revenir au thème par défaut ».'}</small></div>`;
+  };
+
+  const drawCatalog = () => {
+    if (!catalog) {
+      catalogBox.innerHTML = `<div class="row"><span class="row-label">Des thèmes créés par d’autres joueurs</span><button type="button" class="btn btn-ghost row-ctl" data-theme-act="catalog"${busy === 'catalog' ? ' disabled' : ''}>${busy === 'catalog' ? 'Chargement…' : 'Parcourir'}</button></div>`;
+      return;
+    }
+    if (catalog.error) { catalogBox.innerHTML = `<div class="row"><span class="row-label">${esc(catalog.error)}</span><button type="button" class="btn btn-ghost row-ctl" data-theme-act="catalog-force">Réessayer</button></div>`; return; }
+    if (!catalog.themes.length) { catalogBox.innerHTML = '<div class="row"><span class="row-label">Le catalogue est vide pour l’instant.</span></div>'; return; }
+    const using = data && data.active.id;
+    catalogBox.innerHTML = `<div class="theme-list">${catalog.themes.map((t) => {
+      const state = busy === t.id ? '<button type="button" class="btn btn-ghost" disabled>Installation…</button>'
+        : !t.compatible ? '<span class="theme-by">Launcher trop ancien</span>'
+          : t.builtin ? '<span class="theme-by">Thème intégré</span>'
+            : t.update ? `<button type="button" class="btn btn-primary" data-theme-install="${esc(t.id)}">Mettre à jour</button>`
+              : t.installed ? (t.id === using ? '<span class="theme-by">Utilisé</span>' : `<button type="button" class="btn btn-ghost" data-theme-use="${esc(t.id)}">Utiliser</button>`)
+                : `<button type="button" class="btn btn-ghost" data-theme-install="${esc(t.id)}">Installer</button>`;
+      return `<div class="theme-card theme-cat" title="${esc(t.description)}">
+        <span class="theme-prev">${t.preview ? `<img src="${esc(t.preview)}" alt="">` : ''}</span>
+        <span class="theme-name">${esc(t.name)}${t.version ? ` <span class="theme-ver">v${esc(t.version)}</span>` : ''}</span>
+        <span class="theme-by">${t.author ? `par ${esc(t.author)}` : ''}</span>
+        <span class="theme-act">${state}</span>
+      </div>`;
+    }).join('')}</div>`;
+  };
+
+  const load = () => api.themesList().then((d) => { data = d; draw(); drawCatalog(); }).catch((e) => toast('Thèmes : ' + errText(e)));
+  const loadCatalog = async (force) => {
+    busy = 'catalog'; drawCatalog();
+    try { catalog = await api.themesCatalog(force); } catch (e) { catalog = { themes: [], error: 'Catalogue injoignable : ' + errText(e) }; }
+    busy = ''; drawCatalog();
+  };
+  const choose = async (choice) => {
+    try {
+      const active = await api.themeSet(choice);
+      applyTheme(active);
+      data.active = active;
+      draw(); drawCatalog();
+    } catch (e) { toast('Thème : ' + errText(e)); }
+  };
+  // Après un import : le thème est ajouté et appliqué tout de suite
+  const installed = async (m) => {
+    if (!m) return;
+    await load();
+    if (catalog && !catalog.error) catalog = await api.themesCatalog().catch(() => catalog);
+    await choose({ id: m.id });
+    toast(`Thème « ${m.name} » installé`);
+  };
+  const importZip = async (file) => {
+    try { await installed(await api.themeImport(file)); } catch (e) { toast('Import impossible : ' + errText(e)); }
+  };
+
+  group.addEventListener('click', async (e) => {
+    const card = e.target.closest('[data-theme-id]');
+    if (card) { e.preventDefault(); if (card.dataset.themeId !== data.active.id) choose({ id: card.dataset.themeId }); return; }
+    const use = e.target.closest('[data-theme-use]');
+    if (use) { e.preventDefault(); choose({ id: use.dataset.themeUse }); return; }
+    const inst = e.target.closest('[data-theme-install]');
+    if (inst) {
+      e.preventDefault();
+      busy = inst.dataset.themeInstall; drawCatalog();
+      try { const m = await api.themeInstall(busy); busy = ''; await installed(m); } catch (err) { busy = ''; drawCatalog(); toast('Installation impossible : ' + errText(err)); }
+      return;
+    }
+    const act = e.target.closest('[data-theme-act]');
+    if (!act) return;
+    e.preventDefault();
+    const a = act.dataset.themeAct;
+    if (a === 'folder') api.themesOpenFolder();
+    else if (a === 'import') importZip();
+    else if (a === 'catalog' || a === 'catalog-force') loadCatalog(a === 'catalog-force');
+    else if (a === 'remove') {
+      try { const active = await api.themeRemove(act.dataset.id); applyTheme(active); toast('Thème envoyé à la corbeille'); load(); } catch (err) { toast('Suppression impossible : ' + errText(err)); }
+    } else load();
+  });
+  group.addEventListener('change', (e) => {
+    if (!data) return;
+    if (e.target.matches('[data-theme-scheme]')) choose({ id: data.active.id, scheme: e.target.value });
+    else if (e.target.matches('[data-theme-opt]')) {
+      const options = {};
+      group.querySelectorAll('[data-theme-opt]').forEach((i) => { options[i.dataset.themeOpt] = i.checked; });
+      choose({ id: data.active.id, scheme: data.active.scheme, options });
+    }
+  });
+  // Glisser-déposer d'une archive .zip sur le bloc Thème
+  const hasFile = (e) => e.dataTransfer && [...e.dataTransfer.types].includes('Files');
+  group.addEventListener('dragover', (e) => { if (!hasFile(e)) return; e.preventDefault(); group.classList.add('dropping'); });
+  group.addEventListener('dragleave', (e) => { if (!group.contains(e.relatedTarget)) group.classList.remove('dropping'); });
+  group.addEventListener('drop', (e) => {
+    if (!hasFile(e)) return;
+    e.preventDefault();
+    group.classList.remove('dropping');
+    const f = [...e.dataTransfer.files].find((x) => /\.zip$/i.test(x.name));
+    if (!f) { toast('Il faut une archive .zip'); return; }
+    const p = api.pathForFile && api.pathForFile(f);
+    if (p) importZip(p); else toast('Impossible de lire ce fichier');
+  });
+  load();
 }
 
 // eslint-disable-next-line no-global-assign

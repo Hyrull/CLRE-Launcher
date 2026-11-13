@@ -87,7 +87,7 @@ function homeExtras(where) {
 }
 
 function resumeCard(g) {
-  return `<div class="resume-card" data-open="${g.key}" role="button" tabindex="0">
+  return `<div class="resume-card" data-part="resume-card" data-open="${g.key}" role="button" tabindex="0">
     <div class="thumb" style="background:${fallbackBg(g)}"><img src="${esc(g.art.cover)}" alt="" loading="lazy"></div>
     <div class="info"><span class="t">${esc(g.name)}</span><span class="s">${g.lastPlayed ? esc(fmtRel(g.lastPlayed)) : 'Pas encore lancé'}</span>
     <span class="s">${g.playtime ? esc(fmtPlaytime(g.playtime)) + ' au total' : esc(storeOf(g))}</span></div>

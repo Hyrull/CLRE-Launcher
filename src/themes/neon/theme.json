@@ -1,0 +1,51 @@
+{
+  "name": "Néon",
+  "author": "CLRE",
+  "version": "1.0.0",
+  "apiVersion": 1,
+  "description": "Salle d'arcade : noir profond, angles vifs, halo néon et onglets en haut.",
+  "schemes": {
+    "Magenta": {
+      "--bg-rgb": "8 4 16",
+      "--card-rgb": "18 10 32",
+      "--raised-rgb": "30 16 52",
+      "--popover-rgb": "22 12 40",
+      "--glass-rgb": "10 4 20",
+      "--fg-rgb": "255 120 230",
+      "--sidebar": "#0d0619",
+      "--surface-2": "#1a0e2e",
+      "--control": "#3a1f5e",
+      "--control-strong": "#ff2bd6",
+      "--text": "#fbeaff",
+      "--text-2": "#c7a6d9",
+      "--muted": "#8e6fa3",
+      "--accent": "#ff2bd6",
+      "--glow-rgb": "255 43 214",
+      "--on-accent": "#14001a",
+      "--on-text": "#14001a",
+      "--brand-rgb": "255 43 214",
+      "--btn-primary": "linear-gradient(180deg, #ff5ce0 0%, #ff2bd6 100%)",
+      "--btn-primary-hover": "linear-gradient(180deg, #ff7ae6 0%, #ff45dc 100%)",
+      "--btn-primary-press": "#d91fb4",
+      "--btn-primary-edge": "rgba(255, 255, 255, 0.4)",
+      "--art-fallback": "radial-gradient(120% 90% at 30% 10%, #3a1f5e 0%, #12081f 70%)",
+      "--art-fallback-flat": "linear-gradient(160deg, #24123c 0%, #0d0619 100%)"
+    },
+    "Cyan": {
+      "--fg-rgb": "120 230 255",
+      "--accent": "#00e5ff",
+      "--glow-rgb": "0 229 255",
+      "--brand-rgb": "0 229 255",
+      "--control-strong": "#00e5ff",
+      "--on-accent": "#001418",
+      "--on-text": "#001418",
+      "--btn-primary": "linear-gradient(180deg, #5cf0ff 0%, #00e5ff 100%)",
+      "--btn-primary-hover": "linear-gradient(180deg, #85f4ff 0%, #2debff 100%)",
+      "--btn-primary-press": "#00b8cc"
+    }
+  },
+  "options": [
+    { "id": "scanlines", "type": "toggle", "label": "Lignes de balayage", "default": true },
+    { "id": "full-sidebar", "type": "toggle", "label": "Barre latérale complète", "default": false }
+  ]
+}

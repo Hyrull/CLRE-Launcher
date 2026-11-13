@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' steamart: https://*.steamstatic.com https://*.steamusercontent.com https://*.akamaihd.net https://*.epicgames.com https://images.gog-statics.com https://*.itch.zone data:; media-src 'self' blob: https://*.steamstatic.com; connect-src 'self' https://*.steamstatic.com; worker-src 'self' blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' steamart: clre-theme: https://*.steamstatic.com https://*.steamusercontent.com https://*.akamaihd.net https://*.epicgames.com https://images.gog-statics.com https://*.itch.zone data:; media-src 'self' blob: https://*.steamstatic.com; connect-src 'self' https://*.steamstatic.com; worker-src 'self' blob:; style-src 'self' 'unsafe-inline' clre-theme: https://fonts.googleapis.com; font-src clre-theme: https://fonts.gstatic.com; script-src 'self'">
 <title>CLRE-Launcher</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..900&display=swap">
@@ -15,32 +15,33 @@
   <link rel="stylesheet" href="features6.css">
   <link rel="stylesheet" href="ux2.css">
   <link rel="stylesheet" href="downloads.css">
+  <script src="theme.js"></script>
 </head>
 <body>
 <div class="titlebar" aria-hidden="true"></div>
-<div class="app">
-  <aside class="sidebar">
-    <div class="brand">
+<div class="app" data-part="app">
+  <aside class="sidebar" data-part="sidebar">
+    <div class="brand" data-part="brand">
       <svg class="brand-mark" width="24" height="24" viewBox="0 0 256 256" aria-hidden="true"><rect x="8" y="8" width="240" height="240" rx="56" fill="#e9a23b"/><rect x="74" y="58" width="108" height="144" rx="16" fill="#111113" opacity="0.4" transform="rotate(-14 128 130)"/><rect x="74" y="58" width="108" height="144" rx="16" fill="#111113" transform="rotate(3 128 130)"/><path d="M114 108 L150 130 L114 152 Z" fill="#f5f5f7" stroke="#f5f5f7" stroke-width="12" stroke-linejoin="round" transform="rotate(3 128 130)"/></svg>
       <span class="wordmark"><b>CLRE</b>-Launcher</span>
     </div>
-    <nav aria-label="Bibliothèque" class="nav" id="nav-main"></nav>
-    <nav aria-label="Collections" class="nav" id="nav-collections"></nav>
+    <nav aria-label="Bibliothèque" class="nav" data-part="nav-main" id="nav-main"></nav>
+    <nav aria-label="Collections" class="nav" data-part="nav-collections" id="nav-collections"></nav>
     <button type="button" class="nav-item add-game" data-act="add-game" title="Ajouter un jeu">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span class="label">Ajouter un jeu</span>
     </button>
-    <div class="week-card" id="week-card"></div>
+    <div class="week-card" data-part="week-card" id="week-card"></div>
   </aside>
 
-  <main class="content" id="content">
-    <header class="topbar">
-      <nav aria-label="Principal" class="segmented">
+  <main class="content" data-part="content" id="content">
+    <header class="topbar" data-part="topbar">
+      <nav aria-label="Principal" class="segmented" data-part="main-tabs">
         <button type="button" data-nav="shop">Magasin</button>
         <button type="button" data-nav="home" class="active">Bibliothèque</button>
         <button type="button" data-nav="friends">Amis</button>
       </nav>
       <div class="topbar-right">
-        <label class="search">
+        <label class="search" data-part="search">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
           <span class="sr-only">Rechercher</span>
           <input type="search" id="search" placeholder="Rechercher" autocomplete="off">
@@ -55,7 +56,7 @@
         <button type="button" class="avatar" id="profile-btn" aria-label="Compte et réglages">··</button>
       </div>
     </header>
-    <div id="view"></div>
+    <div id="view" data-part="view"></div>
   </main>
 </div>
 

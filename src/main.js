@@ -25,6 +25,7 @@ const store = require('./store');
 const { workshopMods } = require('./workshop');
 const { Saves } = require('./saves');
 const sys = require('./system');
+const { Themes } = require('./themes');
 
 // Le nom d'app a changé (Launcher → CLRE-Launcher) : on garde l'ancien dossier de données
 // pour conserver la clé API, les favoris et le temps de jeu déjà mesuré.
@@ -33,7 +34,10 @@ app.setPath('userData', path.join(app.getPath('appData'), 'launcher'));
 
 if (!app.requestSingleInstanceLock()) { app.quit(); process.exit(0); }
 
-protocol.registerSchemesAsPrivileged([{ scheme: 'steamart', privileges: { standard: true, secure: true, supportFetchAPI: true } }]);
+protocol.registerSchemesAsPrivileged([
+  { scheme: 'steamart', privileges: { standard: true, secure: true, supportFetchAPI: true } },
+  { scheme: 'clre-theme', privileges: { standard: true, secure: true } },
+]);
 
 const dataFile = (name) => path.join(app.getPath('userData'), name);
 function readJson(name, fallback = {}) { return readJsonSafe(dataFile(name), fallback); }
@@ -64,6 +68,7 @@ const settings = () => {
     gogDir: s.gogDir || path.join(process.env.SystemDrive || 'C:', '\\', 'GOG Games'),
     epicDir: s.epicDir || path.join(process.env.SystemDrive || 'C:', '\\', 'Epic Games'),
     autoBackup: s.autoBackup !== false,
+    themeCatalog: s.themeCatalog === undefined ? null : s.themeCatalog, // null = catalogue par défaut
   };
 };
 
@@ -550,6 +555,7 @@ function updateTray() {
     { label: 'Ouvrir CLRE-Launcher', click: showWindow },
     { type: 'separator' },
     ...(recent.length ? [{ label: 'Jouer à', enabled: false }, ...recent.map((g) => ({ label: g.name, click: () => action(g.key, 'play') })), { type: 'separator' }] : []),
+    ...(themes && themes.active().id !== 'graphite' ? [{ label: 'Revenir au thème par défaut', click: resetTheme }, { type: 'separator' }] : []),
     { label: 'Quitter', click: () => { quitting = true; app.quit(); } },
   ]));
 }
@@ -561,6 +567,19 @@ function applyTheme() {
     win.setBackgroundColor('#111113');
     try { win.setTitleBarOverlay({ color: '#00000000', symbolColor: '#a1a1a6', height: 36 }); } catch { /* fenêtre sans barre personnalisée */ }
   }
+}
+
+// ---------- Thèmes de la communauté ----------
+// Sans échec : CLRE-Launcher.exe --safe-mode démarre avec le thème par défaut, sans toucher au choix enregistré.
+let themes = null;
+// Catalogue par défaut : index.json du dépôt public des thèmes (modifiable dans les réglages)
+const THEME_CATALOG = 'https://raw.githubusercontent.com/jclementc/clre-themes/main/index.json';
+function resetTheme() {
+  if (!themes) return;
+  themes.reset();
+  themes.watch();
+  if (win && !win.isDestroyed()) win.webContents.reload();
+  updateTray();
 }
 
 // ---------- Infos en jeu ----------
@@ -672,6 +691,8 @@ function createWindow() {
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false },
   });
   win.loadFile(path.join(__dirname, 'renderer', 'index.html'));
+  // Un fichier déposé à côté d'une zone prévue ne doit pas remplacer la page du launcher
+  win.webContents.on('will-navigate', (e, url) => { if (!url.startsWith(pathToFileURL(path.join(__dirname, 'renderer')).href)) e.preventDefault(); });
   win.webContents.setWindowOpenHandler(({ url }) => { if (/^https:\/\//.test(url)) shell.openExternal(url); return { action: 'deny' }; });
   if (presence && !win.isVisible()) presence.visible = false; // lancé réduit dans la barre des tâches
   for (const ev of ['show', 'restore', 'focus']) win.on(ev, () => presence && presence.setVisible(true));
@@ -737,6 +758,52 @@ app.whenReady().then(() => {
     if (!ok) return new Response('', { status: 403 });
     return net.fetch(pathToFileURL(file).toString());
   });
+
+  themes = new Themes({
+    builtinDir: path.join(__dirname, 'themes'),
+    userDir: dataFile('themes'),
+    getPrefs: () => readPrefs().appearance || {},
+    setPrefs: (a) => { const p = readPrefs(); p.appearance = a; writePrefs(p); },
+    safeMode: process.argv.includes('--safe-mode'),
+    fetch: (url, opts) => net.fetch(url, opts),
+    catalogUrl: () => { const c = (readPrefs().settings || {}).themeCatalog; return c === undefined || c === null ? THEME_CATALOG : c; },
+  });
+  // Rechargement à chaud : une modification du dossier du thème actif est appliquée tout de suite
+  themes.watch((a) => { if (win && !win.isDestroyed()) win.webContents.send('theme-changed', a); });
+  protocol.handle('clre-theme', (req) => {
+    const hit = themes.resolve(req.url);
+    if (!hit) return new Response('', { status: 404 });
+    return net.fetch(pathToFileURL(hit.file).toString()).then((r) => new Response(r.body, { status: r.status, headers: { 'content-type': hit.type } }));
+  });
+  // Lecture synchrone au chargement de la page : le thème est en place avant le premier affichage.
+  ipcMain.on('themes:boot', (e) => { try { e.returnValue = themes.active(); } catch { e.returnValue = null; } });
+  ipcMain.handle('themes:list', () => ({ themes: themes.list(), active: themes.active(), userDir: themes.userDir }));
+  ipcMain.handle('themes:set', (_e, choice) => { const a = themes.set(choice); themes.watch(); updateTray(); return a; });
+  ipcMain.handle('themes:reset', () => { themes.reset(); themes.watch(); updateTray(); return themes.active(); });
+  // Import d'une archive : chemin déposé sur la fenêtre, ou choisi dans une boîte de dialogue
+  ipcMain.handle('themes:import', async (_e, file) => {
+    if (!file) {
+      const res = await dialog.showOpenDialog(win, { title: 'Importer un thème', filters: [{ name: 'Thème (.zip)', extensions: ['zip'] }], properties: ['openFile'] });
+      if (res.canceled || !res.filePaths[0]) return null;
+      file = res.filePaths[0];
+    }
+    file = String(file);
+    if (path.extname(file).toLowerCase() !== '.zip') throw new Error('Il faut une archive .zip');
+    const st = await fs.promises.stat(file);
+    if (!st.isFile() || st.size > 20 * 1024 * 1024) throw new Error('Archive trop grosse (20 Mo au plus)');
+    return themes.installZip(await fs.promises.readFile(file), { sourceName: path.basename(file, '.zip') });
+  });
+  // Suppression : le dossier part à la corbeille (récupérable)
+  ipcMain.handle('themes:remove', async (_e, id) => {
+    const dir = themes.removeDir(String(id));
+    await shell.trashItem(dir);
+    themes.watch();
+    updateTray();
+    return themes.active();
+  });
+  ipcMain.handle('themes:catalog', (_e, force) => themes.catalog({ force: !!force }));
+  ipcMain.handle('themes:install', async (_e, id) => { const m = await themes.installFromCatalog(String(id)); updateTray(); return m; });
+  ipcMain.handle('themes:open-folder', () => shell.openPath(themes.userDir));
 
   const prefs = () => readPrefs();
   const steamAppId = (key) => { const g = games.get(String(key)); return g ? (g.store === 'steam' ? g.appid : g.steamAppId) : null; };

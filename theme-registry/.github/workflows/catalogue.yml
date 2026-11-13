@@ -1,0 +1,37 @@
+name: Catalogue
+
+on:
+  pull_request:
+    paths: ['themes/**']
+  push:
+    branches: [main]
+    paths: ['themes/**', 'scripts/**']
+
+permissions:
+  contents: write
+
+jobs:
+  verifier:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: node scripts/build.js --check
+
+  publier:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: node scripts/build.js
+      - name: Enregistrer index.json et les archives
+        run: |
+          git config user.name "catalogue-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.json dist
+          git diff --cached --quiet || git commit -m "Catalogue mis à jour"
+          git push

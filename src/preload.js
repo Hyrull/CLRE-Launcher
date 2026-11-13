@@ -1,4 +1,4 @@
-const { contextBridge, ipcRenderer } = require('electron');
+const { contextBridge, ipcRenderer, webUtils } = require('electron');
 
 const call = (ch) => (...args) => ipcRenderer.invoke(ch, ...args);
 const on = (ch) => (fn) => ipcRenderer.on(ch, (_e, v) => fn(v));
@@ -76,6 +76,18 @@ contextBridge.exposeInMainWorld('launcher', {
   addCustom: call('custom:add'),
   removeCustom: call('custom:remove'),
   getPrefs: call('prefs:get'),
+  themeBoot: () => ipcRenderer.sendSync('themes:boot'),
+  themesList: call('themes:list'),
+  themeSet: call('themes:set'),
+  themeReset: call('themes:reset'),
+  themesOpenFolder: call('themes:open-folder'),
+  themeImport: call('themes:import'),
+  themeRemove: call('themes:remove'),
+  themesCatalog: call('themes:catalog'),
+  themeInstall: call('themes:install'),
+  onThemeChanged: on('theme-changed'),
+  // Chemin d'un fichier déposé sur la fenêtre (File.path n'existe plus depuis Electron 32)
+  pathForFile: (f) => { try { return webUtils.getPathForFile(f); } catch { return ''; } },
   setPrefs: call('prefs:set'),
   getLocal: call('local:get'),
   setLocal: call('local:set'),

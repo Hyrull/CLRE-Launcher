@@ -129,7 +129,7 @@ VIEWS.shopapp = () => {
     ? `<button type="button" class="btn btn-primary btn-big" data-open="${esc(mine.key)}">${ICONS.play}Dans ta bibliothèque</button>`
     : x.comingSoon ? `<button type="button" class="btn btn-primary btn-big" data-act="shop-open" data-id="${id}">${ICONS.heart}Suivre sur Steam</button>`
     : `<button type="button" class="btn btn-primary btn-big" data-act="shop-open" data-id="${id}">${x.free ? 'Jouer gratuitement' : `Acheter · ${esc(x.price)}`}</button>`;
-  return `<section class="game-hero shop-app-hero" id="shop-app-hero" data-shop-hero="${id}" style="background:#1c1c1e">
+  return `<section class="game-hero shop-app-hero" id="shop-app-hero" data-shop-hero="${id}" style="background:var(--card)">
       ${x.hero || x.header ? `<img class="bg" src="${esc(x.hero || x.header)}" alt="">` : ''}<div class="shade"></div>
       <div class="inner">
         <div class="title">

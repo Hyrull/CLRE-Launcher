@@ -1,0 +1,42 @@
+{
+  "name": "Papier",
+  "author": "CLRE",
+  "version": "1.0.0",
+  "apiVersion": 1,
+  "description": "Clair et éditorial : papier crème, titres à empattements, barre latérale à droite.",
+  "colorScheme": "light",
+  "schemes": {
+    "default": {
+      "--bg-rgb": "244 240 232",
+      "--card-rgb": "251 249 244",
+      "--raised-rgb": "232 226 214",
+      "--popover-rgb": "251 249 244",
+      "--fg-rgb": "40 32 20",
+      "--shade-rgb": "60 44 20",
+      "--sidebar": "#ebe5d9",
+      "--surface-2": "#efe9de",
+      "--control": "#d6cebf",
+      "--control-strong": "#fbf9f4",
+      "--text": "#2a2218",
+      "--text-2": "#6b5f4e",
+      "--muted": "#8c806e",
+      "--accent": "#b4471f",
+      "--on-accent": "#fff8f0",
+      "--on-text": "#fbf9f4",
+      "--knob": "#fbf9f4",
+      "--btn-primary": "linear-gradient(180deg, #3a3024 0%, #2a2218 100%)",
+      "--btn-primary-hover": "linear-gradient(180deg, #4a3e30 0%, #34291d 100%)",
+      "--btn-primary-press": "#2a2218",
+      "--btn-primary-edge": "rgba(255, 255, 255, 0.12)",
+      "--art-fallback": "linear-gradient(160deg, #e3dccd 0%, #d6cebf 100%)",
+      "--art-fallback-flat": "linear-gradient(160deg, #e3dccd 0%, #d6cebf 100%)"
+    },
+    "Encre bleue": {
+      "--accent": "#1f4fb4",
+      "--brand-rgb": "31 79 180"
+    }
+  },
+  "options": [
+    { "id": "sidebar-left", "type": "toggle", "label": "Barre latérale à gauche", "default": false }
+  ]
+}
