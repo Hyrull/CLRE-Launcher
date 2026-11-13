@@ -1,0 +1,68 @@
+{
+  "id": "serie",
+  "name": "Série",
+  "author": "CLRE",
+  "version": "1.0.0",
+  "apiVersion": 1,
+  "description": "Style d'appli d'apprentissage ludique : couleurs franches, boutons épais en relief, cartes à gros bords, barres de progression rebondies.",
+  "colorScheme": "light",
+  "schemes": {
+    "Vert": {
+      "--acc": "#58cc02",
+      "--acc-dark": "#58a700",
+      "--acc-rgb": "88 204 2",
+      "--brand-rgb": "88 204 2"
+    },
+    "Bleu": {
+      "--acc": "#1cb0f6",
+      "--acc-dark": "#1899d6",
+      "--acc-rgb": "28 176 246",
+      "--brand-rgb": "28 176 246"
+    },
+    "Violet": {
+      "--acc": "#ce82ff",
+      "--acc-dark": "#a568cc",
+      "--acc-rgb": "206 130 255",
+      "--brand-rgb": "206 130 255"
+    },
+    "Orange": {
+      "--acc": "#ff9600",
+      "--acc-dark": "#e08500",
+      "--acc-rgb": "255 150 0",
+      "--brand-rgb": "255 150 0"
+    },
+    "Nuit": {
+      "--acc": "#58cc02",
+      "--acc-dark": "#58a700",
+      "--acc-rgb": "88 204 2",
+      "--brand-rgb": "88 204 2",
+      "--page": "#131f24",
+      "--page-rgb": "19 31 36",
+      "--panel": "#131f24",
+      "--panel-2": "#202f36",
+      "--border": "#37464f",
+      "--border-dark": "#2a3a42",
+      "--ink": "#f1f7fb",
+      "--ink-2": "#dce6ec",
+      "--label": "#8a9ba4",
+      "--sel-bg": "#202f36",
+      "--sel-border": "#3f85a7",
+      "--sel-text": "#49c0f8",
+      "--fg-rgb": "241 247 251"
+    }
+  },
+  "options": [
+    {
+      "id": "path",
+      "type": "toggle",
+      "label": "Bibliothèque en chemin de pastilles",
+      "default": false
+    },
+    {
+      "id": "press",
+      "type": "toggle",
+      "label": "Cartes qui s'enfoncent au clic",
+      "default": true
+    }
+  ]
+}

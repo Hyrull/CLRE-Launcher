@@ -1,0 +1,60 @@
+{
+  "id": "vhs",
+  "name": "Cassette",
+  "author": "CLRE",
+  "version": "1.0.0",
+  "apiVersion": 1,
+  "description": "Magnétoscope des années 80-90 : texte d'écran blanc à ombre colorée, couleurs qui bavent, bande de neige, affichage LECTURE ▶ et compteur.",
+  "colorScheme": "dark",
+  "schemes": {
+    "Bleu écran": {
+      "--tape-bg": "#0a0d1a",
+      "--tape-bg-rgb": "10 13 26",
+      "--tape-panel": "#10152a",
+      "--osd": "#f2f2f2",
+      "--osd-rgb": "242 242 242",
+      "--accent": "#3fe0ff",
+      "--accent-rgb": "63 224 255",
+      "--fringe-a": "rgb(255 40 90 / 0.75)",
+      "--fringe-b": "rgb(40 220 255 / 0.75)"
+    },
+    "Bleu total": {
+      "--tape-bg": "#0b1fa8",
+      "--tape-bg-rgb": "11 31 168",
+      "--tape-panel": "#0e26bd",
+      "--osd": "#ffffff",
+      "--osd-rgb": "255 255 255",
+      "--accent": "#ffffff",
+      "--accent-rgb": "255 255 255",
+      "--fringe-a": "rgb(255 60 120 / 0.6)",
+      "--fringe-b": "rgb(60 255 200 / 0.6)"
+    },
+    "Néon 80": {
+      "--tape-bg": "#120822",
+      "--tape-bg-rgb": "18 8 34",
+      "--tape-panel": "#1a0d30",
+      "--osd": "#fff4fb",
+      "--osd-rgb": "255 244 251",
+      "--accent": "#ff3fa4",
+      "--accent-rgb": "255 63 164",
+      "--fringe-a": "rgb(255 63 164 / 0.8)",
+      "--fringe-b": "rgb(80 200 255 / 0.8)"
+    },
+    "Sépia usé": {
+      "--tape-bg": "#17110b",
+      "--tape-bg-rgb": "23 17 11",
+      "--tape-panel": "#211810",
+      "--osd": "#f4e6c8",
+      "--osd-rgb": "244 230 200",
+      "--accent": "#ffb347",
+      "--accent-rgb": "255 179 71",
+      "--fringe-a": "rgb(255 120 60 / 0.6)",
+      "--fringe-b": "rgb(120 200 220 / 0.5)"
+    }
+  },
+  "options": [
+    { "id": "noise", "type": "toggle", "label": "Neige et bande de défilement", "default": true },
+    { "id": "osd", "type": "toggle", "label": "Affichage LECTURE ▶ et compteur", "default": true },
+    { "id": "worn", "type": "toggle", "label": "Images délavées comme une vieille bande", "default": true }
+  ]
+}

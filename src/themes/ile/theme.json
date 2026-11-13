@@ -1,0 +1,55 @@
+{
+  "id": "ile",
+  "name": "Île paisible",
+  "author": "CLRE",
+  "version": "1.0.0",
+  "apiVersion": 1,
+  "description": "Ambiance de jeu de vie sur une île : couleurs douces, bulles de dialogue crème, boutons ronds qui rebondissent, pétales qui tombent.",
+  "colorScheme": "light",
+  "schemes": {
+    "Printemps": {
+      "--grass": "#bfe6c3",
+      "--grass-dot": "#aedcb3",
+      "--petal": "#ffb7cf",
+      "--petal-2": "#ffffff",
+      "--accent": "#3fbf8f",
+      "--accent-dark": "#2a9a70",
+      "--accent-rgb": "63 191 143",
+      "--brand-rgb": "63 191 143"
+    },
+    "Été": {
+      "--grass": "#a8dc8a",
+      "--grass-dot": "#97d077",
+      "--petal": "#fff176",
+      "--petal-2": "#ffffff",
+      "--accent": "#29a8e0",
+      "--accent-dark": "#1784b3",
+      "--accent-rgb": "41 168 224",
+      "--brand-rgb": "41 168 224"
+    },
+    "Automne": {
+      "--grass": "#e8c98f",
+      "--grass-dot": "#dfbb7c",
+      "--petal": "#e8743b",
+      "--petal-2": "#c9502b",
+      "--accent": "#e8743b",
+      "--accent-dark": "#bf5523",
+      "--accent-rgb": "232 116 59",
+      "--brand-rgb": "232 116 59"
+    },
+    "Hiver": {
+      "--grass": "#dfeef7",
+      "--grass-dot": "#cfe4f1",
+      "--petal": "#ffffff",
+      "--petal-2": "#ffffff",
+      "--accent": "#5b8fd6",
+      "--accent-dark": "#3f6fb3",
+      "--accent-rgb": "91 143 214",
+      "--brand-rgb": "91 143 214"
+    }
+  },
+  "options": [
+    { "id": "petals", "type": "toggle", "label": "Pétales qui tombent", "default": true },
+    { "id": "wobble", "type": "toggle", "label": "Jaquettes qui se penchent au survol", "default": true }
+  ]
+}

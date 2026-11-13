@@ -21,10 +21,10 @@ Si un thème rend l'interface inutilisable : clic droit sur l'icône du launcher
 3. Modifie `theme.css` ou `theme.json` : le launcher recharge le thème actif à chaque enregistrement, sans redémarrer.
    Ctrl+Maj+I ouvre les outils de développement pour inspecter les éléments.
 
-Exemples complets dans [`src/themes/`](src/themes) :
-- [`papier`](src/themes/papier) : clair, typo à empattements, barre latérale à droite ;
-- [`neon`](src/themes/neon) : rail d'icônes, deux jeux de couleurs, effet optionnel ;
-- [`salon`](src/themes/salon) : navigation en haut, sections en menus déroulants, le plus éloigné de l'original.
+Exemple complet : [`src/themes/millenium`](src/themes/millenium), le bureau du début des années 2000.
+Il montre trois jeux de couleurs (Bleu, Olive, Argent) qui passent par des variables propres au thème
+(`--xp-title`, `--xp-pane-body`…), une option (`theme-opt-checkboxes`), un thème clair, et la refonte
+de la barre latérale en panneaux sans toucher au code du launcher.
 
 ## Publier dans le catalogue
 
@@ -98,7 +98,7 @@ Définies dans `src/renderer/styles.css`. Les `…-rgb` sont des triplets `R G B
 | `--sidebar-width`, `--radius-cover`, `--radius-tile`, `--cover-ratio`, `--grid-min` | Mise en page. |
 
 Attention : `--on-art` vaut `rgb(var(--on-art-rgb))` **calculé sur `:root`**. Si tu redéfinis `--on-art-rgb`
-sur un élément, redéfinis aussi `--on-art` au même endroit (voir le thème Papier).
+sur un élément, redéfinis aussi `--on-art` au même endroit (voir le thème Millénium).
 
 ## Points d'accroche
 

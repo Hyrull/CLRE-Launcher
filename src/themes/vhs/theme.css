@@ -1,0 +1,162 @@
+/* Cassette — magnétoscope des années 80-90, pour CLRE-Launcher (apiVersion 1).
+   Texte d'écran (OSD) blanc à franges rouge et cyan, neige animée, bande claire qui défile,
+   affichage « LECTURE ▶ » avec un compteur qui tourne, images délavées.
+   Tout est en CSS et en SVG intégré ; aucune marque ni logo. */
+@import url('https://fonts.googleapis.com/css2?family=VT323&family=Share+Tech+Mono&display=swap');
+
+/* Compteur animé : propriétés entières que le CSS sait faire défiler */
+@property --vhs-s { syntax: '<integer>'; inherits: false; initial-value: 0; }
+@property --vhs-m { syntax: '<integer>'; inherits: false; initial-value: 0; }
+
+:root {
+  --sans: 'Share Tech Mono', ui-monospace, monospace;
+  --osd-font: 'VT323', monospace;
+  --fringe: -1.5px 0 0 var(--fringe-a), 1.5px 0 0 var(--fringe-b);
+  --bg-rgb: var(--tape-bg-rgb);
+  --card-rgb: var(--tape-bg-rgb);
+  --raised-rgb: var(--tape-bg-rgb);
+  --popover-rgb: var(--tape-bg-rgb);
+  --glass-rgb: var(--tape-bg-rgb);
+  --fg-rgb: var(--osd-rgb);
+  --shade-rgb: 0 0 0;
+  --on-art-rgb: var(--osd-rgb);
+  --sidebar: var(--tape-panel);
+  --card: var(--tape-panel);
+  --surface-2: var(--tape-panel);
+  --control: rgb(var(--osd-rgb) / 0.1);
+  --control-strong: var(--osd);
+  --text: var(--osd);
+  --text-2: rgb(var(--osd-rgb) / 0.7);
+  --muted: rgb(var(--osd-rgb) / 0.5);
+  --on-accent: #000000;
+  --on-text: #000000;
+  --knob: var(--osd);
+  --material: rgb(var(--tape-bg-rgb) / 0.9);
+  --blur: none;
+  --line: rgb(var(--osd-rgb) / 0.15);
+  --line-strong: rgb(var(--osd-rgb) / 0.4);
+  --art-fallback: var(--tape-panel);
+  --art-fallback-flat: var(--tape-panel);
+  --radius-cover: 2px;
+  --radius-tile: 2px;
+  --ease: steps(3, end);
+  --key: transparent;
+  --key-hover: rgb(var(--osd-rgb) / 0.1);
+  --key-press: rgb(var(--osd-rgb) / 0.2);
+  --key-edge: inset 0 0 0 1px rgb(var(--osd-rgb) / 0.5);
+  --key-edge-press: inset 0 0 0 1px var(--osd);
+  --well: rgb(0 0 0 / 0.3);
+  --well-edge: inset 0 0 0 1px rgb(var(--osd-rgb) / 0.3);
+  --btn-primary: var(--osd);
+  --btn-primary-hover: var(--accent);
+  --btn-primary-press: var(--osd);
+  --btn-primary-edge: transparent;
+}
+* { border-radius: 0 !important; }
+html { background: var(--tape-bg); }
+body { background: transparent; color: var(--osd); }
+.content::before { display: none; }
+
+/* ── Texte d'écran : capitales en police de magnétoscope, franges de couleur ── */
+h1, h2.section, .nav-title, .nav-sec-toggle, .kicker, .group-title, .segmented button, .seg-chips button, .btn, .chip, .tag-toggle, [data-part="brand"] .wordmark, [data-part="game-card"] .t, .stats .k {
+  font-family: var(--osd-font); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 400;
+}
+h1, h2.section, [data-part="brand"] .wordmark { text-shadow: var(--fringe); }
+h2.section { font-size: 34px; }
+.toolbar h1 { font-size: 46px; font-weight: 400; }
+.spotlight h1, .game-hero h1 { font-size: 72px; }
+.stats .v { font-family: var(--osd-font); font-size: 30px; font-weight: 400; text-shadow: var(--fringe); }
+.stats .k { font-size: 16px; }
+body { font-size: 14px; }
+
+/* ── Barre latérale : liste de chapitres ── */
+[data-part="sidebar"] { border-right: 1px solid var(--line) !important; box-shadow: none !important; }
+[data-part="brand"] .wordmark, [data-part="brand"] .wordmark b { font-size: 24px; color: var(--osd); }
+[data-part="sidebar"] .nav-item { font-family: var(--osd-font); font-size: 19px; text-transform: uppercase; letter-spacing: 0.04em; height: 34px; color: rgb(var(--osd-rgb) / 0.75); background: transparent; box-shadow: none !important; position: relative; padding-left: 26px; }
+[data-part="sidebar"] .nav-item svg { color: rgb(var(--osd-rgb) / 0.6); }
+[data-part="sidebar"] .nav-item:hover { color: var(--osd); background: rgb(var(--osd-rgb) / 0.06); }
+[data-part="sidebar"] .nav-item.active { color: #000; background: var(--osd) !important; text-shadow: none; }
+[data-part="sidebar"] .nav-item.active :is(svg, .count, .plat-ico) { color: #000; }
+[data-part="sidebar"] .nav-item.active::before { content: "▶"; position: absolute; left: 8px; font-size: 13px; animation: vhs-blink 1s steps(1) infinite; }
+[data-part="sidebar"] .count { font-family: var(--osd-font); font-size: 18px; }
+[data-part="nav-collections"] .nav-sec-toggle { font-size: 18px; color: var(--accent); }
+[data-part="week-card"] { border-top: 1px dashed var(--line-strong); }
+[data-part="week-card"] .v { font-family: var(--osd-font); font-size: 40px; font-weight: 400; text-shadow: var(--fringe); }
+@keyframes vhs-blink { 50% { opacity: 0; } }
+
+/* ── Barre du haut ── */
+[data-part="topbar"].material { border-bottom: 1px solid var(--line); }
+.segmented, .seg-chips { background: transparent !important; box-shadow: inset 0 0 0 1px rgb(var(--osd-rgb) / 0.4) !important; padding: 2px !important; }
+.segmented button, .seg-chips button { font-size: 20px; color: rgb(var(--osd-rgb) / 0.75); }
+.segmented button.active, .seg-chips button.on { background: var(--osd) !important; color: #000 !important; box-shadow: none !important; }
+.search { background: rgb(0 0 0 / 0.35) !important; }
+.search input { color: var(--osd); font-family: var(--sans); }
+.topbar.over-hero:not(.material) :is(.segmented, .search, .icon-btn, .avatar) { background: rgb(0 0 0 / 0.55) !important; -webkit-backdrop-filter: none; backdrop-filter: none; }
+
+/* ── Boutons : rectangles, le principal en blanc écran, qui « saute » au survol ── */
+.btn, .chip, .tag-toggle { font-size: 20px !important; color: var(--osd); }
+.btn-primary, .btn-light, .cover .quick { background: var(--osd) !important; color: #000 !important; box-shadow: var(--fringe) !important; }
+.btn-primary:hover, .btn-light:hover, .cover .quick:hover { background: var(--accent) !important; animation: vhs-jump 0.3s steps(2) 1; }
+@keyframes vhs-jump { 50% { transform: translateX(3px); box-shadow: -3px 0 0 var(--fringe-a), 3px 0 0 var(--fringe-b); } }
+.chip.on, .tag-toggle.on { background: var(--osd) !important; color: #000 !important; }
+:is(.btn-glass, .btn-ghost, .chip:not(.on), .tag-toggle:not(.on)):hover { background: rgb(var(--osd-rgb) / 0.15) !important; }
+.btn-glass, .btn-running { background: rgb(0 0 0 / 0.5) !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+
+/* ── Jaquettes : jaquette de cassette, lignes sur l'image, petit saut de couleur au survol ── */
+[data-part="cover"] { box-shadow: 0 0 0 1px rgb(var(--osd-rgb) / 0.25) !important; }
+[data-part="cover"]::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: repeating-linear-gradient(0deg, rgb(0 0 0 / 0.22) 0 1px, transparent 1px 3px); }
+[data-part="game-card"]:hover [data-part="cover"] { box-shadow: -3px 0 0 var(--fringe-a), 3px 0 0 var(--fringe-b), 0 0 0 1px var(--osd) !important; animation: vhs-jump 0.25s steps(2) 1; }
+[data-part="game-card"] .t { font-size: 20px; letter-spacing: 0.03em; }
+[data-part="game-card"]:hover .t { text-shadow: var(--fringe); }
+:root.theme-opt-worn :is([data-part="cover"], [data-part="tile"], .thumb, .spotlight, .game-hero) :is(img, video) { filter: saturate(1.35) contrast(1.08) brightness(0.95) sepia(0.12) blur(0.3px); }
+:is([data-part="tile"], [data-part="resume-card"]) { box-shadow: 0 0 0 1px var(--line-strong) !important; }
+
+/* ── Bannières : lignes et légère dérive de couleur sur l'image ── */
+:is(.spotlight, .game-hero)::after { content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 1; background: repeating-linear-gradient(0deg, rgb(0 0 0 / 0.2) 0 1px, transparent 1px 3px); }
+:is(.spotlight .body, .game-hero .inner) { z-index: 2; }
+.spotlight .logo, .game-hero .logo { filter: drop-shadow(-2px 0 0 var(--fringe-a)) drop-shadow(2px 0 0 var(--fringe-b)); }
+
+/* ── Fenêtres, menus, notifications : écrans de menu du magnétoscope ── */
+.modal { background: var(--tape-bg) !important; border: 1px solid var(--line-strong) !important; box-shadow: 0 30px 70px rgb(0 0 0 / 0.6) !important; }
+.prefs-side { background: var(--tape-panel) !important; }
+.prefs-cats button.on, .prefs-me.on { background: var(--osd) !important; color: #000 !important; }
+.group { background: var(--tape-panel) !important; box-shadow: inset 0 0 0 1px var(--line); }
+.ctx-menu, .inbox { background: var(--tape-bg) !important; box-shadow: 0 0 0 1px var(--line-strong), 0 18px 40px rgb(0 0 0 / 0.6) !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+.ctx-menu button:hover { background: var(--osd) !important; color: #000 !important; }
+.toast, .toast-undo { background: #000 !important; color: var(--osd) !important; box-shadow: 0 0 0 1px var(--osd) !important; font-family: var(--osd-font); font-size: 20px; text-transform: uppercase; letter-spacing: 0.06em; text-shadow: var(--fringe); -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+:is(.row-switch, .home-toggles) input[type="checkbox"] { background: rgb(var(--osd-rgb) / 0.15); }
+:is(.row-switch, .home-toggles) input[type="checkbox"]:checked { background: var(--accent); }
+.hl-row .bar, .cover-dl { background: rgb(var(--osd-rgb) / 0.12); }
+.hl-row .bar span, .cover-dl div { background: repeating-linear-gradient(90deg, var(--osd) 0 6px, transparent 6px 8px); }
+select option { background: var(--tape-panel); color: var(--osd); }
+::-webkit-scrollbar-thumb { background: rgb(var(--osd-rgb) / 0.3) !important; border: 4px solid transparent !important; background-clip: padding-box !important; }
+
+/* ── Neige et bande claire qui défile (option), au-dessus de tout sans bloquer la souris ── */
+:root.theme-opt-noise body::before {
+  content: ""; position: fixed; inset: 0; z-index: 9998; pointer-events: none;
+  background:
+    linear-gradient(180deg, transparent 0%, rgb(255 255 255 / 0.06) 46%, rgb(255 255 255 / 0.1) 50%, rgb(255 255 255 / 0.06) 54%, transparent 100%) 0 0 / 100% 220px no-repeat,
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.55 0'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23n)'/%3E%3C/svg%3E"),
+    repeating-linear-gradient(0deg, rgb(0 0 0 / 0.14) 0 1px, transparent 1px 3px);
+  opacity: 0.5;
+  animation: vhs-roll 7s linear infinite, vhs-snow 0.4s steps(4) infinite;
+}
+@keyframes vhs-roll { from { background-position: 0 -220px, 0 0, 0 0; } to { background-position: 0 100vh, 0 0, 0 0; } }
+@keyframes vhs-snow { 25% { opacity: 0.42; } 50% { opacity: 0.55; } 75% { opacity: 0.46; } }
+
+/* ── Affichage LECTURE ▶ et compteur qui tourne (option) ── */
+:root.theme-opt-osd body::after {
+  content: "LECTURE ▶   SP 0:" counter(vhs-m, decimal-leading-zero) ":" counter(vhs-s, decimal-leading-zero);
+  counter-reset: vhs-m var(--vhs-m) vhs-s var(--vhs-s);
+  position: fixed; left: calc(var(--sidebar-width) + 370px); top: 32px; z-index: 9999; pointer-events: none; white-space: pre;
+  font-family: var(--osd-font); font-size: 22px; letter-spacing: 0.06em; color: var(--osd); text-shadow: var(--fringe), 0 0 6px rgb(0 0 0 / 0.8);
+  animation: vhs-sec 60s steps(60) infinite, vhs-min 3600s steps(60) infinite;
+}
+@keyframes vhs-sec { from { --vhs-s: 0; } to { --vhs-s: 60; } }
+@keyframes vhs-min { from { --vhs-m: 0; } to { --vhs-m: 60; } }
+
+/* Fenêtre étroite : pas la place entre les onglets et la recherche */
+@media (max-width: 1320px) { :root.theme-opt-osd body::after { display: none; } }
+@media (prefers-reduced-motion: reduce) {
+  :root.theme-opt-noise body::before, :root.theme-opt-osd body::after, [data-part="sidebar"] .nav-item.active::before { animation: none; }
+}

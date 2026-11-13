@@ -1,0 +1,167 @@
+/* Chaînes — le menu blanc des consoles familiales de 2006, pour CLRE-Launcher (apiVersion 1).
+   Fond gris très clair rayé, jeux en tuiles arrondies à bord gris qui s'allument en bleu,
+   barre du bas bombée avec de gros boutons ronds, police arrondie.
+   Aucune image, icône ni logo repris d'une console : tout est en CSS. */
+@import url('https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;500;700;800&display=swap');
+
+:root {
+  --sans: 'M PLUS Rounded 1c', 'Segoe UI', sans-serif;
+  /* Surfaces claires */
+  --bg-rgb: 242 243 245;
+  --card-rgb: 255 255 255;
+  --raised-rgb: 255 255 255;
+  --popover-rgb: 255 255 255;
+  --glass-rgb: 255 255 255;
+  --fg-rgb: 70 82 94;
+  --shade-rgb: 60 70 80;
+  --on-art-rgb: 63 73 82;
+  --sidebar: linear-gradient(180deg, #f7f8f9 0%, #dfe3e7 100%);
+  --surface-2: #ffffff;
+  --control: #d7dde3;
+  --control-strong: #ffffff;
+  --text: #3f4952;
+  --text-2: #6e7882;
+  --muted: #98a1aa;
+  --on-accent: #ffffff;
+  --on-text: #ffffff;
+  --knob: #ffffff;
+  --art-fallback: linear-gradient(160deg, #ffffff 0%, #e4e8ec 100%);
+  --art-fallback-flat: linear-gradient(160deg, #ffffff 0%, #e4e8ec 100%);
+  --material: rgb(242 243 245 / 0.9);
+  --blur: blur(10px);
+  --tile-edge: #d3d9df;
+  --halo: 0 0 0 3px rgb(var(--accent-rgb) / 0.35), 0 0 18px rgb(var(--accent-rgb) / 0.45);
+  --radius-cover: 16px;
+  --radius-tile: 18px;
+  /* Boutons : pilules blanches à bord gris */
+  --key: linear-gradient(180deg, #ffffff 0%, #eceff2 100%);
+  --key-hover: linear-gradient(180deg, #ffffff 0%, #f3f6f8 100%);
+  --key-press: #e6eaee;
+  --key-edge: inset 0 0 0 2px var(--tile-edge), 0 2px 3px rgb(0 0 0 / 0.08);
+  --key-edge-press: inset 0 0 0 2px var(--accent);
+  --well: #ffffff;
+  --well-edge: inset 0 0 0 2px var(--tile-edge);
+  --btn-primary: linear-gradient(180deg, #ffffff 0%, #e8f7fd 100%);
+  --btn-primary-hover: #ffffff;
+  --btn-primary-press: #dff3fb;
+  --btn-primary-edge: #ffffff;
+}
+:root.theme-opt-landscape { --cover-ratio: 16 / 10; --grid-min: 230px; }
+
+/* Fond : gris très clair, fines rayures horizontales */
+html, body { background: #f2f3f5 repeating-linear-gradient(0deg, rgb(0 0 0 / 0.028) 0 2px, transparent 2px 6px); }
+body { color: var(--text); }
+h1, h2.section { font-weight: 800; letter-spacing: -0.01em; color: #5a6570; }
+
+/* ── Tuiles de jeux : cadre gris arrondi, halo bleu au survol ── */
+[data-part="cover"] {
+  background: #fff !important;
+  box-shadow: inset 0 0 0 3px var(--tile-edge), 0 3px 6px rgb(0 0 0 / 0.08) !important;
+  padding: 5px;
+}
+[data-part="cover"] img { inset: 5px !important; width: calc(100% - 10px) !important; height: calc(100% - 10px) !important; border-radius: 12px; object-position: center 30%; }
+[data-part="game-card"] { transition: transform 160ms var(--ease); }
+[data-part="game-card"]:hover [data-part="cover"], [data-part="game-card"]:focus-visible [data-part="cover"] {
+  transform: scale(1.04); box-shadow: inset 0 0 0 3px var(--accent), var(--halo) !important;
+}
+[data-part="game-card"] .t { text-align: center; font-weight: 700; color: #5a6570; }
+[data-part="game-card"] .s { justify-content: center; }
+[data-part="game-card"]:focus-visible { outline: none; }
+[data-part="tile"], [data-part="resume-card"] { box-shadow: inset 0 0 0 3px var(--tile-edge), 0 3px 6px rgb(0 0 0 / 0.08) !important; }
+[data-part="tile"]:hover, [data-part="resume-card"]:hover { box-shadow: inset 0 0 0 3px var(--accent), var(--halo) !important; }
+[data-part="resume-card"] { background: #fff; }
+
+/* ── Boutons : pilules, le principal en bleu sur blanc ── */
+.btn, .chip, .icon-btn, .avatar, .select, .filter select, .tag-toggle, .field select { border-radius: 999px !important; font-weight: 700; }
+.btn-primary, .btn-light, .cover .quick, .chip.on {
+  color: var(--accent-deep) !important;
+  box-shadow: inset 0 0 0 2px var(--accent), 0 2px 4px rgb(0 0 0 / 0.1) !important;
+}
+:is(.btn, .chip, .icon-btn, .avatar, .select, .tag-toggle):hover { box-shadow: inset 0 0 0 2px var(--accent), var(--halo) !important; }
+.segmented, .seg-chips, .search { border-radius: 999px !important; }
+.segmented button, .seg-chips button { border-radius: 999px !important; font-weight: 700; color: var(--text-2); }
+.segmented button.active, .seg-chips button.on { background: #fff !important; color: var(--accent-deep) !important; box-shadow: inset 0 0 0 2px var(--accent) !important; }
+.topbar.over-hero:not(.material) :is(.segmented, .search, .icon-btn, .avatar) { background: rgb(255 255 255 / 0.85) !important; }
+
+/* Bannières : le dégradé fond vers le gris clair, le texte posé dessus est donc foncé */
+[data-part="spotlight"], [data-part="game-hero"] { --on-art-rgb: 63 73 82; --on-art: #3f4952; }
+.spotlight .logo, .game-hero .logo { filter: drop-shadow(0 2px 6px rgb(0 0 0 / 0.25)); }
+
+/* Fenêtres, menus, notifications : panneaux blancs arrondis */
+.modal { border-radius: 28px !important; border: 3px solid var(--tile-edge) !important; background: #fff !important; }
+.ctx-menu, .inbox { background: #fff !important; border-radius: 18px !important; box-shadow: inset 0 0 0 2px var(--tile-edge), 0 10px 30px rgb(0 0 0 / 0.15) !important; }
+.toast, .toast-undo { background: #fff !important; color: var(--text); box-shadow: inset 0 0 0 2px var(--accent), 0 6px 20px rgb(0 0 0 / 0.15) !important; }
+:is(.row-switch, .home-toggles) input[type="checkbox"] { background: #cfd5db; }
+::-webkit-scrollbar-thumb { background-color: rgb(0 0 0 / 0.16); }
+
+/* ── Barre du bas (option) : bombée, gros boutons ronds, sections qui s'ouvrent vers le haut ── */
+:root.theme-opt-bottom-bar [data-part="app"] {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) 112px;
+  grid-template-areas: "content" "sidebar";
+}
+:root.theme-opt-bottom-bar body.couch [data-part="app"] { grid-template-rows: minmax(0, 1fr); grid-template-areas: "content"; }
+:root.theme-opt-bottom-bar .content::before { inset: 0 0 auto 0 !important; }
+:root.theme-opt-bottom-bar [data-part="sidebar"] {
+  flex-direction: row; align-items: center; justify-content: center; gap: 10px;
+  padding: 16px 24px 0 !important; overflow: visible; z-index: 5;
+  border-radius: 50% 50% 0 0 / 34px 34px 0 0;
+  box-shadow: 0 -1px 0 #c3cad1, 0 -6px 18px rgb(0 0 0 / 0.08) !important;
+}
+:root.theme-opt-bottom-bar [data-part="brand"] { position: absolute; left: 32px; top: 30px; }
+:root.theme-opt-bottom-bar [data-part="brand"] .wordmark { display: none; }
+:root.theme-opt-bottom-bar :is([data-part="week-card"], [data-part="sidebar"] .add-game) { display: none; }
+:root.theme-opt-bottom-bar :is([data-part="nav-main"], [data-part="nav-collections"]) { flex-direction: row; align-items: flex-start; gap: 10px; margin: 0 !important; }
+/* Une entrée : bouton rond blanc, libellé dessous */
+:root.theme-opt-bottom-bar [data-part="sidebar"] .nav-item {
+  width: 76px; height: 82px; padding: 0; flex-direction: column; justify-content: flex-start; gap: 6px;
+  background: transparent !important; box-shadow: none !important; color: var(--text-2);
+}
+:root.theme-opt-bottom-bar [data-part="sidebar"] .nav-item svg {
+  width: 52px; height: 52px; padding: 14px; flex: none; border-radius: 50%; color: #7d8791;
+  background: linear-gradient(180deg, #ffffff 0%, #e9edf0 100%); box-shadow: inset 0 0 0 2px var(--tile-edge), 0 3px 6px rgb(0 0 0 / 0.12);
+  transition: box-shadow 160ms var(--ease), color 160ms var(--ease);
+}
+:root.theme-opt-bottom-bar [data-part="sidebar"] .nav-item .label { font-size: 11px; font-weight: 700; text-align: center; white-space: nowrap; }
+:root.theme-opt-bottom-bar [data-part="sidebar"] .nav-item .count { display: none; }
+:root.theme-opt-bottom-bar [data-part="sidebar"] .nav-item:is(:hover, .active) svg { color: var(--accent-deep); box-shadow: inset 0 0 0 2px var(--accent), var(--halo); }
+:root.theme-opt-bottom-bar [data-part="sidebar"] .nav-item.active { color: var(--accent-deep); }
+/* Sections : un rond avec un point, le contenu monte au-dessus de la barre */
+:root.theme-opt-bottom-bar [data-part="nav-collections"] .nav-sec { position: relative; margin: 0 !important; }
+:root.theme-opt-bottom-bar [data-part="nav-collections"] .nav-sec-head { padding: 0; }
+:root.theme-opt-bottom-bar [data-part="nav-collections"] .nav-sec-head .mini-btn { display: none; }
+:root.theme-opt-bottom-bar [data-part="nav-collections"] .nav-sec-toggle {
+  width: 76px; height: 82px; padding: 58px 0 0; justify-content: center; border-radius: 0; font-size: 11px; font-weight: 700; color: var(--text-2); white-space: nowrap;
+  background: radial-gradient(circle at 50% 26px, #9aa4ad 0 5px, transparent 6px), radial-gradient(circle at 50% 26px, #ffffff 0 22px, #d3d9df 23px 25px, transparent 26px);
+}
+:root.theme-opt-bottom-bar [data-part="nav-collections"] .nav-sec-toggle svg { display: none; }
+:root.theme-opt-bottom-bar [data-part="nav-collections"] .nav-sec:is(:hover, :focus-within) .nav-sec-toggle {
+  color: var(--accent-deep);
+  background: radial-gradient(circle at 50% 26px, var(--accent) 0 5px, transparent 6px), radial-gradient(circle at 50% 26px, #ffffff 0 22px, var(--accent) 23px 25px, rgb(var(--accent-rgb) / 0.3) 26px 30px, transparent 31px);
+}
+:root.theme-opt-bottom-bar [data-part="nav-collections"] .nav-sec-body {
+  position: absolute; bottom: calc(100% + 10px); left: 50%; transform: translate(-50%, 6px);
+  min-width: 230px; max-height: 60vh !important; overflow-y: auto; padding: 8px;
+  display: flex; flex-direction: column; gap: 2px;
+  background: #fff; border-radius: 18px; box-shadow: inset 0 0 0 2px var(--tile-edge), 0 12px 30px rgb(0 0 0 / 0.18);
+  opacity: 0; visibility: hidden; transition: opacity 160ms var(--ease), transform 160ms var(--ease), visibility 0s 160ms;
+}
+:root.theme-opt-bottom-bar [data-part="nav-collections"] .nav-sec::before { content: ""; position: absolute; left: 0; right: 0; bottom: 100%; height: 12px; }
+:root.theme-opt-bottom-bar [data-part="nav-collections"] .nav-sec:is(:hover, :focus-within) .nav-sec-body { opacity: 1; visibility: visible; transform: translate(-50%, 0); transition-delay: 0s; }
+:root.theme-opt-bottom-bar [data-part="nav-collections"] .nav-sec-body .nav-item {
+  width: 100%; height: 36px; flex-direction: row; justify-content: flex-start; gap: 10px; padding: 0 12px; border-radius: 12px; color: var(--text);
+}
+:root.theme-opt-bottom-bar [data-part="nav-collections"] .nav-sec-body .nav-item svg { width: 18px; height: 18px; padding: 0; background: none; box-shadow: none; }
+:root.theme-opt-bottom-bar [data-part="nav-collections"] .nav-sec-body .nav-item .label { font-size: 14px; text-align: left; flex: 1; }
+:root.theme-opt-bottom-bar [data-part="nav-collections"] .nav-sec-body .nav-item:is(:hover, .active) { background: rgb(var(--accent-rgb) / 0.14) !important; color: var(--accent-deep); }
+:root.theme-opt-bottom-bar [data-part="nav-collections"] .nav-sec-body .nav-item:is(:hover, .active) svg { box-shadow: none; }
+/* Le mode « petite fenêtre » du launcher réduit la barre latérale : on annule ici */
+@media (max-width: 1100px) {
+  :root.theme-opt-bottom-bar [data-part="sidebar"] .nav-sec-head { display: flex !important; }
+  :root.theme-opt-bottom-bar [data-part="sidebar"] .nav-sec:not(.open) .nav-sec-body { display: flex; }
+  :root.theme-opt-bottom-bar [data-part="sidebar"] .nav-item.small, :root.theme-opt-bottom-bar [data-part="sidebar"] .nav-sec-body .label { display: revert !important; }
+}
+@media (max-width: 1500px) {
+  :root.theme-opt-bottom-bar [data-part="nav-main"] .nav-item { width: 62px; }
+  :root.theme-opt-bottom-bar [data-part="nav-collections"] .nav-sec-toggle { width: auto; min-width: 62px; padding-left: 4px; padding-right: 4px; }
+}

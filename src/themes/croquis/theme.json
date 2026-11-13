@@ -1,0 +1,35 @@
+{
+  "id": "croquis",
+  "name": "Croquis",
+  "author": "CLRE",
+  "version": "1.0.0",
+  "apiVersion": 1,
+  "description": "Illustration au trait : papier crème, contours noirs épais, boutons pilule noirs, cercles d'icônes et petites étoiles scintillantes.",
+  "colorScheme": "light",
+  "schemes": {
+    "Papier": {
+      "--paper": "#f8f5ef", "--paper-rgb": "248 245 239", "--paper-2": "#efebe2",
+      "--ink": "#111111", "--ink-rgb": "17 17 17", "--ink-2": "#4d4a45",
+      "--pop": "#111111"
+    },
+    "Nuit": {
+      "--paper": "#121212", "--paper-rgb": "18 18 18", "--paper-2": "#1d1d1d",
+      "--ink": "#f6f2ea", "--ink-rgb": "246 242 234", "--ink-2": "#b4afa6",
+      "--pop": "#f6f2ea"
+    },
+    "Menthe": {
+      "--paper": "#eef6ef", "--paper-rgb": "238 246 239", "--paper-2": "#dfece1",
+      "--ink": "#14231a", "--ink-rgb": "20 35 26", "--ink-2": "#46584c",
+      "--pop": "#14231a"
+    },
+    "Pêche": {
+      "--paper": "#fcefe6", "--paper-rgb": "252 239 230", "--paper-2": "#f4e0d2",
+      "--ink": "#2a1610", "--ink-rgb": "42 22 16", "--ink-2": "#6b4a3e",
+      "--pop": "#2a1610"
+    }
+  },
+  "options": [
+    { "id": "sparkles", "type": "toggle", "label": "Étoiles scintillantes", "default": true },
+    { "id": "ink-covers", "type": "toggle", "label": "Jaquettes en noir et blanc (couleur au survol)", "default": false }
+  ]
+}

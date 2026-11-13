@@ -1,0 +1,114 @@
+/* Rétroconsole — les consoles 8 et 16 bits, pour CLRE-Launcher (apiVersion 1).
+   Police pixel, bordures « en escalier » faites d'ombres portées, boutons qui s'enfoncent,
+   curseur ▶ qui clignote, écran cathodique optionnel. Aucune image ni logo repris d'une console. */
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap');
+
+:root {
+  --pixel: 'Press Start 2P', monospace;
+  --sans: 'Segoe UI', system-ui, sans-serif;
+  --u: 3px; /* taille d'un « pixel » d'interface */
+  /* Bordure en escalier : quatre ombres décalées d'un pixel, les coins restent vides */
+  --pxb: 0 calc(var(--u) * -1) 0 0 var(--px), 0 var(--u) 0 0 var(--px), calc(var(--u) * -1) 0 0 0 var(--px), var(--u) 0 0 0 var(--px);
+  /* Relief : lumière en haut à gauche, ombre en bas à droite */
+  --relief: inset calc(var(--u) * -1) calc(var(--u) * -1) 0 0 rgb(0 0 0 / 0.35), inset var(--u) var(--u) 0 0 rgb(255 255 255 / 0.14);
+  --relief-in: inset var(--u) var(--u) 0 0 rgb(0 0 0 / 0.35);
+  --radius-cover: 0px;
+  --radius-tile: 0px;
+  --material: rgb(var(--bg-rgb) / 0.94);
+  --blur: none;
+  --ease: steps(4, end);
+  --key: var(--control);
+  --key-hover: var(--px-light);
+  --key-press: var(--control);
+  --key-edge: var(--pxb), var(--relief);
+  --key-edge-press: var(--pxb), var(--relief-in);
+  --well: rgb(var(--bg-rgb));
+  --well-edge: var(--pxb);
+}
+:root.theme-opt-pixel-text { --sans: 'VT323', monospace; }
+:root.theme-opt-pixel-text body { font-size: 19px; font-size-adjust: 0.54; } /* VT323 a de petites minuscules : on agrandit tout le texte d'un coup */
+:is(h1, h2.section, .modal h2, .prefs-head h2, .wordmark, .btn, .chip, .icon-btn, .avatar, .select, .filter select, .tag-toggle, .field select, .segmented button, .seg-chips button, .nav-item, .nav-sec-toggle, .nav-title, .kicker, .toast, [data-part="game-card"] .t, [data-part="week-card"] .v), :is(.nav-item, .btn, .kicker) * { font-size-adjust: none; }
+* { border-radius: 0 !important; }
+
+/* Titres : police pixel en capitales, ombre dure décalée */
+h1, h2.section, .modal h2, .prefs-head h2, [data-part="brand"] .wordmark {
+  font-family: var(--pixel); text-transform: uppercase; letter-spacing: 0; font-weight: 400;
+  text-shadow: var(--u) var(--u) 0 var(--px-shadow), 0 0 10px var(--glow);
+}
+h2.section { font-size: 16px; line-height: 1.6; }
+.spotlight h1, .game-hero h1 { font-size: 34px; line-height: 1.3; }
+[data-part="brand"] .wordmark { font-size: 10px; }
+[data-part="brand"] .wordmark b { font-weight: 400; color: var(--accent); }
+body { text-shadow: 0 0 6px var(--glow); }
+
+/* ── Panneaux : barre latérale et cartes en escalier ── */
+[data-part="sidebar"] { margin: 10px 0 10px 10px; padding-top: 34px; box-shadow: var(--pxb) !important; }
+[data-part="sidebar"] .nav-item, [data-part="nav-collections"] .nav-sec-toggle, .nav-title {
+  font-family: var(--pixel); font-size: 9px; text-transform: uppercase; letter-spacing: 0; line-height: 1.6;
+}
+[data-part="sidebar"] .nav-item { height: 30px; background: transparent; box-shadow: none; padding-left: 22px; position: relative; }
+[data-part="sidebar"] .nav-item .count { font-family: var(--pixel); font-size: 8px; }
+[data-part="sidebar"] .nav-item:hover { background: rgb(var(--fg-rgb) / 0.06); }
+[data-part="sidebar"] .nav-item.active { background: transparent; box-shadow: none; color: var(--accent); }
+[data-part="sidebar"] .nav-item.active::before { content: "▶"; position: absolute; left: 6px; font-size: 8px; color: var(--accent); animation: retro-blink 1s steps(1) infinite; }
+[data-part="sidebar"] .nav-item.active svg { color: var(--accent); }
+[data-part="week-card"] { box-shadow: var(--pxb); background: rgb(var(--bg-rgb)); margin: 10px var(--u) var(--u); border-top: 0; }
+[data-part="week-card"] .v { font-family: var(--pixel); font-size: 15px; }
+@keyframes retro-blink { 50% { opacity: 0; } }
+
+/* ── Boutons : blocs en relief qui s'enfoncent au clic ── */
+.btn, .chip, .icon-btn, .avatar, .select, .filter select, .tag-toggle, .field select, .resume-card .play {
+  font-family: var(--pixel); font-size: 9px !important; text-transform: uppercase; letter-spacing: 0;
+}
+.btn-primary, .btn-light, .cover .quick, .chip.on {
+  background: var(--btn-primary) !important; color: var(--on-accent) !important; text-shadow: none;
+  box-shadow: var(--pxb), var(--relief) !important;
+}
+.btn-primary:hover, .btn-light:hover, .cover .quick:hover { background: var(--btn-primary-hover) !important; }
+:is(.btn, .chip, .icon-btn, .avatar, .tag-toggle, .cover .quick):active { transform: translateY(var(--u)) !important; box-shadow: var(--pxb), var(--relief-in) !important; }
+.segmented, .seg-chips { gap: 8px !important; padding: var(--u) !important; }
+.segmented button, .seg-chips button { font-family: var(--pixel); font-size: 9px; text-transform: uppercase; }
+.segmented button.active, .seg-chips button.on { background: var(--accent) !important; color: var(--on-accent) !important; box-shadow: var(--relief) !important; text-shadow: none; }
+.search { box-shadow: var(--pxb) !important; }
+
+/* ── Jaquettes : cartouches encadrées, curseur ▶ sur le jeu survolé ── */
+[data-part="cover"] { box-shadow: var(--pxb) !important; image-rendering: pixelated; }
+[data-part="game-card"]:hover [data-part="cover"] { transform: translateY(calc(var(--u) * -2)); box-shadow: 0 calc(var(--u) * -1) 0 0 var(--hot), 0 var(--u) 0 0 var(--hot), calc(var(--u) * -1) 0 0 0 var(--hot), var(--u) 0 0 0 var(--hot), 0 calc(var(--u) * 4) 0 0 rgb(0 0 0 / 0.4) !important; }
+[data-part="game-card"] .t { font-family: var(--pixel); font-size: 9px; line-height: 1.7; text-transform: uppercase; margin-top: 4px; }
+:root.theme-opt-cursor [data-part="game-card"]:is(:hover, :focus-visible) .t::before { content: "▶ "; color: var(--hot); animation: retro-blink 0.8s steps(1) infinite; }
+[data-part="tile"], [data-part="resume-card"] { box-shadow: var(--pxb) !important; }
+:is([data-part="cover"], [data-part="tile"], .thumb, .spotlight, .game-hero) :is(img, video) { filter: var(--art-filter); }
+.spotlight .logo, .game-hero .logo { filter: var(--art-filter) drop-shadow(var(--u) var(--u) 0 var(--px-shadow)); }
+
+/* Bannières : texte avec ombre dure, accroche qui clignote */
+.spotlight .kicker, .game-hero .kicker { font-family: var(--pixel); font-size: 9px; text-transform: uppercase; }
+.spotlight .kicker .lamp, .game-hero .kicker .lamp { animation: retro-blink 1s steps(1) infinite; }
+.spotlight p { text-shadow: var(--u) var(--u) 0 var(--px-shadow); }
+
+/* Barres de progression en blocs */
+.hl-row .bar, .cover-dl { height: 10px; background: rgb(var(--bg-rgb)); box-shadow: var(--pxb); }
+.hl-row .bar span, .cover-dl div { background: repeating-linear-gradient(90deg, var(--accent) 0 8px, transparent 8px 10px); }
+
+/* Interrupteurs carrés */
+:is(.row-switch, .home-toggles) input[type="checkbox"] { box-shadow: var(--pxb); }
+:is(.row-switch, .home-toggles) input[type="checkbox"]::after { box-shadow: none; }
+
+/* Fenêtres, menus, notifications : boîtes de dialogue de jeu */
+.modal, .ctx-menu, .inbox, .toast, .toast-undo {
+  background: rgb(var(--card-rgb)) !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important;
+  border: 0 !important; box-shadow: var(--pxb), 0 0 0 calc(var(--u) * 3) rgb(var(--bg-rgb)), 0 0 0 calc(var(--u) * 4) var(--px-light) !important;
+}
+.toast { font-family: var(--pixel); font-size: 10px; }
+
+/* Barres de défilement carrées */
+::-webkit-scrollbar { width: 14px; background: rgb(var(--bg-rgb)); }
+::-webkit-scrollbar-thumb { background: var(--control) !important; border: 0 !important; box-shadow: inset -3px -3px 0 rgb(0 0 0 / 0.35), inset 3px 3px 0 rgb(255 255 255 / 0.15); }
+
+/* ── Écran cathodique (option) : lignes de balayage et coins assombris, au-dessus de tout sans bloquer la souris ── */
+:root.theme-opt-crt body::after {
+  content: ""; position: fixed; inset: 0; z-index: 9999; pointer-events: none;
+  background:
+    repeating-linear-gradient(0deg, rgb(0 0 0 / 0.18) 0 1px, transparent 1px 3px),
+    radial-gradient(130% 120% at 50% 50%, transparent 62%, rgb(0 0 0 / 0.55) 100%);
+}
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; } }

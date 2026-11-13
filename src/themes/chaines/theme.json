@@ -1,0 +1,39 @@
+{
+  "id": "chaines",
+  "name": "Chaînes",
+  "author": "CLRE",
+  "version": "1.0.0",
+  "apiVersion": 1,
+  "description": "Le menu blanc des consoles familiales de 2006 : fond rayé, jeux en tuiles arrondies, barre arrondie en bas, halo bleu.",
+  "colorScheme": "light",
+  "schemes": {
+    "Bleu": {
+      "--accent": "#34bee8",
+      "--accent-deep": "#1e8fc2",
+      "--accent-rgb": "52 190 232",
+      "--brand-rgb": "52 190 232"
+    },
+    "Vert": {
+      "--accent": "#3cc46b",
+      "--accent-deep": "#23964b",
+      "--accent-rgb": "60 196 107",
+      "--brand-rgb": "60 196 107"
+    },
+    "Orange": {
+      "--accent": "#ff9a2e",
+      "--accent-deep": "#d9740a",
+      "--accent-rgb": "255 154 46",
+      "--brand-rgb": "255 154 46"
+    },
+    "Rose": {
+      "--accent": "#f067a6",
+      "--accent-deep": "#c93f80",
+      "--accent-rgb": "240 103 166",
+      "--brand-rgb": "240 103 166"
+    }
+  },
+  "options": [
+    { "id": "landscape", "type": "toggle", "label": "Jeux en tuiles larges", "default": true },
+    { "id": "bottom-bar", "type": "toggle", "label": "Menu dans la barre du bas", "default": true }
+  ]
+}

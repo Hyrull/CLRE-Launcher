@@ -1,0 +1,146 @@
+/* Tactique — interface de jeu de tir tactique, pour CLRE-Launcher (apiVersion 1).
+   Bleu nuit et crème, un seul accent vif, coins coupés en biais, capitales condensées,
+   filets fins et petits repères. Inspiré du genre : aucun logo, personnage ni police propriétaire. */
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=Barlow:wght@400;500;600&display=swap');
+
+:root {
+  --sans: 'Barlow', 'Segoe UI', sans-serif;
+  --cond: 'Barlow Condensed', 'Barlow', sans-serif;
+  --c: 10px; /* taille d'un coin coupé */
+  --cut: polygon(0 0, calc(100% - var(--c)) 0, 100% var(--c), 100% 100%, var(--c) 100%, 0 calc(100% - var(--c)));
+  --cut-tr: polygon(0 0, calc(100% - var(--c)) 0, 100% var(--c), 100% 100%, 0 100%);
+  --bg-rgb: var(--base-rgb);
+  --card-rgb: var(--base-rgb);
+  --raised-rgb: var(--base-rgb);
+  --popover-rgb: var(--base-rgb);
+  --glass-rgb: var(--base-rgb);
+  --fg-rgb: var(--cream-rgb);
+  --shade-rgb: var(--base-rgb);
+  --on-art-rgb: var(--hero-text-rgb);
+  --sidebar: var(--panel);
+  --card: var(--panel);
+  --surface-2: var(--panel);
+  --control: var(--panel-2);
+  --control-strong: var(--accent);
+  --text: var(--cream);
+  --text-2: var(--dim);
+  --muted: var(--dim);
+  --on-accent: #0f1923;
+  --on-text: var(--base);
+  --knob: var(--cream);
+  --material: rgb(var(--base-rgb) / 0.94);
+  --blur: none;
+  --line: rgb(var(--cream-rgb) / 0.12);
+  --line-strong: rgb(var(--cream-rgb) / 0.25);
+  --fill: rgb(var(--cream-rgb) / 0.06);
+  --art-fallback: var(--panel-2);
+  --art-fallback-flat: var(--panel-2);
+  --radius-cover: 0px;
+  --radius-tile: 0px;
+  --ease: cubic-bezier(0.7, 0, 0.2, 1);
+  --key: transparent;
+  --key-hover: rgb(var(--cream-rgb) / 0.08);
+  --key-press: rgb(var(--cream-rgb) / 0.14);
+  --key-edge: inset 0 0 0 1px rgb(var(--cream-rgb) / 0.35);
+  --key-edge-press: inset 0 0 0 1px var(--cream);
+  --well: rgb(var(--cream-rgb) / 0.05);
+  --well-edge: inset 0 0 0 1px rgb(var(--cream-rgb) / 0.2);
+  --btn-primary: var(--accent);
+  --btn-primary-hover: var(--cream);
+  --btn-primary-press: var(--accent);
+  --btn-primary-edge: transparent;
+}
+* { border-radius: 0 !important; }
+html, body { background: var(--base); }
+.content::before { display: none; }
+
+/* Fond : rayures fines en biais et un grand bloc d'accent incliné, très discrets (option) */
+:root.theme-opt-stripes body::before {
+  content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  background:
+    linear-gradient(115deg, transparent 0 72%, rgb(var(--accent-rgb) / 0.07) 72% 80%, transparent 80%),
+    linear-gradient(115deg, transparent 0 82%, rgb(var(--cream-rgb) / 0.03) 82% 84%, transparent 84%),
+    repeating-linear-gradient(135deg, rgb(var(--cream-rgb) / 0.022) 0 1px, transparent 1px 9px);
+}
+:root.theme-opt-stripes :is([data-part="app"], [data-part="content"], body) { background: transparent; }
+:root.theme-opt-stripes html { background: var(--base); }
+
+/* ── Typo : capitales condensées pour tout ce qui est titre, libellé ou bouton ── */
+h1, h2.section, .nav-item, .nav-sec-toggle, .nav-title, .segmented button, .seg-chips button, .btn, .chip, .tag-toggle, .select, .filter select, .kicker, .group-title, .stats .k, [data-part="brand"] .wordmark, [data-part="game-card"] .t {
+  font-family: var(--cond); text-transform: uppercase; letter-spacing: 0.04em;
+}
+h1 { font-weight: 800; letter-spacing: 0.01em; }
+.spotlight h1, .game-hero h1 { font-size: 80px; line-height: 0.9; }
+h2.section { font-size: 28px; font-weight: 700; display: flex; align-items: center; gap: 12px; }
+h2.section::before { content: ""; width: 10px; height: 10px; flex: none; background: var(--accent); transform: rotate(45deg); }
+.section-sub, .stats .k { color: var(--dim); }
+.stats .v { font-family: var(--cond); font-weight: 700; font-size: 26px; letter-spacing: 0.01em; }
+
+/* ── Barre latérale : panneau sombre, entrée active marquée d'une barre d'accent ── */
+[data-part="sidebar"] { border-right: 1px solid var(--line) !important; box-shadow: none !important; }
+[data-part="brand"] .wordmark, [data-part="brand"] .wordmark b { font-weight: 800; font-size: 18px; color: var(--cream); }
+[data-part="sidebar"] .nav-item { font-size: 16px; font-weight: 600; height: 36px; color: var(--dim); background: transparent; box-shadow: none !important; position: relative; }
+[data-part="sidebar"] .nav-item svg { color: var(--dim); }
+[data-part="sidebar"] .nav-item:hover { color: var(--cream); background: rgb(var(--cream-rgb) / 0.05); }
+[data-part="sidebar"] .nav-item:hover svg { color: var(--cream); }
+[data-part="sidebar"] .nav-item.active { color: var(--cream); background: linear-gradient(90deg, rgb(var(--accent-rgb) / 0.22), transparent 85%) !important; }
+[data-part="sidebar"] .nav-item.active::before { content: ""; position: absolute; left: 0; top: 4px; bottom: 4px; width: 3px; background: var(--accent); }
+[data-part="sidebar"] .nav-item.active svg { color: var(--accent); }
+[data-part="sidebar"] .count { font-family: var(--cond); font-size: 13px; }
+[data-part="nav-collections"] .nav-sec-toggle { font-size: 13px; font-weight: 700; color: var(--accent); letter-spacing: 0.12em; }
+[data-part="week-card"] { border-top: 1px solid var(--line); }
+[data-part="week-card"] .v { font-family: var(--cond); font-weight: 800; font-size: 34px; color: var(--cream); }
+[data-part="week-card"] .k { font-family: var(--cond); text-transform: uppercase; letter-spacing: 0.1em; color: var(--accent); }
+
+/* ── Barre du haut : onglets soulignés, pas de pastille ── */
+[data-part="topbar"].material { border-bottom-color: var(--line); }
+[data-part="main-tabs"], .seg-chips { background: transparent !important; box-shadow: none !important; padding: 0; gap: 6px; }
+[data-part="main-tabs"] button { font-size: 17px; font-weight: 700; color: var(--dim); background: transparent !important; box-shadow: none !important; height: 34px; padding: 0 10px; }
+[data-part="main-tabs"] button:hover { color: var(--cream); }
+[data-part="main-tabs"] button.active { color: var(--cream) !important; background: transparent !important; box-shadow: inset 0 -3px 0 var(--accent) !important; }
+.segmented:not([data-part="main-tabs"]) button.active, .seg-chips button.on { background: var(--cream) !important; color: var(--base) !important; }
+.topbar.over-hero:not(.material) :is(.segmented, .search, .icon-btn, .avatar) { background: rgb(var(--base-rgb) / 0.7) !important; -webkit-backdrop-filter: none; backdrop-filter: none; }
+.search { box-shadow: inset 0 0 0 1px rgb(var(--cream-rgb) / 0.2) !important; }
+.search input { color: var(--cream); font-family: var(--sans); }
+
+/* ── Boutons : rectangles à coins coupés, le principal en accent, s'inverse au survol ── */
+.btn, .chip, .tag-toggle { font-weight: 700; font-size: 15px; color: var(--cream); }
+.btn-primary, .btn-light, .cover .quick { background: var(--accent) !important; color: #0f1923 !important; box-shadow: none !important; font-weight: 800; letter-spacing: 0.08em; transition: background 180ms var(--ease), color 180ms var(--ease); }
+.btn-primary:hover, .btn-light:hover, .cover .quick:hover { background: var(--cream) !important; color: var(--base) !important; }
+.chip.on, .tag-toggle.on { background: var(--accent) !important; color: #0f1923 !important; }
+:is(.btn-glass, .btn-ghost, .chip:not(.on), .tag-toggle:not(.on)):hover { background: var(--cream) !important; color: var(--base) !important; }
+.btn-glass, .btn-running { background: rgb(var(--base-rgb) / 0.55) !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+:root.theme-opt-cut :is(.btn, .chip, .tag-toggle, .cover .quick) { clip-path: var(--cut); }
+:root.theme-opt-cut :is(.btn, .chip) { --c: 8px; }
+
+/* ── Jaquettes : coin coupé en haut à droite, barre d'accent au survol ── */
+[data-part="cover"] { box-shadow: none !important; transition: transform 200ms var(--ease); }
+:root.theme-opt-cut [data-part="cover"] { --c: 18px; clip-path: var(--cut-tr); }
+[data-part="cover"]::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 4px; background: var(--accent); transform: scaleX(0); transform-origin: left; transition: transform 220ms var(--ease); }
+[data-part="game-card"]:hover [data-part="cover"] { transform: translateY(-4px); }
+[data-part="game-card"]:hover [data-part="cover"]::after { transform: scaleX(1); }
+[data-part="game-card"] .t { font-size: 17px; font-weight: 700; letter-spacing: 0.03em; }
+[data-part="game-card"]:hover .t { color: var(--accent); }
+:root.theme-opt-cut [data-part="tile"] { --c: 18px; clip-path: var(--cut-tr); }
+[data-part="resume-card"] { background: var(--panel); box-shadow: inset 3px 0 0 var(--accent); }
+
+/* ── Bannières : gros titre, filet d'accent, repères dans les coins ── */
+.spotlight .body::before, .game-hero .title::before { content: ""; display: block; width: 64px; height: 4px; background: var(--accent); margin-bottom: 6px; }
+.spotlight .kicker, .game-hero .kicker { font-weight: 700; letter-spacing: 0.2em; color: var(--accent); }
+.spotlight p { font-size: 17px; }
+
+/* ── Fenêtres, menus, notifications ── */
+.modal { background: var(--base) !important; border: 1px solid var(--line-strong) !important; box-shadow: inset 0 3px 0 var(--accent), 0 30px 60px rgb(0 0 0 / 0.5) !important; }
+.prefs-side { background: var(--panel) !important; }
+.prefs-cats button.on, .prefs-me.on { background: var(--accent) !important; color: #0f1923 !important; }
+.group { background: var(--panel) !important; box-shadow: inset 0 0 0 1px var(--line); }
+.ctx-menu, .inbox { background: var(--panel) !important; box-shadow: 0 0 0 1px var(--line-strong), inset 3px 0 0 var(--accent), 0 18px 40px rgb(0 0 0 / 0.5) !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+.ctx-menu button:hover { background: var(--accent) !important; color: #0f1923 !important; }
+.toast, .toast-undo { background: var(--cream) !important; color: var(--base) !important; box-shadow: inset 4px 0 0 var(--accent) !important; font-family: var(--cond); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 700; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+:is(.row-switch, .home-toggles) input[type="checkbox"] { background: rgb(var(--cream-rgb) / 0.15); }
+:is(.row-switch, .home-toggles) input[type="checkbox"]:checked { background: var(--accent); }
+:is(.row-switch, .home-toggles) input[type="checkbox"]:checked::after { background: var(--base); }
+.hl-row .bar span, .cover-dl div { background: var(--accent); }
+select option { background: var(--panel); color: var(--cream); }
+::-webkit-scrollbar-thumb { background: rgb(var(--cream-rgb) / 0.18) !important; border: 4px solid transparent !important; background-clip: padding-box !important; }
+::-webkit-scrollbar-thumb:hover { background-color: var(--accent) !important; }

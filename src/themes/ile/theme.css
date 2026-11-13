@@ -1,0 +1,165 @@
+/* Île paisible — ambiance de jeu de vie sur une île, pour CLRE-Launcher (apiVersion 1).
+   Herbe à pois, panneaux crème très arrondis, texte brun, entrées du menu en petites tuiles
+   d'appli colorées, boutons ronds en relief qui s'enfoncent, bulles de dialogue, pétales qui tombent.
+   Inspiré du genre : aucun personnage, logo, icône ni police d'un jeu existant. */
+@import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400..700&family=Nunito:wght@500..800&display=swap');
+
+:root {
+  --sans: 'Nunito', 'Segoe UI', sans-serif;
+  --round: 'Fredoka', 'Nunito', sans-serif;
+  --cream: #fff9e8;
+  --cream-2: #f6ecd2;
+  --brown: #6b4e3d;
+  --brown-2: #9a7b62;
+  --edge: #e6d6b0;
+  --bg-rgb: 255 249 232;
+  --card-rgb: 255 249 232;
+  --raised-rgb: 255 249 232;
+  --popover-rgb: 255 249 232;
+  --glass-rgb: 255 249 232;
+  --fg-rgb: 107 78 61;
+  --shade-rgb: 80 60 40;
+  --on-art-rgb: 107 78 61;
+  --on-art: #6b4e3d;
+  --sidebar: var(--cream);
+  --card: var(--cream);
+  --surface-2: var(--cream);
+  --control: var(--cream-2);
+  --control-strong: #ffffff;
+  --text: var(--brown);
+  --text-2: var(--brown-2);
+  --muted: #b39a82;
+  --on-accent: #ffffff;
+  --on-text: #ffffff;
+  --knob: #ffffff;
+  --material: rgb(255 249 232 / 0.92);
+  --blur: blur(6px);
+  --line: rgb(107 78 61 / 0.15);
+  --art-fallback: linear-gradient(160deg, #fffdf4, var(--cream-2));
+  --art-fallback-flat: linear-gradient(160deg, #fffdf4, var(--cream-2));
+  --radius-cover: 18px;
+  --radius-tile: 22px;
+  --ease: cubic-bezier(0.34, 1.56, 0.64, 1); /* petit rebond */
+  /* Boutons crème en relief : bord du bas plus foncé, ils s'enfoncent au clic */
+  --key: #ffffff;
+  --key-hover: #fffdf6;
+  --key-press: var(--cream-2);
+  --key-edge: 0 4px 0 var(--edge), inset 0 0 0 2px var(--edge);
+  --key-edge-press: 0 1px 0 var(--edge), inset 0 0 0 2px var(--edge);
+  --well: #ffffff;
+  --well-edge: inset 0 0 0 2px var(--edge);
+  --btn-primary: var(--accent);
+  --btn-primary-hover: var(--accent);
+  --btn-primary-press: var(--accent-dark);
+  --btn-primary-edge: transparent;
+}
+.content::before { display: none; }
+
+/* ── Herbe à pois ── */
+/* Fond sur <html> seulement : un fond sur <body> passerait par-dessus les pétales (z-index -1) */
+html { background: var(--grass) radial-gradient(circle, var(--grass-dot) 0 5px, transparent 6px) 0 0 / 34px 34px; }
+body { background: transparent; color: var(--brown); }
+:is([data-part="app"], [data-part="content"]) { background: transparent; }
+/* Pétales qui tombent en biais (option) : petites ellipses dessinées en dégradés, couleur selon la saison */
+:root.theme-opt-petals body::after {
+  content: ""; position: fixed; inset: -400px 0 0 0; z-index: -1; pointer-events: none;
+  background:
+    radial-gradient(ellipse 7px 4px at 40px 60px, var(--petal) 90%, transparent),
+    radial-gradient(ellipse 5px 3px at 210px 20px, var(--petal-2) 90%, transparent),
+    radial-gradient(ellipse 6px 4px at 330px 190px, var(--petal) 90%, transparent),
+    radial-gradient(ellipse 4px 3px at 120px 260px, var(--petal) 90%, transparent),
+    radial-gradient(ellipse 7px 4px at 260px 340px, var(--petal-2) 90%, transparent),
+    radial-gradient(ellipse 5px 3px at 370px 330px, var(--petal) 90%, transparent);
+  background-size: 400px 400px;
+  opacity: 0.85;
+  animation: ile-fall 40s linear infinite;
+}
+@keyframes ile-fall { to { transform: translate(-200px, 400px); } }
+@media (prefers-reduced-motion: reduce) { :root.theme-opt-petals body::after { animation: none; } }
+
+/* ── Titres ronds et bruns, avec une petite feuille ── */
+h1, h2.section, .nav-sec-toggle, .nav-title, [data-part="brand"] .wordmark, .segmented button, .btn, .group-title { font-family: var(--round); }
+h1, h2.section { color: var(--brown); font-weight: 700; letter-spacing: 0; }
+h2.section { display: flex; align-items: center; gap: 10px; }
+h2.section::before { content: ""; width: 18px; height: 18px; flex: none; background: var(--accent); border-radius: 0 100% 0 100%; transform: rotate(-10deg); box-shadow: inset -3px -3px 0 rgb(0 0 0 / 0.08); }
+.section-sub { color: var(--brown-2); }
+
+/* ── Barre latérale : panneau crème flottant, entrées en tuiles d'appli ── */
+[data-part="sidebar"] {
+  margin: 14px 0 14px 14px; border-radius: 28px; padding: 30px 10px 12px !important;
+  box-shadow: 0 6px 0 var(--edge), 0 10px 24px rgb(80 60 40 / 0.12) !important; border-right: 0;
+}
+[data-part="brand"] .wordmark, [data-part="brand"] .wordmark b { color: var(--brown); font-weight: 700; }
+[data-part="sidebar"] .nav-item { height: 40px; border-radius: 14px; color: var(--brown); font-weight: 700; gap: 10px; background: transparent; box-shadow: none !important; transition: background 160ms ease; }
+[data-part="sidebar"] .nav-item svg {
+  width: 28px; height: 28px; padding: 6px; flex: none; border-radius: 9px; color: #fff;
+  background: var(--tile, #8fcf9b); box-shadow: inset 0 -3px 0 rgb(0 0 0 / 0.12);
+}
+[data-part="sidebar"] .nav-item:nth-child(6n + 1) { --tile: #ff9fb2; }
+[data-part="sidebar"] .nav-item:nth-child(6n + 2) { --tile: #7fc8f8; }
+[data-part="sidebar"] .nav-item:nth-child(6n + 3) { --tile: #ffcf5c; }
+[data-part="sidebar"] .nav-item:nth-child(6n + 4) { --tile: #8fd694; }
+[data-part="sidebar"] .nav-item:nth-child(6n + 5) { --tile: #c3a6f2; }
+[data-part="sidebar"] .nav-item:nth-child(6n + 6) { --tile: #ffa76b; }
+[data-part="sidebar"] .nav-item:hover { background: var(--cream-2); }
+[data-part="sidebar"] .nav-item.active { background: #ffffff !important; box-shadow: 0 3px 0 var(--edge), inset 0 0 0 2px var(--edge) !important; }
+[data-part="sidebar"] .nav-item.active svg { transform: scale(1.08) rotate(-4deg); }
+[data-part="sidebar"] .count { color: var(--brown-2); font-weight: 800; }
+[data-part="nav-collections"] .nav-sec-toggle { color: var(--brown-2); font-weight: 600; font-size: 14px; }
+[data-part="week-card"] { margin-top: 10px; border-top: 0; border-radius: 20px; background: #fff; box-shadow: inset 0 0 0 2px var(--edge); padding: 12px 14px; }
+[data-part="week-card"] .v { font-family: var(--round); color: var(--accent-dark); }
+
+/* ── Barre du haut : crème, pointillés dessous ── */
+[data-part="topbar"].material { background: rgb(255 249 232 / 0.94) !important; border-bottom: 3px dashed var(--edge) !important; }
+.segmented, .seg-chips { background: #fff !important; box-shadow: inset 0 0 0 2px var(--edge) !important; border-radius: 999px !important; padding: 4px !important; }
+.segmented button, .seg-chips button { border-radius: 999px !important; color: var(--brown-2); font-weight: 600; }
+.segmented button.active, .seg-chips button.on { background: var(--accent) !important; color: #fff !important; box-shadow: 0 3px 0 var(--accent-dark) !important; }
+.search { border-radius: 999px !important; background: #fff !important; }
+.search input { color: var(--brown); }
+.topbar.over-hero:not(.material) :is(.segmented, .search, .icon-btn, .avatar) { background: #fff !important; }
+
+/* ── Boutons ronds en relief ── */
+.btn, .chip, .icon-btn, .avatar, .select, .filter select, .tag-toggle, .field select { border-radius: 999px !important; font-weight: 700; color: var(--brown); }
+.btn-primary, .btn-light, .cover .quick { color: #fff !important; box-shadow: 0 4px 0 var(--accent-dark) !important; text-shadow: 0 1px 0 rgb(0 0 0 / 0.15); }
+:is(.btn, .chip, .icon-btn, .avatar, .tag-toggle, .cover .quick) { transition: transform 160ms var(--ease), box-shadow 120ms ease, background 160ms ease !important; }
+:is(.btn, .chip, .icon-btn, .avatar, .tag-toggle):hover { transform: translateY(-2px); }
+:is(.btn, .chip, .icon-btn, .avatar, .tag-toggle):active { transform: translateY(3px) !important; }
+.btn-primary:active, .btn-light:active { box-shadow: 0 1px 0 var(--accent-dark) !important; }
+.chip.on, .tag-toggle.on { background: var(--accent) !important; color: #fff !important; box-shadow: 0 3px 0 var(--accent-dark) !important; }
+.btn-glass, .btn-running { background: #fff !important; color: var(--brown) !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+
+/* ── Jaquettes : autocollants à bord blanc, qui se penchent au survol ── */
+[data-part="cover"] { box-shadow: 0 0 0 5px #fff, 0 7px 0 3px var(--edge), 0 12px 20px rgb(80 60 40 / 0.18) !important; }
+[data-part="game-card"] { gap: 14px; }
+:root.theme-opt-wobble [data-part="game-card"]:hover [data-part="cover"] { transform: translateY(-6px) rotate(-2.5deg); }
+:root.theme-opt-wobble [data-part="game-card"]:nth-child(even):hover [data-part="cover"] { transform: translateY(-6px) rotate(2.5deg); }
+[data-part="cover"] { transition: transform 260ms var(--ease) !important; }
+[data-part="game-card"] .t { font-family: var(--round); font-weight: 600; font-size: 15px; color: var(--brown); text-align: center; }
+[data-part="game-card"] .s { justify-content: center; color: var(--brown-2); }
+:is([data-part="tile"], [data-part="resume-card"]) { background: var(--cream); box-shadow: 0 5px 0 var(--edge), inset 0 0 0 2px var(--edge) !important; }
+
+/* ── Bannières : l'image se fond dans l'herbe, le texte est posé dans une bulle crème ── */
+[data-part="spotlight"], [data-part="game-hero"] { background: transparent !important; }
+:is(.spotlight, .game-hero) :is(img.bg, video, .shade) { -webkit-mask-image: linear-gradient(180deg, #000 55%, transparent 100%); mask-image: linear-gradient(180deg, #000 55%, transparent 100%); }
+.spotlight .shade, .game-hero .shade { background: none; }
+.spotlight .body { background: var(--cream); border-radius: 30px; padding: 22px 26px 26px !important; margin: 0 0 40px 32px; box-shadow: 0 6px 0 var(--edge), 0 14px 30px rgb(80 60 40 / 0.18); }
+.game-hero .title { background: var(--cream); border-radius: 28px; padding: 18px 24px; box-shadow: 0 6px 0 var(--edge), 0 14px 30px rgb(80 60 40 / 0.18); }
+.spotlight .logo, .game-hero .logo { filter: none; }
+.spotlight p { color: var(--brown-2); }
+
+/* ── Bulles de dialogue : fenêtres, menus, notifications ── */
+.modal { border-radius: 34px !important; border: 0 !important; background: var(--cream) !important; box-shadow: 0 8px 0 var(--edge), 0 24px 60px rgb(80 60 40 / 0.3) !important; }
+.prefs-side { background: var(--cream-2) !important; }
+.prefs-cats button.on, .prefs-me.on { background: var(--accent) !important; color: #fff !important; }
+.group { background: #fff !important; border-radius: 22px !important; box-shadow: inset 0 0 0 2px var(--edge); }
+.ctx-menu, .inbox { background: var(--cream) !important; border-radius: 22px !important; box-shadow: 0 5px 0 var(--edge), 0 14px 30px rgb(80 60 40 / 0.2) !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; color: var(--brown); }
+.ctx-menu button { border-radius: 14px !important; }
+.toast, .toast-undo { background: var(--cream) !important; color: var(--brown) !important; border-radius: 26px !important; box-shadow: 0 5px 0 var(--edge), 0 12px 26px rgb(80 60 40 / 0.25) !important; font-family: var(--round); font-weight: 600; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+/* Petite queue de bulle sous la notification */
+.toast::after { content: ""; position: absolute; left: 34px; bottom: -10px; width: 20px; height: 20px; background: var(--cream); transform: rotate(45deg); border-radius: 4px; box-shadow: 4px 4px 0 var(--edge); z-index: -1; }
+:is(.row-switch, .home-toggles) input[type="checkbox"] { background: var(--cream-2); box-shadow: inset 0 0 0 2px var(--edge); }
+:is(.row-switch, .home-toggles) input[type="checkbox"]:checked { background: var(--accent); box-shadow: none; }
+.hl-row .bar, .cover-dl { background: var(--cream-2); border-radius: 999px; }
+.hl-row .bar span, .cover-dl div { background: var(--accent); border-radius: 999px; }
+select option { background: #fff; color: var(--brown); }
+::-webkit-scrollbar-thumb { background-color: rgb(107 78 61 / 0.25); }

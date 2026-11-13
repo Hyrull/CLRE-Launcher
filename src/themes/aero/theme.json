@@ -1,0 +1,85 @@
+{
+  "id": "aero",
+  "name": "Aéro",
+  "author": "CLRE",
+  "version": "1.0.0",
+  "apiVersion": 1,
+  "description": "Esthétique Frutiger Aero : ciel lumineux, verre dépoli, boutons brillants, bulles et reflets.",
+  "colorScheme": "light",
+  "schemes": {
+    "Ciel": {
+      "--sky": "linear-gradient(180deg, #1f86dc 0%, #5ab6f0 28%, #bfe7ff 55%, #eefaff 70%, #d6f3c4 84%, #7fcb47 100%)",
+      "--text": "#0d3354",
+      "--text-2": "#2d5679",
+      "--muted": "#4f7697",
+      "--hero-text-rgb": "8 40 70",
+      "--hero-glow": "rgb(255 255 255 / 0.9)",
+      "--panel-rgb": "255 255 255",
+      "--panel-a": "0.42",
+      "--accent": "#1a8fe3",
+      "--aqua-top": "#7fd0ff",
+      "--aqua-bottom": "#0f73d6",
+      "--aqua-edge": "#0b5cb0"
+    },
+    "Océan": {
+      "--sky": "linear-gradient(180deg, #0a6f9e 0%, #20a6c9 30%, #8be3ee 55%, #e3fbff 72%, #8fe0e8 86%, #1c9fb8 100%)",
+      "--text": "#073b4c",
+      "--text-2": "#1f5d6e",
+      "--muted": "#3f7d8c",
+      "--hero-text-rgb": "4 44 58",
+      "--hero-glow": "rgb(255 255 255 / 0.9)",
+      "--panel-rgb": "255 255 255",
+      "--panel-a": "0.42",
+      "--accent": "#0aa2c4",
+      "--aqua-top": "#7fe8f5",
+      "--aqua-bottom": "#0a8fb0",
+      "--aqua-edge": "#06708c"
+    },
+    "Prairie": {
+      "--sky": "linear-gradient(180deg, #3fa3e8 0%, #9bd6f7 30%, #eaf8ff 50%, #d9f5b8 64%, #8fd651 82%, #3e9e1f 100%)",
+      "--text": "#14391a",
+      "--text-2": "#2f5a2f",
+      "--muted": "#4f7a4a",
+      "--hero-text-rgb": "16 50 20",
+      "--hero-glow": "rgb(255 255 255 / 0.9)",
+      "--panel-rgb": "255 255 255",
+      "--panel-a": "0.45",
+      "--accent": "#34a321",
+      "--aqua-top": "#a6ec7c",
+      "--aqua-bottom": "#2f9e1c",
+      "--aqua-edge": "#22781a"
+    },
+    "Aurore": {
+      "--sky": "radial-gradient(ellipse 70% 40% at 25% 30%, rgb(60 230 160 / 0.55), transparent 70%), radial-gradient(ellipse 60% 35% at 75% 22%, rgb(80 150 255 / 0.5), transparent 70%), linear-gradient(180deg, #03142b 0%, #06305a 45%, #0b4a6e 75%, #04213a 100%)",
+      "--text": "#eaf6ff",
+      "--text-2": "#b6d6ee",
+      "--muted": "#86aac6",
+      "--hero-text-rgb": "234 246 255",
+      "--hero-glow": "rgb(0 30 60 / 0.8)",
+      "--panel-rgb": "20 60 100",
+      "--panel-a": "0.38",
+      "--accent": "#3cd6a0",
+      "--aqua-top": "#7ff0c8",
+      "--aqua-bottom": "#14a878",
+      "--aqua-edge": "#0c7a56",
+      "--key-top": "rgb(255 255 255 / 0.22)",
+      "--key-bottom": "rgb(255 255 255 / 0.06)",
+      "--key-glow": "rgb(0 20 40 / 0.6)",
+      "--well-bg": "rgb(0 20 40 / 0.35)"
+    }
+  },
+  "options": [
+    {
+      "id": "bubbles",
+      "type": "toggle",
+      "label": "Bulles qui montent",
+      "default": true
+    },
+    {
+      "id": "reflect",
+      "type": "toggle",
+      "label": "Reflet sous les jaquettes",
+      "default": true
+    }
+  ]
+}

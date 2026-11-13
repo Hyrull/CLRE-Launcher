@@ -1,0 +1,51 @@
+{
+  "id": "vague",
+  "name": "Vague",
+  "author": "CLRE",
+  "version": "1.0.0",
+  "apiVersion": 1,
+  "description": "Menu de console de salon des années 2000 : catégories en ligne, listes verticales, vagues lumineuses qui ondulent.",
+  "colorScheme": "dark",
+  "schemes": {
+    "Bleu nuit": {
+      "--wave-top": "#1b4f9c",
+      "--wave-bottom": "#04122e",
+      "--bg-rgb": "8 28 70",
+      "--glow-rgb": "150 200 255"
+    },
+    "Rouge": {
+      "--wave-top": "#a3182a",
+      "--wave-bottom": "#2a0207",
+      "--bg-rgb": "80 8 18",
+      "--glow-rgb": "255 170 170"
+    },
+    "Vert": {
+      "--wave-top": "#2e8b3a",
+      "--wave-bottom": "#04200a",
+      "--bg-rgb": "14 60 24",
+      "--glow-rgb": "180 255 190"
+    },
+    "Violet": {
+      "--wave-top": "#6a3fb5",
+      "--wave-bottom": "#120526",
+      "--bg-rgb": "44 20 84",
+      "--glow-rgb": "215 190 255"
+    },
+    "Or": {
+      "--wave-top": "#b8862a",
+      "--wave-bottom": "#2a1803",
+      "--bg-rgb": "90 60 12",
+      "--glow-rgb": "255 230 170"
+    },
+    "Argent": {
+      "--wave-top": "#9aa3ad",
+      "--wave-bottom": "#262a30",
+      "--bg-rgb": "70 76 86",
+      "--glow-rgb": "255 255 255"
+    }
+  },
+  "options": [
+    { "id": "list", "type": "toggle", "label": "Bibliothèque en liste verticale", "default": true },
+    { "id": "still", "type": "toggle", "label": "Vagues immobiles", "default": false }
+  ]
+}

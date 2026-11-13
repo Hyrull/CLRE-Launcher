@@ -1,0 +1,134 @@
+/* Millénium — le bureau du début des années 2000, pour CLRE-Launcher (apiVersion 1).
+   Barre de titre bleue, volet de tâches à gauche, boutons beiges en relief, gros bouton vert.
+   Tout est dessiné en CSS : aucune image ni logo repris d'un produit existant. */
+
+:root {
+  --sans: Tahoma, Verdana, 'Segoe UI', sans-serif;
+  --radius-cover: 2px;
+  --radius-tile: 3px;
+  --material: var(--xp-title);
+  --blur: none;
+  /* Boutons beiges en relief, liseré bleu foncé */
+  --key: linear-gradient(180deg, #ffffff 0%, #f3f1e7 60%, #e3dfd0 100%);
+  --key-hover: linear-gradient(180deg, #ffffff 0%, #f6f4ec 60%, #e9e5d8 100%);
+  --key-press: linear-gradient(180deg, #e3dfd0 0%, #f3f1e7 100%);
+  --key-edge: inset 0 0 0 1px var(--xp-title-edge);
+  --key-edge-press: inset 0 0 0 1px var(--xp-title-edge), inset 1px 1px 2px rgb(0 0 0 / 0.2);
+  --well: #ffffff;
+  --well-edge: inset 0 0 0 1px #7f9db9;
+}
+body { font-size: 13px; }
+
+/* ── Barre de titre : toute la barre d'outils, toujours opaque ── */
+[data-part="topbar"], [data-part="topbar"].material {
+  background: var(--xp-title) !important;
+  border-bottom: 0 !important;
+  padding-bottom: 8px;
+  box-shadow: 0 1px 0 var(--xp-title-edge), 0 2px 4px rgb(0 0 0 / 0.25);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+/* Onglets principaux : onglets blancs, liseré orange sur l'onglet actif */
+[data-part="topbar"] [data-part="main-tabs"] { background: transparent !important; box-shadow: none !important; padding: 0; gap: 4px; }
+[data-part="main-tabs"] button {
+  height: 26px; padding: 0 14px; border-radius: 3px 3px 0 0 !important;
+  color: var(--xp-title-text); font-weight: 700; text-shadow: 1px 1px 0 rgb(0 0 0 / 0.25);
+  background: rgb(255 255 255 / 0.12); box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.35);
+}
+[data-part="main-tabs"] button:hover { background: rgb(255 255 255 / 0.25); color: var(--xp-title-text); }
+[data-part="main-tabs"] button.active {
+  background: #fcfcfe !important; color: #000 !important; text-shadow: none;
+  box-shadow: inset 0 3px 0 var(--xp-hot), inset 0 0 0 1px var(--xp-title-edge) !important;
+}
+/* Recherche : champ blanc à bord bleu-gris */
+[data-part="topbar"] [data-part="search"] { background: #fff !important; box-shadow: inset 0 0 0 1px #7f9db9 !important; border-radius: 0 !important; color: #000; }
+[data-part="search"] input { color: #000; }
+[data-part="search"] kbd { background: #ece9d8; box-shadow: inset 0 0 0 1px #aca899; color: #000; }
+/* Boutons de la barre de titre : carrés bleus bordés de blanc */
+[data-part="topbar"] :is(.icon-btn, .avatar) {
+  border-radius: 3px !important;
+  color: var(--xp-title-text) !important;
+  background: var(--xp-btn) !important;
+  box-shadow: inset 0 0 0 1px #fff, 0 1px 1px rgb(0 0 0 / 0.3) !important;
+}
+[data-part="topbar"] :is(.icon-btn, .avatar):hover { background: var(--xp-btn-hover) !important; }
+
+/* ── Volet de tâches : panneaux blancs sur fond bleu dégradé ── */
+[data-part="sidebar"] { box-shadow: inset -1px 0 0 rgb(0 0 0 / 0.15); padding-top: 44px; }
+[data-part="brand"] .wordmark, [data-part="brand"] .wordmark b { color: var(--xp-brand); }
+[data-part="nav-main"], [data-part="nav-collections"] .nav-sec { background: var(--xp-pane-body); border-radius: 4px 4px 0 0; overflow: hidden; box-shadow: 0 0 0 1px #fff; }
+[data-part="nav-main"] { padding: 30px 4px 6px; position: relative; }
+[data-part="nav-main"]::before {
+  content: "Bibliothèque"; position: absolute; left: 0; right: 0; top: 0; height: 24px; padding: 0 10px;
+  display: flex; align-items: center; font-weight: 700; color: var(--xp-link); background: var(--xp-pane-head);
+}
+[data-part="nav-collections"] .nav-sec + .nav-sec { margin-top: 12px; }
+[data-part="nav-collections"] .nav-sec-head { background: var(--xp-pane-head); padding-right: 6px; }
+[data-part="nav-collections"] .nav-sec-toggle { color: var(--xp-link); font-weight: 700; height: 24px; }
+[data-part="nav-collections"] .nav-sec-toggle svg { opacity: 1; }
+[data-part="nav-collections"] .nav-sec-body { padding: 0 4px; }
+[data-part="nav-collections"] .nav-sec.open .nav-sec-body { padding: 4px; }
+[data-part="sidebar"] .nav-item { height: 24px; border-radius: 0; color: var(--xp-link); background: transparent; box-shadow: none; }
+[data-part="sidebar"] .nav-item svg, [data-part="sidebar"] .nav-item .plat-ico { color: var(--xp-link); }
+[data-part="sidebar"] .nav-item:hover { background: transparent; color: var(--xp-link-hover); }
+[data-part="sidebar"] .nav-item:hover .label { text-decoration: underline; }
+[data-part="sidebar"] .nav-item.active { background: var(--accent); color: #fff; box-shadow: none; }
+[data-part="sidebar"] .nav-item.active :is(svg, .plat-ico, .count) { color: #fff; }
+[data-part="sidebar"] :is(.nav-hint, .count) { color: #4d5d80; }
+[data-part="sidebar"] .add-game, [data-part="sidebar"] .add-game svg { color: var(--xp-brand); }
+[data-part="week-card"] { margin-top: 8px; border-radius: 4px; background: var(--xp-pane-body); box-shadow: 0 0 0 1px #fff; border-top: 0; padding: 8px 10px; }
+
+/* ── Contenu ── */
+h2.section { font-weight: 700; letter-spacing: 0; color: #003399; padding-bottom: 4px; border-bottom: 1px solid; border-image: linear-gradient(90deg, #3d7bd9, transparent 70%) 1; }
+.btn, .chip, .seg-chips, .seg-chips button, .select, .filter select, .tag-toggle, .field select { border-radius: 3px !important; }
+.btn-glass:hover, .btn-ghost:hover, .chip:not(.on):hover, .select:hover, .filter select:hover, .tag-toggle:hover, .field select:hover {
+  box-shadow: inset 0 0 0 1px var(--xp-title-edge), inset 0 0 0 3px var(--xp-hot);
+}
+.seg-chips button.on, .segmented button.active { background: #fff; color: #000; box-shadow: inset 0 0 0 1px var(--xp-title-edge); }
+/* Gros bouton vert : texte blanc en italique, coin arrondi à droite */
+.btn-primary, .btn-light, .cover .quick, .chip.on {
+  color: #fff !important;
+  font-weight: 700;
+  font-style: italic;
+  text-shadow: 1px 1px 1px rgb(0 0 0 / 0.45);
+  border-radius: 4px 14px 14px 4px !important;
+}
+.chip.on { font-style: normal; border-radius: 3px !important; background: var(--accent); }
+
+/* Jaquettes : vignettes encadrées ; au survol, le nom passe en sélection bleue */
+[data-part="cover"] { box-shadow: 0 0 0 1px #7f9db9 !important; }
+[data-part="game-card"]:hover [data-part="cover"] { transform: none; box-shadow: 0 0 0 2px var(--accent) !important; }
+[data-part="game-card"]:hover .t { background: var(--accent); color: #fff; padding: 0 3px; margin: 0 -3px; }
+[data-part="tile"], [data-part="resume-card"] { border-radius: 3px; box-shadow: 0 0 0 1px #7f9db9; }
+
+/* Bannières : le dégradé fond vers le beige, le texte posé dessus est donc foncé */
+[data-part="spotlight"], [data-part="game-hero"] { --on-art-rgb: 0 0 0; --on-art: #000; }
+
+/* Barres de progression vertes à segments */
+.cover-dl div, .hl-row .bar span { background: repeating-linear-gradient(90deg, #36b236 0 7px, transparent 7px 9px); }
+.hl-row .bar, .cover-dl { background: #fff; box-shadow: inset 0 0 0 1px #7f9db9; border-radius: 3px; }
+
+/* Fenêtres : épaisse barre de titre bleue (bordure haute) */
+.modal { border: 3px solid var(--xp-frame) !important; border-top-width: 26px !important; border-radius: 8px 8px 3px 3px; background: var(--surface-2); }
+
+/* Info-bulle jaune pour les notifications */
+.toast, .toast-undo { background: #ffffe1 !important; color: #000; border-radius: 6px !important; box-shadow: 0 0 0 1px #000, 2px 2px 4px rgb(0 0 0 / 0.3) !important; -webkit-backdrop-filter: none; backdrop-filter: none; }
+
+/* Menus : blancs, bord gris, sélection bleue */
+.ctx-menu, .inbox { background: #fff !important; border-radius: 0 !important; box-shadow: 0 0 0 1px #aca899, 2px 2px 3px rgb(0 0 0 / 0.3) !important; -webkit-backdrop-filter: none; backdrop-filter: none; }
+.ctx-menu button { border-radius: 0 !important; }
+
+/* Barres de défilement bleu clair */
+::-webkit-scrollbar { width: 17px; background: #f4f3ee; }
+::-webkit-scrollbar-thumb { background: linear-gradient(90deg, #c9d7fd, #b4c8f6) !important; border: 1px solid #fff !important; border-radius: 3px; box-shadow: inset 0 0 0 1px #94aee9; background-clip: border-box !important; }
+::-webkit-scrollbar-thumb:hover { background: linear-gradient(90deg, #d8e3ff, #c4d5fb) !important; }
+
+/* Option : de vraies cases à cocher au lieu des interrupteurs */
+:root.theme-opt-checkboxes :is(.row-switch, .home-toggles) input[type="checkbox"] {
+  width: 13px; height: 13px; border-radius: 0; background: linear-gradient(135deg, #dcdcd7, #fff); box-shadow: inset 0 0 0 1px #1c5180;
+}
+:root.theme-opt-checkboxes :is(.row-switch, .home-toggles) input[type="checkbox"]::after { display: none; }
+:root.theme-opt-checkboxes :is(.row-switch, .home-toggles) input[type="checkbox"]:checked {
+  background: linear-gradient(135deg, #dcdcd7, #fff);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 13 13'%3E%3Cpath d='M3 6.5l2.3 2.3L10 4' fill='none' stroke='%2321a121' stroke-width='2'/%3E%3C/svg%3E"), linear-gradient(135deg, #dcdcd7, #fff);
+}

@@ -1,0 +1,153 @@
+/* Double écran — la console portable à deux écrans de 2004, pour CLRE-Launcher (apiVersion 1).
+   La fenêtre devient la coque : la barre latérale et le contenu sont deux écrans encadrés de noir,
+   reliés par une charnière. Fond quadrillé, boutons blancs arrondis, sélection en couleur épaisse,
+   jeux présentés en cartouches. Aucune image ni logo repris d'une console : tout est en CSS. */
+@import url('https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400..700&family=Nunito:wght@400..800&display=swap');
+
+:root {
+  --sans: 'Nunito', 'Segoe UI', sans-serif;
+  --pixel: 'Pixelify Sans', 'Nunito', sans-serif;
+  --screen: #f7f8f9;
+  --grid-line: rgb(0 0 0 / 0.05);
+  --bezel: #1b1c1f;
+  --bg-rgb: 247 248 249;
+  --card-rgb: 255 255 255;
+  --raised-rgb: 255 255 255;
+  --popover-rgb: 255 255 255;
+  --glass-rgb: 255 255 255;
+  --fg-rgb: 40 46 56;
+  --shade-rgb: 30 34 40;
+  --on-art-rgb: 34 40 48;
+  --on-art: #222830;
+  --sidebar: transparent;
+  --card: #ffffff;
+  --surface-2: #ffffff;
+  --control: #dfe2e6;
+  --control-strong: #ffffff;
+  --text: #24292f;
+  --text-2: #5d6670;
+  --muted: #8a929b;
+  --on-accent: #ffffff;
+  --on-text: #ffffff;
+  --knob: #ffffff;
+  --material: rgb(247 248 249 / 0.92);
+  --blur: blur(8px);
+  --art-fallback: linear-gradient(160deg, #ffffff, #e2e6ea);
+  --art-fallback-flat: linear-gradient(160deg, #ffffff, #e2e6ea);
+  --radius-cover: 6px;
+  --radius-tile: 8px;
+  --sel: 0 0 0 3px var(--accent), 0 0 0 6px rgb(var(--accent-rgb) / 0.25);
+  /* Boutons blancs à bord gris, légèrement bombés */
+  --key: linear-gradient(180deg, #ffffff 0%, #eef0f2 100%);
+  --key-hover: linear-gradient(180deg, #ffffff 0%, #f5f7f8 100%);
+  --key-press: #e7eaed;
+  --key-edge: inset 0 0 0 1.5px #c6cbd1, 0 1px 0 #ffffff, 0 2px 3px rgb(0 0 0 / 0.08);
+  --key-edge-press: inset 0 0 0 1.5px #aab1b9, inset 0 2px 3px rgb(0 0 0 / 0.12);
+  --well: #ffffff;
+  --well-edge: inset 0 0 0 1.5px #c6cbd1;
+  --btn-primary: linear-gradient(180deg, rgb(var(--accent-rgb) / 0.85) 0%, var(--accent) 100%);
+  --btn-primary-hover: var(--accent);
+  --btn-primary-press: var(--accent);
+  --btn-primary-edge: rgb(255 255 255 / 0.5);
+}
+.content::before { display: none; }
+
+/* Fond quadrillé des écrans */
+html, body { background: var(--screen); }
+[data-part="sidebar"], [data-part="content"] {
+  background-color: var(--screen) !important;
+  background-image: linear-gradient(var(--grid-line) 1px, transparent 1px), linear-gradient(90deg, var(--grid-line) 1px, transparent 1px) !important;
+  background-size: 16px 16px !important;
+}
+
+/* ── Coque et deux écrans (option) ── */
+:root.theme-opt-screens html, :root.theme-opt-screens body { background: var(--shell); }
+:root.theme-opt-screens [data-part="app"] {
+  padding: 26px 28px 28px; column-gap: 44px; height: 100vh;
+  /* Charnière : une bande verticale entre les deux écrans */
+  background:
+    linear-gradient(90deg, transparent calc(var(--sidebar-width) + 40px), var(--hinge) calc(var(--sidebar-width) + 40px), rgb(255 255 255 / 0.55) calc(var(--sidebar-width) + 44px), var(--hinge) calc(var(--sidebar-width) + 50px), rgb(0 0 0 / 0.3) calc(var(--sidebar-width) + 60px), transparent calc(var(--sidebar-width) + 60px)) no-repeat;
+}
+:root.theme-opt-screens body.couch [data-part="app"] { background: none; }
+:root.theme-opt-screens :is([data-part="sidebar"], [data-part="content"]) {
+  border-radius: 10px; border-right: 0;
+  box-shadow: 0 0 0 7px var(--bezel), 0 0 0 9px var(--shell-edge), inset 0 2px 8px rgb(0 0 0 / 0.12) !important;
+}
+:root.theme-opt-screens [data-part="sidebar"] { padding-top: 22px; }
+:root.theme-opt-screens [data-part="content"] { overflow-y: auto; }
+:root.theme-opt-screens [data-part="topbar"] { padding-top: 16px; }
+:root.theme-opt-screens [data-part="spotlight"], :root.theme-opt-screens .spotlight-frame { border-radius: 0; }
+
+/* ── Titres et libellés en police pixel ── */
+h1, h2.section, .nav-title, .nav-sec-toggle, [data-part="brand"] .wordmark, .segmented button, .group-title { font-family: var(--pixel); letter-spacing: 0; }
+h1, h2.section { font-weight: 600; color: var(--text); }
+h2.section { font-size: 24px; }
+
+/* ── Menu : gros boutons blancs empilés, sélection en couleur épaisse ── */
+[data-part="sidebar"] .nav-item {
+  height: 38px; margin: 3px 4px; width: calc(100% - 8px); border-radius: 8px; color: var(--text); font-weight: 700;
+  background: var(--key) !important; box-shadow: var(--key-edge) !important;
+}
+[data-part="sidebar"] .nav-item:hover { box-shadow: inset 0 0 0 1.5px var(--accent), 0 2px 3px rgb(0 0 0 / 0.08) !important; }
+[data-part="sidebar"] .nav-item.active { box-shadow: inset 0 0 0 1.5px #c6cbd1, var(--sel) !important; background: linear-gradient(180deg, #ffffff, rgb(var(--accent-rgb) / 0.12)) !important; color: var(--text); animation: ds-pulse 1.2s ease-in-out infinite; }
+[data-part="sidebar"] .nav-item.active :is(svg, .plat-ico) { color: var(--accent); }
+[data-part="sidebar"] .nav-item.small { height: 32px; }
+[data-part="sidebar"] .nav-item svg { color: #7a838d; }
+[data-part="nav-collections"] .nav-sec-toggle { color: var(--accent); font-size: 14px; }
+@keyframes ds-pulse { 50% { box-shadow: inset 0 0 0 1.5px #c6cbd1, 0 0 0 3px var(--accent), 0 0 0 7px rgb(var(--accent-rgb) / 0.1); } }
+@media (prefers-reduced-motion: reduce) { [data-part="sidebar"] .nav-item.active { animation: none; } }
+[data-part="week-card"] { margin: 10px 4px 4px; border-top: 0; border-radius: 8px; background: #fff; box-shadow: var(--key-edge); padding: 10px 12px; }
+[data-part="week-card"] .v { font-family: var(--pixel); color: var(--accent); }
+
+/* ── Barre du haut : bande d'état grise avec un filet de couleur ── */
+[data-part="topbar"], [data-part="topbar"].material { border-bottom: 2px solid var(--accent) !important; }
+[data-part="topbar"].material { background: linear-gradient(180deg, #ffffff, #e9ecef) !important; }
+.segmented, .seg-chips { border-radius: 10px !important; }
+.segmented button, .seg-chips button { border-radius: 8px !important; font-size: 15px; }
+.segmented button.active, .seg-chips button.on { background: #fff !important; color: var(--text) !important; box-shadow: inset 0 0 0 1.5px #c6cbd1, 0 0 0 2px var(--accent) !important; }
+.topbar.over-hero:not(.material) :is(.segmented, .search, .icon-btn, .avatar) { background: rgb(255 255 255 / 0.9) !important; }
+
+/* ── Boutons ── */
+.btn, .chip, .icon-btn, .avatar, .select, .filter select, .tag-toggle, .field select, .search { border-radius: 8px !important; font-weight: 700; }
+.btn, .chip, .select, .filter select, .tag-toggle { color: var(--text); }
+:is(.btn-glass, .btn-ghost, .icon-btn, .avatar, .chip:not(.on), .select, .filter select, .tag-toggle):hover { box-shadow: inset 0 0 0 1.5px var(--accent) !important; }
+.btn-primary, .btn-light, .cover .quick { color: #fff !important; text-shadow: 0 1px 0 rgb(0 0 0 / 0.25); box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.45), 0 0 0 1.5px rgb(0 0 0 / 0.18), 0 2px 4px rgb(0 0 0 / 0.15) !important; }
+.chip.on, .tag-toggle.on { background: var(--accent) !important; color: #fff !important; }
+.btn-glass, .btn-running { background: var(--key) !important; color: var(--text) !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+
+/* ── Jeux en cartouches (option) : coque grise, encoche, rainures ── */
+:root.theme-opt-carts [data-part="cover"] {
+  padding: 18px 8px 10px;
+  background: linear-gradient(180deg, #f1f2f4 0%, #d4d8dd 100%) !important;
+  border-radius: 6px 18px 6px 6px !important;
+  box-shadow: inset 0 0 0 1.5px #a8afb7, inset 0 2px 0 #ffffff, 0 3px 6px rgb(0 0 0 / 0.15) !important;
+}
+/* Rainures en haut de la cartouche */
+:root.theme-opt-carts [data-part="cover"]::before {
+  content: ""; position: absolute; left: 14px; right: 28px; top: 5px; height: 8px; z-index: 1;
+  background: repeating-linear-gradient(90deg, #b7bdc4 0 2px, transparent 2px 6px);
+}
+:root.theme-opt-carts [data-part="cover"] img { inset: 18px 8px 10px !important; width: calc(100% - 16px) !important; height: calc(100% - 28px) !important; border-radius: 3px; box-shadow: 0 0 0 1px rgb(0 0 0 / 0.2); }
+:root.theme-opt-carts [data-part="cover"] :is(.plat-badge, .ach-badge) { top: 22px; }
+:root.theme-opt-carts [data-part="cover"] .plat-badge { left: 12px; }
+:root.theme-opt-carts [data-part="cover"] .ach-badge { left: 42px; }
+[data-part="game-card"]:hover [data-part="cover"], [data-part="game-card"]:focus-visible [data-part="cover"] { transform: translateY(-3px); box-shadow: inset 0 0 0 1.5px #a8afb7, var(--sel) !important; }
+[data-part="game-card"]:focus-visible { outline: none; }
+[data-part="game-card"] .t { font-weight: 800; }
+[data-part="tile"], [data-part="resume-card"] { box-shadow: var(--key-edge) !important; background: #fff; }
+[data-part="tile"]:hover, [data-part="resume-card"]:hover { box-shadow: inset 0 0 0 1.5px #c6cbd1, var(--sel) !important; }
+
+/* ── Bannières : fondu vers l'écran clair, texte foncé ── */
+[data-part="spotlight"], [data-part="game-hero"] { background: transparent !important; }
+:is(.spotlight, .game-hero) :is(img.bg, video, .shade) { -webkit-mask-image: linear-gradient(180deg, #000 50%, transparent 100%); mask-image: linear-gradient(180deg, #000 50%, transparent 100%); }
+.spotlight .shade, .game-hero .shade { background: linear-gradient(90deg, rgb(247 248 249 / 0.85) 0%, rgb(247 248 249 / 0) 55%); }
+
+/* ── Fenêtres, menus, notifications : panneaux blancs à cadre noir, comme un écran ── */
+.modal { border-radius: 12px !important; border: 0 !important; background: var(--screen) !important; box-shadow: 0 0 0 6px var(--bezel), 0 20px 50px rgb(0 0 0 / 0.35) !important; }
+.prefs-side { background: rgb(255 255 255 / 0.6) !important; }
+.prefs-cats button.on, .prefs-me.on { background: #fff !important; color: var(--text) !important; box-shadow: var(--sel); }
+.ctx-menu, .inbox { background: #fff !important; border-radius: 10px !important; box-shadow: 0 0 0 2px var(--bezel), 0 10px 30px rgb(0 0 0 / 0.2) !important; }
+.toast, .toast-undo { background: #fff !important; color: var(--text); border-radius: 10px !important; box-shadow: 0 0 0 2px var(--accent), 0 8px 20px rgb(0 0 0 / 0.2) !important; }
+:is(.row-switch, .home-toggles) input[type="checkbox"] { background: #cfd4da; }
+select option { background: #fff; color: var(--text); }
+::-webkit-scrollbar-thumb { background-color: rgb(0 0 0 / 0.2); }

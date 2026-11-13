@@ -31,6 +31,8 @@ const { Themes } = require('./themes');
 // pour conserver la clé API, les favoris et le temps de jeu déjà mesuré.
 app.setName('CLRE-Launcher');
 app.setPath('userData', path.join(app.getPath('appData'), 'launcher'));
+// Captures de dev (LAUNCHER_SNAP_DATA) : dossier de données à part, pour tourner à côté du launcher installé sans toucher à ses données
+if (process.env.LAUNCHER_SNAP_DATA && !app.isPackaged) app.setPath('userData', process.env.LAUNCHER_SNAP_DATA);
 
 if (!app.requestSingleInstanceLock()) { app.quit(); process.exit(0); }
 
@@ -773,7 +775,8 @@ app.whenReady().then(() => {
   protocol.handle('clre-theme', (req) => {
     const hit = themes.resolve(req.url);
     if (!hit) return new Response('', { status: 404 });
-    return net.fetch(pathToFileURL(hit.file).toString()).then((r) => new Response(r.body, { status: r.status, headers: { 'content-type': hit.type } }));
+    // fs lit aussi dans app.asar (thèmes intégrés de l'exe)
+    return fs.promises.readFile(hit.file).then((b) => new Response(b, { headers: { 'content-type': hit.type } }), () => new Response('', { status: 404 }));
   });
   // Lecture synchrone au chargement de la page : le thème est en place avant le premier affichage.
   ipcMain.on('themes:boot', (e) => { try { e.returnValue = themes.active(); } catch { e.returnValue = null; } });

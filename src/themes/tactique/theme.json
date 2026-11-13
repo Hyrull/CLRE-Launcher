@@ -1,0 +1,63 @@
+{
+  "id": "tactique",
+  "name": "Tactique",
+  "author": "CLRE",
+  "version": "1.0.0",
+  "apiVersion": 1,
+  "description": "Interface de jeu de tir tactique : bleu nuit et crème, accent rouge vif, coins coupés, capitales condensées.",
+  "colorScheme": "dark",
+  "schemes": {
+    "Nuit": {
+      "--base": "#0f1923",
+      "--base-rgb": "15 25 35",
+      "--panel": "#16222e",
+      "--panel-2": "#1f2d3a",
+      "--cream": "#ece8e1",
+      "--cream-rgb": "236 232 225",
+      "--dim": "#8b97a3",
+      "--accent": "#ff4655",
+      "--accent-rgb": "255 70 85",
+      "--hero-text-rgb": "236 232 225"
+    },
+    "Craie": {
+      "--base": "#ece8e1",
+      "--base-rgb": "236 232 225",
+      "--panel": "#e2ddd4",
+      "--panel-2": "#d6d0c5",
+      "--cream": "#0f1923",
+      "--cream-rgb": "15 25 35",
+      "--dim": "#5a6570",
+      "--accent": "#ff4655",
+      "--accent-rgb": "255 70 85",
+      "--hero-text-rgb": "15 25 35"
+    },
+    "Sarcelle": {
+      "--base": "#0c1a1f",
+      "--base-rgb": "12 26 31",
+      "--panel": "#12252b",
+      "--panel-2": "#1a3138",
+      "--cream": "#e6f1ee",
+      "--cream-rgb": "230 241 238",
+      "--dim": "#86a1a0",
+      "--accent": "#17e0b4",
+      "--accent-rgb": "23 224 180",
+      "--hero-text-rgb": "230 241 238"
+    },
+    "Or": {
+      "--base": "#14120f",
+      "--base-rgb": "20 18 15",
+      "--panel": "#1d1a15",
+      "--panel-2": "#29251d",
+      "--cream": "#efe6d2",
+      "--cream-rgb": "239 230 210",
+      "--dim": "#9d927c",
+      "--accent": "#f2b632",
+      "--accent-rgb": "242 182 50",
+      "--hero-text-rgb": "239 230 210"
+    }
+  },
+  "options": [
+    { "id": "cut", "type": "toggle", "label": "Coins coupés", "default": true },
+    { "id": "stripes", "type": "toggle", "label": "Rayures et formes en fond", "default": true }
+  ]
+}

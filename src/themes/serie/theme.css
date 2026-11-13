@@ -1,0 +1,154 @@
+/* Série — style d'appli d'apprentissage ludique, pour CLRE-Launcher (apiVersion 1).
+   Fond blanc, gros bords gris arrondis, boutons épais en relief (bord du bas plus foncé),
+   capitales grasses, barres de progression épaisses, option « chemin » de pastilles rondes.
+   Inspiré du genre : aucune mascotte, logo ni police d'une appli existante. */
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@600..900&display=swap');
+
+:root {
+  --sans: 'Nunito', 'Segoe UI', sans-serif;
+  /* Couleurs claires par défaut ; le jeu « Nuit » les remplace */
+  --page: #ffffff; --page-rgb: 255 255 255;
+  --panel: #ffffff; --panel-2: #f7f7f7;
+  --border: #e5e5e5; --border-dark: #d0d0d0;
+  --ink: #4b4b4b; --ink-2: #777777; --label: #afafaf;
+  --sel-bg: #ddf4ff; --sel-border: #84d8ff; --sel-text: #1cb0f6;
+  --bg-rgb: var(--page-rgb);
+  --card-rgb: var(--page-rgb);
+  --raised-rgb: var(--page-rgb);
+  --popover-rgb: var(--page-rgb);
+  --glass-rgb: var(--page-rgb);
+  --fg-rgb: 75 75 75;
+  --shade-rgb: 0 0 0;
+  --on-art-rgb: 255 255 255;
+  --sidebar: var(--panel);
+  --card: var(--panel);
+  --surface-2: var(--panel);
+  --control: var(--panel-2);
+  --control-strong: var(--panel);
+  --text: var(--ink);
+  --text-2: var(--ink-2);
+  --muted: var(--label);
+  --accent: var(--acc);
+  --on-accent: #ffffff;
+  --on-text: #ffffff;
+  --knob: #ffffff;
+  --material: var(--page);
+  --blur: none;
+  --line: var(--border);
+  --line-strong: var(--border);
+  --fill: var(--panel-2);
+  --art-fallback: var(--panel-2);
+  --art-fallback-flat: var(--panel-2);
+  --radius-cover: 16px;
+  --radius-tile: 16px;
+  --ease: cubic-bezier(0.3, 1.4, 0.6, 1);
+  /* Boutons secondaires : blancs, bord gris, bas plus épais */
+  --key: var(--panel);
+  --key-hover: var(--panel-2);
+  --key-press: var(--panel-2);
+  --key-edge: inset 0 0 0 2px var(--border), inset 0 -4px 0 var(--border);
+  --key-edge-press: inset 0 0 0 2px var(--border);
+  --well: var(--panel-2);
+  --well-edge: inset 0 0 0 2px var(--border);
+  --btn-primary: var(--acc);
+  --btn-primary-hover: var(--acc);
+  --btn-primary-press: var(--acc);
+  --btn-primary-edge: transparent;
+}
+html, body, [data-part="content"] { background: var(--page); }
+.content::before { display: none; }
+
+/* ── Typo : grasse et ronde, petits libellés gris en capitales ── */
+body { font-weight: 700; color: var(--ink); }
+h1, h2.section, .toolbar h1 { font-weight: 900; color: var(--ink); letter-spacing: -0.01em; }
+.section-sub, .nav-title, .nav-sec-toggle, .stats .k, .group-title, .kicker { text-transform: uppercase; letter-spacing: 0.08em; color: var(--label); font-weight: 800; font-size: 12px; }
+.card .s, .stats .sub, .row-help { color: var(--label); }
+
+/* ── Barre latérale : entrées en grosses pastilles, l'active en bleu clair encadré ── */
+[data-part="sidebar"] { border-right: 2px solid var(--border) !important; box-shadow: none !important; padding: 32px 12px 16px !important; }
+[data-part="brand"] .wordmark, [data-part="brand"] .wordmark b { color: var(--acc); font-weight: 900; font-size: 19px; letter-spacing: -0.02em; white-space: nowrap; }
+[data-part="sidebar"] .nav-item { height: 46px; border-radius: 12px; color: var(--ink-2); font-weight: 800; font-size: 13px; text-transform: uppercase; letter-spacing: 0.02em; background: transparent; box-shadow: none !important; gap: 12px; }
+[data-part="sidebar"] .nav-item svg { width: 22px; height: 22px; color: var(--label); }
+[data-part="sidebar"] .nav-item:hover { background: var(--panel-2) !important; }
+[data-part="sidebar"] .nav-item.active { background: var(--sel-bg) !important; color: var(--sel-text); box-shadow: inset 0 0 0 2px var(--sel-border) !important; }
+[data-part="sidebar"] .nav-item.active :is(svg, .count, .plat-ico) { color: var(--sel-text); }
+[data-part="sidebar"] .nav-item.small { height: 38px; text-transform: none; letter-spacing: 0; }
+[data-part="sidebar"] .count { font-weight: 800; color: var(--label); }
+/* Carte du temps de jeu : la « série », avec une flamme dessinée en CSS */
+[data-part="week-card"] { margin-top: 12px; border-top: 0; border-radius: 16px; padding: 14px 16px 14px 56px; position: relative; box-shadow: inset 0 0 0 2px var(--border); }
+[data-part="week-card"]::before {
+  content: ""; position: absolute; left: 16px; top: 50%; width: 26px; height: 32px; transform: translateY(-55%);
+  background: radial-gradient(ellipse 45% 40% at 50% 72%, #ffc800 60%, transparent 62%), #ff9600;
+  border-radius: 50% 50% 50% 50% / 62% 62% 40% 40%;
+  clip-path: polygon(50% 0, 72% 22%, 90% 45%, 100% 70%, 85% 95%, 50% 100%, 15% 95%, 0 70%, 12% 42%, 30% 25%);
+}
+[data-part="week-card"] .v { color: #ff9600; font-weight: 900; }
+
+/* ── Barre du haut ── */
+[data-part="topbar"], [data-part="topbar"].material { background: var(--page) !important; border-bottom: 2px solid var(--border) !important; -webkit-backdrop-filter: none; backdrop-filter: none; }
+.topbar.over-hero:not(.material) { border-bottom-color: transparent !important; background: transparent !important; }
+.segmented, .seg-chips { background: var(--panel) !important; box-shadow: inset 0 0 0 2px var(--border) !important; border-radius: 14px !important; padding: 4px !important; }
+.segmented button, .seg-chips button { border-radius: 10px !important; font-weight: 800; color: var(--ink-2); text-transform: uppercase; font-size: 12px; letter-spacing: 0.05em; }
+.segmented button.active, .seg-chips button.on { background: var(--sel-bg) !important; color: var(--sel-text) !important; box-shadow: inset 0 0 0 2px var(--sel-border) !important; }
+.search { border-radius: 14px !important; background: var(--panel-2) !important; box-shadow: inset 0 0 0 2px var(--border) !important; }
+.search input { color: var(--ink); font-weight: 700; }
+.topbar.over-hero:not(.material) :is(.segmented, .search, .icon-btn, .avatar) { background: var(--panel) !important; }
+
+/* ── Boutons épais en relief : le bas plus foncé, ils s'enfoncent au clic ── */
+.btn, .chip, .icon-btn, .avatar, .select, .filter select, .tag-toggle, .field select { border-radius: 14px !important; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; font-size: 13px !important; color: var(--sel-text); }
+.select, .filter select, .field select { color: var(--ink); text-transform: none; letter-spacing: 0; }
+.btn-primary, .btn-light, .cover .quick, .chip.on, .tag-toggle.on {
+  background: var(--acc) !important; color: #fff !important;
+  box-shadow: inset 0 -4px 0 var(--acc-dark) !important; text-shadow: none;
+}
+.btn-primary:hover, .btn-light:hover, .cover .quick:hover { filter: brightness(1.06); }
+:is(.btn, .chip, .icon-btn, .avatar, .tag-toggle, .cover .quick):active { transform: translateY(3px) !important; box-shadow: inset 0 0 0 2px var(--border) !important; }
+:is(.btn-primary, .btn-light, .cover .quick):active { box-shadow: none !important; }
+.btn-glass, .btn-running { background: var(--panel) !important; color: var(--sel-text) !important; box-shadow: inset 0 0 0 2px var(--border), inset 0 -4px 0 var(--border) !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+
+/* ── Cartes de jeux : gros bord gris, bas plus épais ── */
+[data-part="cover"] { box-shadow: 0 0 0 2px var(--border), 0 4px 0 2px var(--border) !important; transition: transform 140ms var(--ease) !important; }
+[data-part="game-card"]:hover [data-part="cover"] { transform: translateY(-3px); box-shadow: 0 0 0 2px var(--sel-border), 0 4px 0 2px var(--sel-border) !important; }
+:root.theme-opt-press [data-part="game-card"]:active [data-part="cover"] { transform: translateY(3px); box-shadow: 0 0 0 2px var(--sel-border) !important; }
+[data-part="game-card"] .t { font-weight: 800; color: var(--ink); }
+:is([data-part="tile"], [data-part="resume-card"]) { box-shadow: inset 0 0 0 2px var(--border), inset 0 -4px 0 var(--border) !important; background: var(--panel); }
+:is([data-part="tile"], [data-part="resume-card"]):hover { box-shadow: inset 0 0 0 2px var(--sel-border), inset 0 -4px 0 var(--sel-border) !important; }
+
+/* ── Barres de progression épaisses avec un reflet ── */
+.hl-row .bar, .cover-dl { height: 16px; border-radius: 999px; background: var(--border); }
+.hl-row .bar span, .cover-dl div { border-radius: 999px; background: var(--acc); position: relative; box-shadow: inset 0 -3px 0 rgb(0 0 0 / 0.08); }
+.hl-row .bar span::after, .cover-dl div::after { content: ""; position: absolute; left: 8px; right: 8px; top: 4px; height: 4px; border-radius: 999px; background: rgb(255 255 255 / 0.35); }
+
+/* ── Bannières : l'image reste, bas fondu vers la page ── */
+.spotlight .logo, .game-hero .logo { filter: drop-shadow(0 4px 0 rgb(0 0 0 / 0.2)); }
+
+/* ── Fenêtres, menus, notifications : cartes à gros bord ── */
+.modal { border-radius: 20px !important; border: 2px solid var(--border) !important; background: var(--page) !important; box-shadow: 0 6px 0 var(--border), 0 24px 50px rgb(0 0 0 / 0.2) !important; }
+.prefs-side { background: var(--panel) !important; border-right: 2px solid var(--border); }
+.prefs-cats button.on, .prefs-me.on { background: var(--sel-bg) !important; color: var(--sel-text) !important; box-shadow: inset 0 0 0 2px var(--sel-border); }
+.group { background: var(--panel) !important; border-radius: 16px !important; box-shadow: inset 0 0 0 2px var(--border); }
+.ctx-menu, .inbox { background: var(--panel) !important; border-radius: 16px !important; box-shadow: 0 0 0 2px var(--border), 0 4px 0 2px var(--border), 0 18px 36px rgb(0 0 0 / 0.15) !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; color: var(--ink); }
+.ctx-menu button { border-radius: 10px !important; font-weight: 700; }
+.toast, .toast-undo { background: var(--acc) !important; color: #fff !important; border-radius: 16px !important; box-shadow: inset 0 -4px 0 var(--acc-dark) !important; font-weight: 800; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+:is(.row-switch, .home-toggles) input[type="checkbox"] { background: var(--border); }
+:is(.row-switch, .home-toggles) input[type="checkbox"]:checked { background: var(--acc); }
+select option { background: var(--panel); color: var(--ink); }
+::-webkit-scrollbar-thumb { background-color: var(--border-dark); border-radius: 999px; }
+
+/* ── Option : la bibliothèque en chemin de pastilles rondes qui serpente ── */
+:root.theme-opt-path .grid:has(> [data-part="game-card"]) { display: flex; flex-direction: column; align-items: center; gap: 22px; padding: 20px 0 60px; }
+:root.theme-opt-path [data-part="game-card"] { width: 150px; align-items: center; gap: 10px; }
+:root.theme-opt-path [data-part="game-card"] [data-part="cover"] {
+  width: 92px; aspect-ratio: 1 / 1; border-radius: 50% !important;
+  box-shadow: 0 0 0 5px var(--acc), 0 9px 0 5px var(--acc-dark) !important;
+}
+:root.theme-opt-path [data-part="game-card"] [data-part="cover"] :is(.plat-badge, .ach-badge, .quick, .fav-mark, .fallback) { display: none; }
+:root.theme-opt-path [data-part="game-card"] .t { margin-top: 10px; text-align: center; white-space: normal; font-size: 14px; }
+:root.theme-opt-path [data-part="game-card"] .s { justify-content: center; }
+:root.theme-opt-path [data-part="game-card"]:nth-child(8n + 2) { transform: translateX(70px); }
+:root.theme-opt-path [data-part="game-card"]:nth-child(8n + 3) { transform: translateX(110px); }
+:root.theme-opt-path [data-part="game-card"]:nth-child(8n + 4) { transform: translateX(70px); }
+:root.theme-opt-path [data-part="game-card"]:nth-child(8n + 6) { transform: translateX(-70px); }
+:root.theme-opt-path [data-part="game-card"]:nth-child(8n + 7) { transform: translateX(-110px); }
+:root.theme-opt-path [data-part="game-card"]:nth-child(8n + 8) { transform: translateX(-70px); }
+:root.theme-opt-path [data-part="game-card"]:hover [data-part="cover"] { box-shadow: 0 0 0 5px var(--sel-text), 0 9px 0 5px var(--sel-border) !important; }

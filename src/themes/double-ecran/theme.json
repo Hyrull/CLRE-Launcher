@@ -1,0 +1,63 @@
+{
+  "id": "double-ecran",
+  "name": "Double écran",
+  "author": "CLRE",
+  "version": "1.0.0",
+  "apiVersion": 1,
+  "description": "La console portable à deux écrans de 2004 : coque colorée, deux écrans à charnière, quadrillage, jeux en cartouches.",
+  "colorScheme": "light",
+  "schemes": {
+    "Blanc polaire": {
+      "--shell": "linear-gradient(135deg, #ffffff 0%, #e9ebee 55%, #d6d9de 100%)",
+      "--shell-edge": "#c3c7cd",
+      "--hinge": "#b9bec5",
+      "--accent": "#2f8cff",
+      "--accent-rgb": "47 140 255",
+      "--brand-rgb": "47 140 255"
+    },
+    "Noir onyx": {
+      "--shell": "linear-gradient(135deg, #3a3d42 0%, #232528 55%, #16171a 100%)",
+      "--shell-edge": "#0d0e10",
+      "--hinge": "#4a4e55",
+      "--accent": "#ff6a2b",
+      "--accent-rgb": "255 106 43",
+      "--brand-rgb": "255 106 43"
+    },
+    "Bleu glacier": {
+      "--shell": "linear-gradient(135deg, #d9ecfb 0%, #a9cdee 55%, #86b4e0 100%)",
+      "--shell-edge": "#6f9cc9",
+      "--hinge": "#8fb6dc",
+      "--accent": "#1f6fd1",
+      "--accent-rgb": "31 111 209",
+      "--brand-rgb": "31 111 209"
+    },
+    "Rose corail": {
+      "--shell": "linear-gradient(135deg, #ffe1e8 0%, #f6b7c6 55%, #ea95aa 100%)",
+      "--shell-edge": "#d27a90",
+      "--hinge": "#e7a3b4",
+      "--accent": "#e2406f",
+      "--accent-rgb": "226 64 111",
+      "--brand-rgb": "226 64 111"
+    },
+    "Rouge vif": {
+      "--shell": "linear-gradient(135deg, #ef4a52 0%, #c81e2a 55%, #9c1520 100%)",
+      "--shell-edge": "#7a0f18",
+      "--hinge": "#a8202b",
+      "--accent": "#d61f2c",
+      "--accent-rgb": "214 31 44",
+      "--brand-rgb": "214 31 44"
+    },
+    "Vert menthe": {
+      "--shell": "linear-gradient(135deg, #e3f7ea 0%, #b5e3c4 55%, #8fd0a6 100%)",
+      "--shell-edge": "#71b68a",
+      "--hinge": "#9ccfae",
+      "--accent": "#1f9e55",
+      "--accent-rgb": "31 158 85",
+      "--brand-rgb": "31 158 85"
+    }
+  },
+  "options": [
+    { "id": "screens", "type": "toggle", "label": "Coque et deux écrans", "default": true },
+    { "id": "carts", "type": "toggle", "label": "Jeux en cartouches", "default": true }
+  ]
+}
