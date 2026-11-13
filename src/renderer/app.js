@@ -198,6 +198,119 @@ function renderSidebar() {
     <span class="sub">${last && last.lastPlayed ? `Dernier lancé : ${esc(last.name)}` : 'Aucune session récente'}</span>`;
 }
 
+// ---------- Textes de la bannière « Pour toi » ----------
+// Le moment de la journée remplace le « Ce soir » fixe : ce matin, ce midi, cet après-midi, ce soir, cette nuit
+// (et « ce week-end » en journée le samedi et le dimanche).
+function moment(d = new Date()) {
+  const h = d.getHours(), wk = d.getDay() === 0 || d.getDay() === 6;
+  if (h >= 5 && h < 11) return { label: wk ? 'Ce week-end' : 'Ce matin', when: 'ce matin', part: 'matin' };
+  if (h >= 11 && h < 14) return { label: wk ? 'Ce week-end' : 'Ce midi', when: 'ce midi', part: 'midi' };
+  if (h >= 14 && h < 18) return { label: wk ? 'Ce week-end' : 'Cet après-midi', when: 'cet après-midi', part: 'aprem' };
+  if (h >= 18 && h < 23) return { label: 'Ce soir', when: 'ce soir', part: 'soir' };
+  return { label: 'Cette nuit', when: 'cette nuit', part: 'nuit' };
+}
+// Choix stable : le même jeu garde sa phrase pendant la journée, mais elle change d'un jeu et d'un jour à l'autre.
+function seedPick(list, seed) {
+  let h = 2166136261;
+  for (const c of seed) h = Math.imul(h ^ c.charCodeAt(0), 16777619);
+  return list[(h >>> 0) % list.length];
+}
+function spotlightText(g) {
+  const m = moment();
+  const day = new Date().toDateString();
+  const pick = (list, salt) => seedPick(list, `${g.key}|${day}|${salt}`);
+  const hours = (g.playtime || 0) / 60;
+  const status = typeof statusOf === 'function' ? statusOf(g) : '';
+  const daysAgo = g.lastPlayed ? (now() - g.lastPlayed) / DAY : Infinity;
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const playedToday = g.lastPlayed >= today.getTime() / 1000;
+  // Durée en toutes lettres, pour qu'elle se lise bien dans une phrase (« 3 semaines », « plus d'un an »)
+  const d = Math.max(1, Math.round(daysAgo));
+  const since = d < 7 ? `${d} jour${d > 1 ? 's' : ''}` : d < 11 ? 'une semaine' : d < 31 ? `${Math.round(d / 7)} semaines`
+    : d < 45 ? 'un mois' : d < 365 ? `${Math.round(d / 30)} mois` : d < 730 ? 'plus d’un an' : `${Math.floor(d / 365)} ans`;
+  const ach = g.ach && g.ach.total ? g.ach : null;
+  const achPctV = ach ? Math.floor((ach.done / ach.total) * 100) : 0;
+  // Tags Steam classés par votes : les premiers disent le vrai genre du jeu
+  const tags = (g.tags || []).slice(0, 8).map((t) => (typeof tagName === 'function' ? tagName(t) : '').toLowerCase()).filter(Boolean);
+
+  // 1. Où tu en es avec ce jeu
+  const facts = [];
+  if (!g.lastPlayed) {
+    facts.push(...[
+      'Installé, mais jamais lancé.',
+      'Il attend son premier lancement.',
+      'Toujours pas essayé : c’est le moment de le découvrir.',
+      'Tu l’as installé, il n’attend plus que toi.',
+    ]);
+    if (g.reviewPct >= 90) facts.push(`${g.reviewPct} % d’avis positifs sur Steam : il a bonne réputation.`);
+    else if (g.reviewPct >= 75) facts.push(`${g.reviewPct} % d’avis positifs sur Steam.`);
+  } else {
+    if (daysAgo < 2) {
+      const w = playedToday ? 'aujourd’hui' : 'hier';
+      facts.push(`Tu y as joué ${w}, l’élan est encore là.`, `Ta dernière partie date d’${w} : reprends où tu en étais.`);
+    } else if (daysAgo < 14) facts.push(`Ta dernière session remonte à ${since}.`, `Pas lancé depuis ${since} : tu t’en souviens encore bien.`);
+    else if (daysAgo < 120) facts.push(`Ça fait ${since} que tu n’y as pas touché.`, `Pas lancé depuis ${since}, il te manque peut-être.`);
+    else facts.push(`Tu ne l’as pas lancé depuis ${since} : une bonne occasion de le redécouvrir.`, 'Un vieil ami de ta bibliothèque, laissé de côté depuis longtemps.');
+    if (hours >= 100) facts.push(`${fmtPlaytime(g.playtime)} au compteur : c’est l’un de tes jeux de cœur.`, `Plus de ${Math.floor(hours)} heures passées dessus, tu connais la maison.`);
+    else if (hours >= 20) facts.push(`${fmtPlaytime(g.playtime)} de jeu au compteur.`, `Déjà ${fmtPlaytime(g.playtime)} passées dessus.`);
+    else if (hours >= 2) facts.push(`${fmtPlaytime(g.playtime)} de jeu : tu n’as fait qu’effleurer le jeu.`, `Seulement ${fmtPlaytime(g.playtime)} de jeu pour l’instant.`);
+    else facts.push('À peine commencé, tout reste à découvrir.');
+    if (g.playtime2wks >= 120) facts.push(`${fmtPlaytime(g.playtime2wks)} sur les deux dernières semaines : tu es dedans en ce moment.`);
+    if (ach && ach.done === ach.total) facts.push(`Tous les succès débloqués (${ach.total}) : un 100 % dans les règles.`);
+    else if (ach && achPctV >= 70) facts.push(`${achPctV} % des succès débloqués : le 100 % n’est plus très loin.`);
+    else if (ach && ach.done > 0) facts.push(`${ach.done} succès sur ${ach.total} débloqués.`);
+    if (status === 'playing') facts.push('Marqué « en cours » : la suite t’attend.');
+    if (status === 'done') facts.push('Déjà terminé, mais on y revient toujours avec plaisir.');
+  }
+  if (isFav(g)) facts.push('Un de tes favoris, ça ne se refuse pas.');
+
+  // 2. Une petite phrase selon le genre
+  const GENRE_LINES = [
+    [/roguelike|roguelite/, ['Une dernière run ? Ce n’est jamais la dernière.', 'Cette fois, c’est la bonne run.', 'Un nouveau build à tester, peut-être.']],
+    [/souls/, ['Le boss ne va pas se battre tout seul.', 'Respire, apprends ses attaques, réessaie.']],
+    [/difficile|impitoyable/, ['Respire, concentre-toi, réessaie.', 'Ce passage difficile va finir par céder.', 'Tu progresses à chaque essai, même raté.']],
+    [/horreur/, ['Éteins la lumière, si tu oses.', 'Garde ton sang-froid.', 'Monte le son… ou pas.']],
+    [/grande stratégie|stratégie complexe|4x|guerre/, ['Quelques tours, promis.', 'L’empire ne va pas se construire tout seul.', 'Le monde attend tes ordres.']],
+    [/stratégie|tactique/, ['Prends le temps de bien réfléchir.', 'Quelques coups bien pensés, promis.', 'Un bon plan, et c’est parti.']],
+    [/construction de villes|city builder/, ['Ta ville a sûrement un embouteillage à régler.', 'Un nouveau quartier à dessiner ?']],
+    [/incrémental|idle/, ['Les chiffres ont grimpé pendant ton absence.', 'Va voir combien tu as accumulé.']],
+    [/gestion|construction|automatisation|simulation/, ['Ta base a sûrement besoin d’une petite optimisation.', 'Encore une petite amélioration, et après on arrête.', 'Tout tourne mieux avec un peu d’organisation.']],
+    [/survie|fabrication/, ['Prépare de quoi tenir.', 'Les ressources ne vont pas se ramasser seules.', 'Ton abri mérite une petite amélioration.']],
+    [/rpg|jeu de rôle/, ['Une quête t’attend quelque part.', 'Ton personnage aimerait bien monter de niveau.', 'Il reste des PNJ à qui parler.']],
+    [/monde ouvert|exploration|aventure/, ['Il reste des coins de la carte à explorer.', 'Pars à l’aventure, sans itinéraire.']],
+    [/course|conduite/, ['Ton record ne va pas se battre tout seul.', 'Pied au plancher.', 'Un tour de chauffe ?']],
+    [/sport|football/, ['Un petit match ?', 'L’équipe t’attend sur le terrain.']],
+    [/cartes|deckbuilding|decks/, ['Le deck parfait est à une pioche près.', 'Une partie, juste une.']],
+    [/casse-tête|puzzle|réflexion/, ['Une énigme pour garder l’esprit vif.', 'Le genre de jeu qui fait du bien au cerveau.']],
+    [/coop|multijoueur|en ligne|jcj|mmo/, ['Parfait pour une partie entre amis.', 'Vois si l’équipe est en ligne.']],
+    [/détente|relaxant|réconfortant|mignon|casual/, ['Idéal pour décompresser.', 'Pas de pression, juste un bon moment.']],
+    [/fps|tir|shooter/, ['Échauffe ton viseur.', 'Quelques parties nerveuses ?']],
+    [/plateforme/, ['Quelques sauts bien placés et ça repart.']],
+    [/rythme|musique/, ['Monte le son et garde le rythme.']],
+    [/bac à sable/, ['Laisse parler ta créativité.', 'Aucune règle, que des idées.']],
+  ];
+  let genre = null;
+  for (const t of tags) { genre = GENRE_LINES.find(([re]) => re.test(t)); if (genre) break; }
+
+  // 3. Une invitation selon le moment de la journée
+  const nudges = {
+    matin: ['Une petite partie avant de commencer la journée ?', 'Le café et une partie, ça se tente.', 'Bien réveillé ? Le jeu aussi.'],
+    midi: ['Parfait pour une pause du midi.', 'Une partie rapide pendant la pause ?', 'Le temps d’une pause, c’est jouable.'],
+    aprem: ['L’après-midi est à toi.', 'Une session tranquille cet après-midi ?', 'Le bon moment pour t’y remettre.'],
+    soir: ['C’est peut-être le bon soir.', 'La soirée s’y prête bien.', 'Une partie pour finir la journée ?'],
+    nuit: ['Une dernière avant de dormir ?', 'Les nuits sont faites pour ça, non ?', 'Encore éveillé ? Il l’est aussi.'],
+  };
+  const weekend = [0, 6].includes(new Date().getDay()) && m.part !== 'soir' && m.part !== 'nuit';
+  const nudgeList = weekend ? ['C’est le week-end, prends ton temps.', 'Le week-end, c’est fait pour les longues sessions.'] : nudges[m.part];
+
+  // Mise à jour ou jeu non installé : l'info utile passe avant le reste
+  const ready = g.needsUpdate ? 'Une mise à jour l’attend avant de jouer.' : !g.installed ? 'Il faudra l’installer d’abord.' : '';
+  const parts = [pick(facts, 'fact')];
+  if (ready) parts.push(ready);
+  else parts.push(genre && pick([0, 1], 'g') ? pick(genre[1], 'genre') : pick(nudgeList, 'nudge'));
+  return { kicker: m.label, text: parts.join(' ') };
+}
+
 // ---------- Vues ----------
 function viewHome() {
   const all = games();
@@ -215,19 +328,14 @@ function viewHome() {
 
   let spotHtml = '';
   if (spot) {
-    const rel = fmtRel(spot.lastPlayed);
-    const when = /^(Aujourd|Hier)/.test(rel) ? `Tu y as joué ${rel.toLowerCase()}.` : `Ta dernière session remonte à ${rel.toLowerCase().replace('il y a ', '')}.`;
-    const ready = !spot.installed ? '.' : spot.needsUpdate ? ', une mise à jour t’attend.' : ', il est prêt à lancer.';
-    const reason = spot.lastPlayed
-      ? `${when} ${fmtPlaytime(spot.playtime)} de jeu au compteur${ready}`
-      :`Installé mais jamais lancé.${spot.reviewPct ? ` ${spot.reviewPct} % d’avis positifs sur Steam.` : ''} C’est peut-être le bon soir.`;
+    const { kicker, text: reason } = spotlightText(spot);
     spotHtml = `
-    <section aria-label="Ce soir" class="spotlight-frame" id="home-hero" data-hero-key="${spot.key}">
+    <section aria-label="${esc(kicker)}" class="spotlight-frame" id="home-hero" data-hero-key="${spot.key}">
       <div class="spotlight" style="background:${fallbackBg(spot)}">
         <img class="bg" src="${esc(spot.art.hero)}" alt="">
         <div class="shade"></div>
         <div class="body">
-          <span class="kicker">${lamp(spot)}Ce soir</span>
+          <span class="kicker">${lamp(spot)}${esc(kicker)}</span>
           <img class="logo" src="${esc(spot.art.logo)}" alt="${esc(spot.name)}" data-onfail="hide-show-title">
           <h1 class="title-fallback" hidden>${esc(spot.name)}</h1>
           <p>${esc(reason)}</p>

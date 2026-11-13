@@ -3,25 +3,62 @@
 const STORE = { steam: 'Steam', epic: 'Epic Games', gog: 'GOG', ubisoft: 'Ubisoft Connect', ea: 'EA app', xbox: 'Xbox', battlenet: 'Battle.net', riot: 'Riot', amazon: 'Amazon Games', itch: 'itch.io', custom: 'PC' };
 
 // Phrases par genre, choisies d'après les tags Steam du jeu (noms en français)
+// Les genres les plus précis passent en premier (un roguelike est souvent aussi « action »).
 const GENRES = [
-  [/roguelike|roguelite|rogue-like/i, ['Encore une dernière run', 'Meurt, apprend, recommence', 'Cette run est la bonne']],
-  [/battle royale/i, ['Vise le top 1', 'Saute du bus', 'Dernier cercle en vue']],
-  [/fps|tir|shooter/i, ['En pleine fusillade', 'Vise la tête', 'Recharge à couvert']],
-  [/grande stratégie|stratégie|4x|tactique/i, ['Prépare son prochain coup', 'Conquiert le monde, tranquillement', 'Réfléchit trois tours d’avance']],
-  [/gestion|construction|bac à sable|automatisation|city builder|simulation/i, ['Optimise sa base', 'Construit quelque chose de grand', 'Encore une petite amélioration']],
-  [/survie|fabrication/i, ['Survit tant bien que mal', 'Fabrique de quoi tenir la nuit', 'Cherche des ressources']],
-  [/horreur/i, ['Joue les lumières éteintes', 'N’ose pas ouvrir cette porte', 'Garde son sang-froid']],
-  [/course|sport|football|conduite/i, ['Au volant', 'Bat son record', 'Pied au plancher']],
-  [/soulslike|difficile|impitoyable/i, ['Meurt pour la 47e fois', 'Apprend les patterns du boss', 'Ne lâche rien']],
-  [/jeu de cartes|deckbuilding|cartes/i, ['Construit le deck parfait', 'Tire la bonne carte', 'Calcule son combo']],
-  [/rpg|jeu de rôle/i, ['En pleine quête', 'Monte en niveau', 'Fouille chaque recoin']],
-  [/monde ouvert|exploration|aventure/i, ['Explore le monde', 'Part à l’aventure', 'Se perd volontairement']],
-  [/casse-tête|puzzle|réflexion/i, ['Se creuse la tête', 'A presque trouvé', 'Résout une énigme']],
-  [/coop|multijoueur|jcj|en ligne/i, ['Joue avec l’équipe', 'En ligne', 'Porte l’équipe']],
-  [/détente|casual|relaxant|mignon/i, ['Se détend', 'Prend son temps', 'Partie tranquille']],
-  [/plateforme/i, ['Saute de plateforme en plateforme', 'Rate un saut, recommence']],
-  [/rythme|musique/i, ['Garde le rythme', 'Vise le combo parfait']],
+  [/roguelike|roguelite|rogue-like/i, ['Encore une dernière run', 'Meurt, apprend, recommence', 'Cette run est la bonne', 'Tente un nouveau build', 'Une run de plus, promis', 'Prie pour un bon objet']],
+  [/battle royale/i, ['Vise le top 1', 'Saute du bus', 'Dernier cercle en vue', 'Fouille le premier bâtiment', 'Reste dans la zone', 'Joue le top 10 tranquille']],
+  [/soulslike|souls-like|difficile|impitoyable/i, ['Meurt pour la 47e fois', 'Apprend les patterns du boss', 'Ne lâche rien', 'Respire avant le boss', 'Récupère ses âmes perdues', 'Roule au bon moment']],
+  [/horreur|psychologique/i, ['Joue les lumières éteintes', 'N’ose pas ouvrir cette porte', 'Garde son sang-froid', 'A entendu un bruit', 'Avance à pas de loup', 'Ne regarde pas derrière lui']],
+  [/fps|tir|shooter/i, ['En pleine fusillade', 'Vise la tête', 'Recharge à couvert', 'Tient la position', 'Cherche le meilleur angle', 'Enchaîne les éliminations']],
+  [/grande stratégie|4x/i, ['Conquiert le monde, tranquillement', 'Négocie une alliance douteuse', 'Encore un tour', 'Prépare une guerre éclair', 'Redessine la carte du monde', 'Gère son empire']],
+  [/stratégie|tactique|\bstr\b/i, ['Prépare son prochain coup', 'Réfléchit trois tours d’avance', 'Place ses unités', 'Tente une manœuvre risquée', 'Monte une stratégie imparable']],
+  [/city builder|ville/i, ['Construit sa ville', 'Règle les embouteillages', 'Ajoute un nouveau quartier', 'Surveille le budget de la ville', 'Rend ses habitants heureux']],
+  [/automatisation|usine/i, ['Agrandit son usine', 'Optimise sa chaîne de production', 'Démêle des tapis roulants', 'L’usine doit grandir']],
+  [/course|conduite|automobile/i, ['Au volant', 'Bat son record', 'Pied au plancher', 'Prend la corde', 'Attaque le dernier virage', 'Règle sa voiture']],
+  [/gestion|construction|colonie/i, ['Optimise sa base', 'Construit quelque chose de grand', 'Encore une petite amélioration', 'Fait tourner la boutique', 'Range tout au millimètre', 'Planifie le prochain agrandissement']],
+  [/bac à sable|modable/i, ['Laisse parler sa créativité', 'Teste une idée farfelue', 'Construit n’importe quoi, avec talent', 'Invente ses propres règles']],
+  [/survie|fabrication/i, ['Survit tant bien que mal', 'Fabrique de quoi tenir la nuit', 'Cherche des ressources', 'Renforce son abri', 'Surveille sa faim', 'Prépare l’expédition']],
+  [/^vr$|réalité virtuelle/i, ['Casque VR sur la tête', 'En réalité virtuelle', 'Fait attention aux murs']],
+  [/humour|mèmes|comédie/i, ['Rigole bien', 'Ne prend rien au sérieux', 'Fait n’importe quoi, avec style']],
+  [/sport|football|basket/i, ['En plein match', 'Monte une équipe de rêve', 'Joue les prolongations', 'Vise la victoire', 'Prépare sa tactique']],
+  [/jeu de cartes|deckbuilding|cartes/i, ['Construit le deck parfait', 'Tire la bonne carte', 'Calcule son combo', 'Mélange le paquet', 'Tente une combo improbable']],
+  [/rpg|jeu de rôle/i, ['En pleine quête', 'Monte en niveau', 'Fouille chaque recoin', 'Parle à tous les PNJ', 'Optimise son équipement', 'Suit la quête principale… ou pas']],
+  [/metroidvania/i, ['Cherche le passage secret', 'Revient avec un nouveau pouvoir', 'Complète la carte']],
+  [/monde ouvert|exploration|aventure/i, ['Explore le monde', 'Part à l’aventure', 'Se perd volontairement', 'Suit un point d’intérêt', 'Admire le paysage', 'Grimpe tout en haut']],
+  [/histoire|narratif|riche en histoire/i, ['Suit l’histoire', 'Veut savoir la suite', 'Lit tous les dialogues', 'Vit un moment fort']],
+  [/casse-tête|puzzle|réflexion/i, ['Se creuse la tête', 'A presque trouvé', 'Résout une énigme', 'Tente une solution farfelue', 'Refuse de regarder la soluce']],
+  [/coop|multijoueur|jcj|en ligne|massivement/i, ['Joue avec l’équipe', 'En ligne', 'Porte l’équipe', 'Coordonne la partie', 'Joue entre potes']],
+  [/détente|casual|relaxant|mignon|agréable/i, ['Se détend', 'Prend son temps', 'Partie tranquille', 'Joue sans pression', 'Profite du moment']],
+  [/ferme|agricole|agriculture/i, ['S’occupe de sa ferme', 'Arrose ses cultures', 'Attend la récolte', 'Nourrit les animaux']],
+  [/plateforme/i, ['Saute de plateforme en plateforme', 'Rate un saut, recommence', 'Vise le saut parfait', 'Cherche tous les collectibles']],
+  [/rythme|musique/i, ['Garde le rythme', 'Vise le combo parfait', 'Suit la mesure', 'Joue en rythme']],
+  [/combat|beat ’em up|hack and slash|action/i, ['En plein combat', 'Enchaîne les combos', 'Esquive au dernier moment', 'Ne laisse rien passer']],
+  [/vaisseaux|espace|science-fiction/i, ['Explore l’espace', 'Pilote son vaisseau', 'Part vers une nouvelle planète']],
+  [/simulation/i, ['Soigne chaque détail', 'Se prend au jeu de la simulation', 'Joue la carte du réalisme']],
 ];
+
+// « ce matin », « ce midi », « cet après-midi », « ce soir » ou « cette nuit » selon l'heure
+function momentWord(d = new Date()) {
+  const h = d.getHours();
+  return h >= 5 && h < 11 ? 'ce matin' : h >= 11 && h < 14 ? 'ce midi' : h >= 14 && h < 18 ? 'cet après-midi' : h >= 18 && h < 23 ? 'ce soir' : 'cette nuit';
+}
+
+// Phrases selon l'heure de la partie
+const HOUR_LINES = [
+  [[5, 11], ['Partie du matin', 'Commence la journée en jouant']],
+  [[11, 14], ['Pause du midi bien méritée']],
+  [[14, 18], ['Session de l’après-midi']],
+  [[18, 23], ['Partie du soir', 'Soirée jeu']],
+  [[23, 29], ['Partie nocturne', 'Joue tard, encore une fois']],
+];
+// Mélange stable : chaque partie a son propre ordre de phrases, qui ne change pas en cours de route.
+function shuffled(list, seed) {
+  let h = 2166136261;
+  for (const c of String(seed)) h = Math.imul(h ^ c.charCodeAt(0), 16777619);
+  const out = [...list];
+  for (let i = out.length - 1; i > 0; i--) { h = Math.imul(h ^ (h >>> 15), 2246822507) >>> 0; const j = h % (i + 1); [out[i], out[j]] = [out[j], out[i]]; }
+  return out;
+}
 
 // Image accessible par Discord : les visuels Steam sont stockés en local, on prend leur adresse web
 function webArt(g) {
@@ -54,25 +91,57 @@ class Presence {
   // ---------- En jeu ----------
   gameLines(g) {
     const lines = [];
-    const tags = (g.tags || []).map((t) => (this.ctx.lib() && this.ctx.lib().tagNames || {})[t] || '').filter(Boolean).join(' · ');
-    const used = new Set();
-    for (const [re, phrases] of GENRES) {
-      if (re.test(tags) && !used.has(phrases)) { used.add(phrases); lines.push(...phrases.slice(0, 2)); }
-      if (used.size >= 2) break;
+    const names = (this.ctx.lib() && this.ctx.lib().tagNames) || {};
+    const seed = `${g.key}|${this.gameStart}`;
+    // Les tags Steam sont classés par votes : on lit les 8 premiers dans l'ordre, pour que le genre
+    // principal du jeu passe avant un tag secondaire (« Simulation » sur un jeu de course, par exemple).
+    // Jusqu'à deux genres, quatre phrases chacun, piochées différemment à chaque partie.
+    const picked = [];
+    for (const t of (g.tags || []).slice(0, 8)) {
+      const name = names[t] || '';
+      const genre = name && GENRES.find(([re]) => re.test(name));
+      if (genre && !picked.includes(genre)) picked.push(genre);
+      if (picked.length >= 2) break;
     }
-    if (g.ach && g.ach.total) lines.push(`Succès : ${g.ach.done}/${g.ach.total} (${Math.floor((g.ach.done / g.ach.total) * 100)} %)`);
-    if (g.playtime >= 60) lines.push(`${fmtH(g.playtime)} au compteur`);
-    else if (g.playtime < 30) lines.push('Découvre le jeu');
+    for (const [re, phrases] of picked) lines.push(...shuffled(phrases, seed + re.source).slice(0, 4));
+
+    // Progression
+    const ach = g.ach && g.ach.total ? g.ach : null;
+    if (ach) {
+      const pct = Math.floor((ach.done / ach.total) * 100);
+      lines.push(`Succès : ${ach.done}/${ach.total} (${pct} %)`);
+      if (ach.done === ach.total) lines.push('100 % des succès, rien ne lui résiste');
+      else if (pct >= 80) lines.push(`Plus que ${ach.total - ach.done} succès pour le 100 %`);
+      else if (ach.done === 0) lines.push('Chasse son premier succès');
+    }
+    const h = (g.playtime || 0) / 60;
+    if (h >= 500) lines.push(`${fmtH(g.playtime)} au compteur, une vraie passion`);
+    else if (h >= 100) lines.push(`${fmtH(g.playtime)} au compteur, un habitué`);
+    else if (h >= 1) lines.push(`${fmtH(g.playtime)} au compteur`);
+    else lines.push('Découvre le jeu', 'Premiers pas dans le jeu');
+    if ((g.playtime2wks || 0) >= 600) lines.push('Ne lâche plus ce jeu ces temps-ci');
     const status = ((this.ctx.local() || {}).status || {})[g.key];
     if (status === 'done') lines.push('Déjà fini, y retourne pour le plaisir');
     if (status === 'playing') lines.push('Partie en cours, on avance');
+    if (status === 'todo') lines.push('Enfin lancé, il était sur la liste');
     const hl = this.ctx.howLong && this.ctx.howLong(g.key);
     if (hl && hl.main) {
       const left = Math.round(hl.main / 60) - (g.playtime || 0);
       lines.push(left > 0 ? `Environ ${fmtH(left)} avant la fin de l’histoire` : 'A dépassé la durée de l’histoire');
     }
+
+    // Durée de la partie en cours et heure
+    const sessionMin = this.gameStart ? (Date.now() - this.gameStart) / 60000 : 0;
+    if (sessionMin >= 180) lines.push('Session marathon en cours');
+    else if (sessionMin >= 90) lines.push('Bien installé pour un moment');
+    else if (sessionMin < 10) lines.push('Vient de lancer la partie');
+    let hour = new Date().getHours();
+    if (hour < 5) hour += 24;
+    const hourLines = HOUR_LINES.find(([[a, b]]) => hour >= a && hour < b);
+    if (hourLines) lines.push(shuffled(hourLines[1], seed)[0]);
+
     if (!lines.length) lines.push(`Sur ${STORE[g.store] || 'PC'}`);
-    return lines;
+    return shuffled(lines, seed);
   }
   setGame(key) {
     if (key === this.gameKey) return;
@@ -100,7 +169,7 @@ class Presence {
     const big = (x) => { const u = x && webArt(x); return u ? { large_image: u, large_text: x.name, ...LOGO } : undefined; };
     const i = this.i;
     const V = {
-      home: ['Choisit à quoi jouer', pick(['Hésite entre plusieurs jeux', `${inst} jeux prêts à lancer`, 'Regarde ce qu’il y a de bon ce soir'], i)],
+      home: ['Choisit à quoi jouer', pick(['Hésite entre plusieurs jeux', `${inst} jeux prêts à lancer`, `Regarde ce qu’il y a de bon ${momentWord()}`], i)],
       all: ['Parcourt sa bibliothèque', `${n} jeux, toutes plateformes`],
       installed: ['Regarde ses jeux installés', `${inst} jeux prêts à lancer`],
       favorites: ['Regarde ses favoris', `${all.filter((x) => x.favorite).length || ''} jeux préférés`.trim()],
