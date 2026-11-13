@@ -81,10 +81,3 @@
 .ob-dots span { width: 6px; height: 6px; border-radius: 3px; background: var(--fill-strong); transition: width 240ms var(--ease), background 240ms; }
 .ob-dots span.on { width: 18px; background: var(--accent); }
 
-@media (prefers-color-scheme: light) {
-  .ctx-menu { background: rgba(246, 246, 248, 0.9); box-shadow: inset 0 0.5px 0 #fff, 0 0 0 0.5px rgba(0, 0, 0, 0.12), 0 12px 40px rgba(0, 0, 0, 0.18); }
-  .ctx-menu button:hover, .ctx-menu button:focus-visible, .ctx-sub:hover > .has-sub { color: #111; }
-  .toast-undo, .offline-banner { background: rgba(255, 255, 255, 0.92); box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.08), 0 10px 30px rgba(0, 0, 0, 0.15); }
-  .toast-undo button { background: rgba(0, 0, 0, 0.06); }
-  .pill .px { background: rgba(0, 0, 0, 0.08); }
-}

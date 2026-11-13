@@ -6,7 +6,7 @@ const PI = (d) => `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" s
 const PREF_CATS = [
   { id: 'account', title: 'Compte Steam', color: '#0a84ff', icon: PI('<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>'), legends: [], intro: 'Ta bibliothèque est lue directement dans les fichiers de Steam. Rien à connecter.' },
   { id: 'general', title: 'Général', color: '#8e8e93', icon: PI('<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/>'), legends: ['Système'], intro: 'Comment le launcher se comporte avec Windows.' },
-  { id: 'look', title: 'Apparence', color: '#5e5ce6', icon: PI('<circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 0 0 18Z" fill="currentColor"/>'), legends: ['Apparence', 'Effets'], intro: 'Thème, couleur d’accent, taille des jaquettes et effets visuels.' },
+  { id: 'look', title: 'Apparence', color: '#5e5ce6', icon: PI('<circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 0 0 18Z" fill="currentColor"/>'), legends: ['Apparence', 'Effets'], intro: 'Taille des jaquettes et effets visuels.' },
   { id: 'notif', title: 'Notifications', color: '#ff453a', icon: PI('<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/>'), legends: ['Notifications Windows'], intro: 'Choisis ce qui mérite de t’interrompre.' },
   { id: 'ingame', title: 'En jeu', color: '#30d158', icon: PI('<path d="M6 11h4M8 9v4M15 12h.01M18 10h.01"/><path d="M17.3 5H6.7a4 4 0 0 0-4 3.6l-.7 6.5a2.6 2.6 0 0 0 4.7 1.8L8.5 15h7l1.8 1.9a2.6 2.6 0 0 0 4.7-1.8l-.7-6.5a4 4 0 0 0-4-3.6Z"/>'), legends: ['Infos en jeu', 'Performances'], intro: 'Infos par-dessus le jeu, rappel de pause et mesure des performances.' },
   { id: 'saves', title: 'Sauvegardes', color: '#40c8e0', icon: PI('<path d="M21 8v13H3V8"/><path d="M1 3h22v5H1z"/><path d="M10 12h4"/>'), legends: ['Sauvegardes de jeux'], intro: 'Des copies de sécurité de tes sauvegardes, faites toutes seules.' },
@@ -16,8 +16,6 @@ const PREF_CATS = [
 ];
 // Titres des lignes sans libellé
 const ROW_TITLES = [
-  [(el) => el.matches('.swatches'), 'Couleur d’accent'],
-  [(el) => el.querySelector('[name="theme"]'), 'Thème'],
   [(el) => el.querySelector('[name="coverSize"]'), 'Taille des jaquettes'],
   [(el) => el.querySelector('#backup-dir'), 'Dossier des copies'],
   [(el) => el.querySelector('[name="updateRepo"]'), 'Dépôt GitHub'],

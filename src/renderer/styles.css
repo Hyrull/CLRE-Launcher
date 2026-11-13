@@ -13,7 +13,7 @@
   --text: #f5f5f7;
   --text-2: #a1a1a6;
   --muted: #8a8a90;
-  --accent: #e9a23b;        /* veilleuse */
+  --accent: #f5f5f7;        /* seule couleur d'accent : blanc */
   --negative: #ff453a;
   --material: rgba(28, 28, 30, 0.72);
   --blur: saturate(180%) blur(20px);

@@ -1,7 +1,7 @@
 // CLRE-Launcher : confort d'utilisation. Menu clic droit, recherche tolérante, filtres en pastilles,
 // annuler, états vides utiles, erreurs claires, chargements doux, premier lancement guidé.
 /* global state, api, VIEWS, ICONS, esc, render, go, back, toast, byId, games, saveLocal, doAction, emptyBox, filterBar, filters,
-   FILTERS, STATUSES, statusOf, isFav, myCollections, toggleInCollection, storeOf, ACCENTS, applyLook */
+   FILTERS, STATUSES, statusOf, isFav, myCollections, toggleInCollection, storeOf */
 
 // ---------- Recherche tolérante : sigles, fautes de frappe, lettres dans l'ordre ----------
 const normS = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[™®©:'’.,!?()\-_/]+/g, ' ').replace(/\s+/g, ' ').trim();
@@ -300,9 +300,6 @@ function openOnboarding(force) {
     `<div class="ob-step"><div class="ob-logo"><svg width="64" height="64" viewBox="0 0 256 256" aria-hidden="true"><rect x="8" y="8" width="240" height="240" rx="56" fill="#e9a23b"/><rect x="74" y="58" width="108" height="144" rx="16" fill="#111113" opacity="0.4" transform="rotate(-14 128 130)"/><rect x="74" y="58" width="108" height="144" rx="16" fill="#111113" transform="rotate(3 128 130)"/><path d="M114 108 L150 130 L114 152 Z" fill="#f5f5f7" stroke="#f5f5f7" stroke-width="12" stroke-linejoin="round" transform="rotate(3 128 130)"/></svg></div>
       <h2>Bienvenue dans CLRE-Launcher</h2><p>J’ai trouvé <b>${total} jeux</b> sur ton PC, toutes plateformes réunies. Rien à connecter : tout est lu directement sur ta machine.</p>
       <div class="ob-plats">${plats.map((p) => `<span class="ob-plat">${typeof platIcon === 'function' ? platIcon(p.id, 16) : ''}<b>${esc(STORE_NAME[p.id] || p.id)}</b><span>${p.count}</span></span>`).join('')}</div></div>`,
-    `<div class="ob-step"><h2>Ton style</h2><p>Choisis l’apparence. Tu pourras la changer à tout moment dans les réglages.</p>
-      <div class="ob-label">Thème</div><div class="seg-chips" role="radiogroup">${[['dark', 'Sombre'], ['light', 'Clair'], ['system', 'Comme Windows']].map(([v, l], i) => `<button type="button" class="${i === 0 ? 'on' : ''}" data-ob-theme="${v}">${l}</button>`).join('')}</div>
-      <div class="ob-label">Couleur d’accent</div><div class="ob-swatches">${Object.entries(ACCENTS).map(([id, c]) => `<button type="button" class="ob-sw ${(state.local.accent || 'ambre') === id ? 'on' : ''}" data-ob-accent="${id}" style="--c:${c}" aria-label="${id}"></button>`).join('')}</div></div>`,
     `<div class="ob-step"><h2>En option</h2><p>Tout marche déjà. Ces options ajoutent des choses en plus :</p>
       <ul class="ob-list">
         <li><b>Clé Steam Web API</b><span>Tes amis en ligne et les succès des jeux jamais lancés. Gratuite sur steamcommunity.com/dev/apikey</span><input id="ob-key" type="password" placeholder="Colle ta clé (facultatif)" autocomplete="off"></li>
@@ -310,7 +307,6 @@ function openOnboarding(force) {
       </ul></div>`,
   ];
   let i = 0;
-  const choice = { theme: null, accent: null };
   el.innerHTML = `<div class="ob-card" role="dialog" aria-modal="true" aria-label="Bienvenue"><div class="ob-body"></div>
     <div class="ob-foot"><div class="ob-dots">${steps.map(() => '<span></span>').join('')}</div>
       <div class="actions"><button type="button" class="btn btn-ghost" data-ob="skip">Passer</button><button type="button" class="btn btn-primary" data-ob="next">Suivant</button></div></div></div>`;
@@ -319,15 +315,12 @@ function openOnboarding(force) {
     el.querySelector('.ob-body').innerHTML = steps[i];
     el.querySelectorAll('.ob-dots span').forEach((d, k) => d.classList.toggle('on', k === i));
     el.querySelector('[data-ob="next"]').textContent = i === steps.length - 1 ? 'C’est parti' : 'Suivant';
-    if (choice.theme) el.querySelectorAll('[data-ob-theme]').forEach((b) => b.classList.toggle('on', b.dataset.obTheme === choice.theme));
   };
   const finish = async () => {
     state.local.onboarded = true;
-    if (choice.accent) state.local.accent = choice.accent;
     saveLocal();
     const key = el.querySelector('#ob-key');
     const patch = {};
-    if (choice.theme) patch.settings = { theme: choice.theme };
     if (key && key.value.trim()) patch.apiKey = key.value.trim();
     if (Object.keys(patch).length) await api.setPrefs(patch);
     el.classList.remove('on');
@@ -336,11 +329,9 @@ function openOnboarding(force) {
     render({ quiet: true });
   };
   el.addEventListener('click', (e) => {
-    const t = e.target.closest('[data-ob],[data-ob-theme],[data-ob-accent]');
+    const t = e.target.closest('[data-ob]');
     if (!t) return;
     e.stopPropagation();
-    if (t.dataset.obTheme) { choice.theme = t.dataset.obTheme; el.querySelectorAll('[data-ob-theme]').forEach((b) => b.classList.toggle('on', b === t)); api.setPrefs({ settings: { theme: choice.theme } }); return; }
-    if (t.dataset.obAccent) { choice.accent = t.dataset.obAccent; state.local.accent = choice.accent; applyLook(); el.querySelectorAll('[data-ob-accent]').forEach((b) => b.classList.toggle('on', b === t)); return; }
     if (t.dataset.ob === 'skip') return finish();
     if (i < steps.length - 1) { i++; draw(); } else finish();
   });

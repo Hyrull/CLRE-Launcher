@@ -14,13 +14,14 @@ Object.assign(ICONS, {
 });
 Object.assign(state.cache, { store: {}, specs: {}, mods: {}, saves: {} });
 state.recap = { mode: 'month', offset: 0 };
-const ACCENTS = { ambre: '#e9a23b', bleu: '#0a84ff', vert: '#30d158', rose: '#ff375f', blanc: '#f5f5f7' };
+// Une seule couleur d'accent : le blanc. (Les anciens choix enregistrés sont ignorés.)
+const ACCENT = '#f5f5f7';
 const steamish = (g) => g.store === 'steam' || !!g.steamAppId;
 
 // ---------- Personnalisation ----------
 function applyLook() {
   const l = state.local;
-  document.documentElement.style.setProperty('--accent', ACCENTS[l.accent] || ACCENTS.ambre);
+  document.documentElement.style.setProperty('--accent', ACCENT);
   document.body.classList.remove('cover-s', 'cover-m', 'cover-l');
   document.body.classList.add(`cover-${l.coverSize || 'm'}`);
 }
@@ -398,8 +399,6 @@ settingsSystem = function (prefs) {
   const l = state.local;
   return _settingsSystem(prefs) + `
   <fieldset class="field set"><legend>Apparence</legend>
-    <div class="swatches" role="radiogroup" aria-label="Couleur d’accent">${Object.entries(ACCENTS).map(([id, c]) => `<label class="swatch" title="${id}"><input type="radio" name="accent" value="${id}" ${(l.accent || 'ambre') === id ? 'checked' : ''}><span style="background:${c}"></span><span class="sr-only">${id}</span></label>`).join('')}</div>
-    <div class="seg-chips" role="radiogroup" aria-label="Thème">${[['dark', 'Sombre'], ['light', 'Clair'], ['system', 'Comme Windows']].map(([id, lab]) => `<label class="seg-radio"><input type="radio" name="theme" value="${id}" ${(s.theme || 'dark') === id ? 'checked' : ''}><span>${lab}</span></label>`).join('')}</div>
     <div class="seg-chips" role="radiogroup" aria-label="Taille des jaquettes">${[['s', 'Petites'], ['m', 'Moyennes'], ['l', 'Grandes']].map(([id, lab]) => `<label class="seg-radio"><input type="radio" name="coverSize" value="${id}" ${(l.coverSize || 'm') === id ? 'checked' : ''}><span>${lab}</span></label>`).join('')}</div>
   </fieldset>
   <fieldset class="field set"><legend>Notifications Windows</legend>
@@ -438,12 +437,10 @@ settingsSystem = function (prefs) {
   </fieldset>`;
 };
 function readExtraSettings(f) {
-  state.local.accent = f.get('accent') || 'ambre';
   state.local.coverSize = f.get('coverSize') || 'm';
   saveLocal();
   return {
     notify: { downloads: !!f.get('n_downloads'), promos: !!f.get('n_promos'), friends: !!f.get('n_friends'), updates: !!f.get('n_updates'), storage: !!f.get('n_storage'), party: !!f.get('n_party') },
-    theme: f.get('theme') || 'dark',
     overlay: { enabled: !!f.get('ov_enabled'), pauseMin: Number(f.get('ov_pause') || 0) },
     discordId: String(f.get('discordId') || '').replace(/\D/g, ''),
     discordEnabled: !!f.get('discordEnabled'),

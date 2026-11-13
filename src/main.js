@@ -49,7 +49,7 @@ const settings = () => {
   const s = readPrefs().settings || {};
   return {
     notify: { downloads: true, promos: true, friends: true, updates: true, storage: true, recaps: true, party: true, ...(s.notify || {}) },
-    theme: ['dark', 'light', 'system'].includes(s.theme) ? s.theme : 'dark',
+    theme: 'dark', // le launcher n'a plus de mode clair
     overlay: { enabled: true, pauseMin: 120, ...(s.overlay || {}) },
     presentMon: s.presentMon || '',
     liveBanners: s.liveBanners !== false,
@@ -554,16 +554,14 @@ function updateTray() {
   ]));
 }
 
-// ---------- Thème : sombre, clair ou celui de Windows ----------
-function applyTheme(theme) {
-  nativeTheme.themeSource = theme || 'dark';
+// ---------- Thème : toujours sombre (le mode clair a été retiré) ----------
+function applyTheme() {
+  nativeTheme.themeSource = 'dark';
   if (win && !win.isDestroyed()) {
-    const light = !nativeTheme.shouldUseDarkColors;
-    win.setBackgroundColor(light ? '#f5f5f7' : '#111113');
-    try { win.setTitleBarOverlay({ color: '#00000000', symbolColor: light ? '#3a3a3c' : '#a1a1a6', height: 36 }); } catch { /* fenêtre sans barre personnalisée */ }
+    win.setBackgroundColor('#111113');
+    try { win.setTitleBarOverlay({ color: '#00000000', symbolColor: '#a1a1a6', height: 36 }); } catch { /* fenêtre sans barre personnalisée */ }
   }
 }
-nativeTheme.on('updated', () => applyTheme(nativeTheme.themeSource));
 
 // ---------- Infos en jeu ----------
 const overlay = new Overlay();
@@ -654,7 +652,7 @@ function applySystem() {
   const st = settings();
   if (st.overlay.enabled) globalShortcut.register('Control+Alt+O', () => overlay.toggle(overlayInfo()));
   else overlay.hide();
-  applyTheme(st.theme);
+  applyTheme();
   if (app.isPackaged) {
     app.setLoginItemSettings({ openAtLogin: !!s.autostart, path: process.env.PORTABLE_EXECUTABLE_FILE || process.execPath, args: ['--hidden'] });
   }
@@ -667,10 +665,10 @@ function createWindow() {
     minWidth: 960,
     minHeight: 640,
     show: !process.argv.includes('--hidden') && !playArg(process.argv),
-    backgroundColor: (nativeTheme.themeSource = settings().theme, nativeTheme.shouldUseDarkColors) ? '#111113' : '#f5f5f7',
+    backgroundColor: (nativeTheme.themeSource = 'dark', '#111113'),
     icon: path.join(ASSETS, 'icon-256.png'),
     titleBarStyle: 'hidden',
-    titleBarOverlay: { color: '#00000000', symbolColor: nativeTheme.shouldUseDarkColors ? '#a1a1a6' : '#3a3a3c', height: 36 },
+    titleBarOverlay: { color: '#00000000', symbolColor: '#a1a1a6', height: 36 },
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false },
   });
   win.loadFile(path.join(__dirname, 'renderer', 'index.html'));
