@@ -321,8 +321,10 @@ async function recordStory(el, restart, done, file) {
   v.muted = true; v.srcObject = stream; await v.play();
   const canvas = document.createElement('canvas'); canvas.width = 1920; canvas.height = 1080;
   const ctx = canvas.getContext('2d');
-  const types = ['video/mp4;codecs=avc1.640028', 'video/mp4;codecs=avc1', 'video/mp4', 'video/webm;codecs=vp9', 'video/webm'];
+  // Pas d'« avc1.640028 » (H.264 High 4.0) : Chromium le dit pris en charge mais n'en sort aucune image.
+  const types = ['video/mp4;codecs=avc1', 'video/mp4', 'video/webm;codecs=vp9', 'video/webm'];
   const mime = types.find((t) => MediaRecorder.isTypeSupported(t));
+  if (!mime) { stream.getTracks().forEach((t) => t.stop()); throw new Error('aucun format vidéo disponible'); }
   const rec = new MediaRecorder(canvas.captureStream(30), { mimeType: mime, videoBitsPerSecond: 14e6 });
   const chunks = [];
   rec.ondataavailable = (e) => e.data.size && chunks.push(e.data);
@@ -345,9 +347,10 @@ async function recordStory(el, restart, done, file) {
         cancelAnimationFrame(raf);
         stream.getTracks().forEach((t) => t.stop());
         const blob = new Blob(chunks, { type: mime });
+        // Une vidéo vide ne doit pas être proposée à l'enregistrement : on prévient à la place
+        if (!blob.size) { toast('Export impossible : la vidéo est vide'); done(null); return; }
         const ext = mime.startsWith('video/mp4') ? 'mp4' : 'webm';
-        const saved = await api.saveVideo(await blob.arrayBuffer(), file, ext);
-        done(saved);
+        try { done(await api.saveVideo(await blob.arrayBuffer(), file, ext)); } catch (err) { toast(`Export impossible : ${err.message}`); done(null); }
       };
       setTimeout(() => rec.stop(), 400);
     },

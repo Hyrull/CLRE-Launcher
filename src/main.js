@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, shell, protocol, net, Tray, Menu, nativeImage, globalShortcut, dialog, Notification, nativeTheme, desktopCapturer, session } = require('electron');
+const { app, BrowserWindow, ipcMain, shell, protocol, net, Tray, Menu, nativeImage, globalShortcut, dialog, Notification, nativeTheme, session } = require('electron');
 const { Overlay } = require('./overlay');
 const { Perf } = require('./perf');
 const journal = require('./journal');
@@ -725,11 +725,11 @@ app.whenReady().then(() => {
   perf = new Perf(dataFile('perf'), () => settings().presentMon);
   rarity = new journal.Rarity(dataFile('ach-global.json'));
   // Export vidéo du récap : la page filme sa propre fenêtre
-  session.defaultSession.setDisplayMediaRequestHandler((_req, cb) => {
-    desktopCapturer.getSources({ types: ['window'] }).then((src) => {
-      const mine = win && src.find((x) => x.id === win.getMediaSourceId());
-      cb(mine ? { video: mine } : {});
-    }).catch(() => cb({}));
+  // On filme directement la page (capture d'onglet) : pas de capture d'écran de Windows, qui échouait
+  // (« Error starting capture ») et qui aurait aussi filmé ce qui passe par-dessus la fenêtre.
+  session.defaultSession.setDisplayMediaRequestHandler((req, cb) => {
+    if (win && !win.isDestroyed() && req.frame) { cb({ video: req.frame }); return; }
+    cb({});
   });
   setTimeout(checkRecaps, 20000);
   setInterval(checkRecaps, 6 * 3600 * 1000);
@@ -1133,6 +1133,8 @@ app.whenReady().then(() => {
     } catch { return null; }
   });
   ipcMain.handle('save-video', async (_e, buf, name, ext) => {
+    // Captures de dev : enregistrement direct dans un dossier, sans boîte de dialogue
+    if (process.env.LAUNCHER_SNAP_SAVE && !app.isPackaged) { const f = path.join(process.env.LAUNCHER_SNAP_SAVE, `${name || 'recap'}.${ext}`); fs.writeFileSync(f, Buffer.from(buf)); return f; }
     const res = await dialog.showSaveDialog(win, { title: 'Enregistrer la vidéo du récap', defaultPath: path.join(app.getPath('videos'), `${name || 'recap'}.${ext}`), filters: [{ name: 'Vidéo', extensions: [ext] }] });
     if (res.canceled) return null;
     fs.writeFileSync(res.filePath, Buffer.from(buf));
