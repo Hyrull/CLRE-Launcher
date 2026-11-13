@@ -562,12 +562,21 @@ function updateTray() {
   ]));
 }
 
-// ---------- Thème : toujours sombre (le mode clair a été retiré) ----------
+// ---------- Fenêtre : sombre par défaut ; un thème peut demander le clair et une matière Windows 11 ----------
+// Windows 11 22H2+ : la matière n'apparaît que si la fenêtre est CRÉÉE avec (l'activer ensuite ne fait rien).
+// On la crée donc toujours avec Mica ; les thèmes normaux gardent un fond plein par-dessus.
+const MATERIAL_OK = process.platform === 'win32' && Number(String(process.getSystemVersion()).split('.')[2] || 0) >= 22621;
 function applyTheme() {
-  nativeTheme.themeSource = 'dark';
+  const t = themes ? themes.active() : { colorScheme: 'dark', windowMaterial: 'none' };
+  const light = t.colorScheme === 'light';
+  const material = t.windowMaterial || 'none';
+  // La matière (Mica…) teinte selon le mode clair/sombre de l'application
+  nativeTheme.themeSource = material !== 'none' && light ? 'light' : 'dark';
   if (win && !win.isDestroyed()) {
-    win.setBackgroundColor('#111113');
-    try { win.setTitleBarOverlay({ color: '#00000000', symbolColor: '#a1a1a6', height: 36 }); } catch { /* fenêtre sans barre personnalisée */ }
+    // Mica ne se voit qu'à travers une fenêtre transparente ; sinon le fond sombre habituel le recouvre
+    if (MATERIAL_OK && material !== 'none') { try { win.setBackgroundMaterial(material); } catch { /* matière refusée */ } }
+    win.setBackgroundColor(material !== 'none' ? '#00000000' : '#111113');
+    try { win.setTitleBarOverlay({ color: '#00000000', symbolColor: light ? '#1f1f1f' : '#a1a1a6', height: 36 }); } catch { /* fenêtre sans barre personnalisée */ }
   }
 }
 
@@ -580,6 +589,7 @@ function resetTheme() {
   if (!themes) return;
   themes.reset();
   themes.watch();
+  applyTheme();
   if (win && !win.isDestroyed()) win.webContents.reload();
   updateTray();
 }
@@ -687,6 +697,7 @@ function createWindow() {
     minHeight: 640,
     show: !process.argv.includes('--hidden') && !playArg(process.argv),
     backgroundColor: (nativeTheme.themeSource = 'dark', '#111113'),
+    ...(MATERIAL_OK ? { backgroundMaterial: 'mica' } : {}),
     icon: path.join(ASSETS, 'icon-256.png'),
     titleBarStyle: 'hidden',
     titleBarOverlay: { color: '#00000000', symbolColor: '#a1a1a6', height: 36 },
@@ -767,11 +778,12 @@ app.whenReady().then(() => {
     getPrefs: () => readPrefs().appearance || {},
     setPrefs: (a) => { const p = readPrefs(); p.appearance = a; writePrefs(p); },
     safeMode: process.argv.includes('--safe-mode'),
+    materialSupported: MATERIAL_OK,
     fetch: (url, opts) => net.fetch(url, opts),
     catalogUrl: () => { const c = (readPrefs().settings || {}).themeCatalog; return c === undefined || c === null ? THEME_CATALOG : c; },
   });
   // Rechargement à chaud : une modification du dossier du thème actif est appliquée tout de suite
-  themes.watch((a) => { if (win && !win.isDestroyed()) win.webContents.send('theme-changed', a); });
+  themes.watch((a) => { applyTheme(); if (win && !win.isDestroyed()) win.webContents.send('theme-changed', a); });
   protocol.handle('clre-theme', (req) => {
     const hit = themes.resolve(req.url);
     if (!hit) return new Response('', { status: 404 });
@@ -781,8 +793,8 @@ app.whenReady().then(() => {
   // Lecture synchrone au chargement de la page : le thème est en place avant le premier affichage.
   ipcMain.on('themes:boot', (e) => { try { e.returnValue = themes.active(); } catch { e.returnValue = null; } });
   ipcMain.handle('themes:list', () => ({ themes: themes.list(), active: themes.active(), userDir: themes.userDir }));
-  ipcMain.handle('themes:set', (_e, choice) => { const a = themes.set(choice); themes.watch(); updateTray(); return a; });
-  ipcMain.handle('themes:reset', () => { themes.reset(); themes.watch(); updateTray(); return themes.active(); });
+  ipcMain.handle('themes:set', (_e, choice) => { const a = themes.set(choice); themes.watch(); applyTheme(); updateTray(); return a; });
+  ipcMain.handle('themes:reset', () => { themes.reset(); themes.watch(); applyTheme(); updateTray(); return themes.active(); });
   // Import d'une archive : chemin déposé sur la fenêtre, ou choisi dans une boîte de dialogue
   ipcMain.handle('themes:import', async (_e, file) => {
     if (!file) {
@@ -801,6 +813,7 @@ app.whenReady().then(() => {
     const dir = themes.removeDir(String(id));
     await shell.trashItem(dir);
     themes.watch();
+    applyTheme();
     updateTray();
     return themes.active();
   });

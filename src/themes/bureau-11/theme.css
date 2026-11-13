@@ -1,0 +1,153 @@
+/* Bureau 11 — comme une appli native de Windows 11 (langage WinUI 3), pour CLRE-Launcher (apiVersion 1).
+   La fenêtre demande la matière Mica (theme.json : "windowMaterial": "mica") : le fond d'écran transparaît,
+   flouté et teinté. Volet de navigation à gauche posé sur le Mica, zone de contenu sur une couche
+   plus claire au coin arrondi, cartes à fin liseré, boutons à bord inférieur, indicateur de sélection. */
+
+:root {
+  --sans: 'Segoe UI Variable Text', 'Segoe UI Variable', 'Segoe UI', system-ui, sans-serif;
+  --display: 'Segoe UI Variable Display', 'Segoe UI Variable', 'Segoe UI', sans-serif;
+  /* Couleurs du launcher reliées aux jetons du thème */
+  --bg-rgb: var(--w-bg-rgb);
+  --card-rgb: var(--w-bg-rgb);
+  --raised-rgb: var(--w-bg-rgb);
+  --popover-rgb: var(--w-bg-rgb);
+  --glass-rgb: var(--w-bg-rgb);
+  --fg-rgb: var(--w-fg-rgb);
+  --shade-rgb: 0 0 0;
+  --on-art-rgb: 255 255 255;
+  --sidebar: transparent;
+  --card: var(--w-card);
+  --surface-2: var(--w-solid);
+  --control: var(--w-ctrl);
+  --control-strong: var(--w-card);
+  --text: var(--w-text);
+  --text-2: var(--w-text-2);
+  --muted: var(--w-text-3);
+  --on-text: var(--on-accent);
+  --knob: #ffffff;
+  --material: var(--w-layer);
+  --blur: blur(30px) saturate(1.25);
+  --line: var(--w-stroke);
+  --line-strong: var(--w-stroke-strong);
+  --fill: var(--w-ctrl);
+  --fill-strong: var(--w-ctrl-hover);
+  --art-fallback: var(--w-card);
+  --art-fallback-flat: var(--w-card);
+  --radius-cover: 8px;
+  --radius-tile: 8px;
+  --ease: cubic-bezier(0, 0, 0, 1); /* courbe « décélération » de Windows */
+  /* Boutons standard : remplissage clair, liseré, bord du bas un peu plus marqué */
+  --key: var(--w-ctrl);
+  --key-hover: var(--w-ctrl-hover);
+  --key-press: var(--w-ctrl-press);
+  --key-edge: inset 0 0 0 1px var(--w-stroke), inset 0 -1px 0 var(--w-stroke-strong);
+  --key-edge-press: inset 0 0 0 1px var(--w-stroke);
+  --well: var(--w-ctrl);
+  --well-edge: inset 0 0 0 1px var(--w-stroke), inset 0 -1px 0 var(--w-stroke-strong);
+  --btn-primary: var(--accent);
+  --btn-primary-hover: var(--accent-hover);
+  --btn-primary-press: var(--accent-press);
+  --btn-primary-edge: rgb(255 255 255 / 0.08);
+}
+.content::before { display: none; }
+
+/* ── Fond : transparent quand Mica est actif ; sinon (Windows 10) une couleur unie ── */
+html, body { background: var(--w-solid); color: var(--w-text); }
+:root[data-window-material="mica"] :is(html, body), :root[data-window-material="mica"] { background: transparent !important; }
+
+/* ── Volet de navigation posé sur le Mica ── */
+[data-part="sidebar"] { background: transparent !important; border-right: 0 !important; box-shadow: none !important; padding: 44px 4px 8px !important; }
+[data-part="brand"] { padding: 0 12px; height: 28px; }
+[data-part="brand"] .wordmark, [data-part="brand"] .wordmark b { font-size: 12px; font-weight: 400; color: var(--w-text); }
+[data-part="sidebar"] .nav-item {
+  height: 36px; margin: 2px 4px; width: calc(100% - 8px); padding: 0 12px; border-radius: 4px; position: relative;
+  font-size: 14px; font-weight: 400; color: var(--w-text); background: transparent !important; box-shadow: none !important;
+  transition: background 83ms linear;
+}
+[data-part="sidebar"] .nav-item svg { color: var(--w-text); }
+[data-part="sidebar"] .nav-item:hover { background: var(--w-subtle-hover) !important; }
+[data-part="sidebar"] .nav-item:active { background: var(--w-subtle-press) !important; }
+[data-part="sidebar"] .nav-item.active { background: var(--w-subtle-hover) !important; color: var(--w-text); }
+/* Indicateur de sélection : petite pilule d'accent à gauche */
+[data-part="sidebar"] .nav-item.active::before { content: ""; position: absolute; left: 0; top: 50%; width: 3px; height: 16px; margin-top: -8px; border-radius: 2px; background: var(--accent); }
+[data-part="sidebar"] .nav-item.active :is(svg, .plat-ico) { color: var(--w-text); }
+[data-part="sidebar"] .count { color: var(--w-text-2); font-size: 12px; }
+[data-part="nav-collections"] .nav-sec-toggle { color: var(--w-text-2); font-weight: 600; font-size: 12px; padding-left: 16px; }
+[data-part="week-card"] { margin: 8px 8px 0; border-top: 0; border-radius: 8px; background: var(--w-card); box-shadow: inset 0 0 0 1px var(--w-stroke); padding: 12px; }
+[data-part="sidebar"] .add-game { color: var(--w-text); }
+/* Option : volet compact, icônes seules */
+:root.theme-opt-compact { --sidebar-width: 56px; }
+:root.theme-opt-compact [data-part="sidebar"] :is(.wordmark, .label, .count, .nav-sec-head, .nav-hint, [data-part="week-card"], .nav-item.small, .nav-title) { display: none !important; }
+:root.theme-opt-compact [data-part="sidebar"] .nav-item { justify-content: center; padding: 0; }
+:root.theme-opt-compact [data-part="sidebar"] .nav-sec-body { max-height: none !important; }
+
+/* ── Zone de contenu : couche plus claire, coin supérieur gauche arrondi, liseré ── */
+[data-part="content"] {
+  background: var(--w-layer) !important;
+  border-radius: 8px 0 0 0;
+  box-shadow: inset 1px 1px 0 var(--w-stroke);
+  margin-top: 36px;
+}
+[data-part="topbar"] { padding-top: 12px !important; }
+[data-part="topbar"].material { background: var(--w-flyout) !important; -webkit-backdrop-filter: var(--blur); backdrop-filter: var(--blur); border-bottom-color: var(--w-stroke) !important; }
+
+/* ── Typo : échelle de Windows (Titre 28, Sous-titre 20, Corps 14) ── */
+body { font-size: 14px; }
+h1, .toolbar h1 { font-family: var(--display); font-weight: 600; letter-spacing: 0; color: var(--w-text); }
+.toolbar h1 { font-size: 28px; line-height: 36px; }
+h2.section { font-family: var(--display); font-size: 20px; font-weight: 600; letter-spacing: 0; line-height: 28px; }
+.section-sub, .card .s, .stats .k { color: var(--w-text-2); }
+.stats .v { font-family: var(--display); font-weight: 600; }
+
+/* ── Contrôles ── */
+.btn, .chip, .icon-btn, .avatar, .select, .filter select, .tag-toggle, .field select { border-radius: 4px !important; font-weight: 400; font-size: 14px; color: var(--w-text); }
+.btn { height: 32px; padding: 0 12px; letter-spacing: 0; }
+.btn-big { height: 40px; padding: 0 20px; }
+.btn-primary, .btn-light, .cover .quick { color: var(--on-accent) !important; box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.08), inset 0 -1px 0 rgb(0 0 0 / 0.4) !important; text-shadow: none; }
+.chip.on, .tag-toggle.on { background: var(--accent) !important; color: var(--on-accent) !important; box-shadow: none !important; }
+.btn-glass, .btn-running { background: var(--w-ctrl) !important; color: var(--w-text) !important; box-shadow: var(--key-edge) !important; -webkit-backdrop-filter: var(--blur) !important; backdrop-filter: var(--blur) !important; }
+.avatar { border-radius: 50% !important; background: var(--accent) !important; color: var(--on-accent) !important; box-shadow: none !important; }
+/* Sélecteur segmenté façon onglets : souligné d'accent */
+.segmented, .seg-chips { background: var(--w-ctrl) !important; box-shadow: var(--well-edge) !important; border-radius: 4px !important; padding: 2px !important; }
+.segmented button, .seg-chips button { border-radius: 3px !important; font-weight: 400; color: var(--w-text-2); }
+.segmented button.active, .seg-chips button.on { background: var(--w-card) !important; color: var(--w-text) !important; box-shadow: inset 0 0 0 1px var(--w-stroke), inset 0 -2px 0 var(--accent) !important; }
+/* Champ de recherche : souligné d'accent au focus */
+.search { border-radius: 4px !important; }
+.search:focus-within { box-shadow: inset 0 0 0 1px var(--w-stroke), inset 0 -2px 0 var(--accent) !important; }
+.search input { color: var(--w-text); }
+.topbar.over-hero:not(.material) :is(.segmented, .search, .icon-btn) { background: var(--w-flyout) !important; }
+
+/* ── Cartes ── */
+[data-part="cover"] { box-shadow: inset 0 0 0 1px var(--w-stroke), 0 2px 4px rgb(0 0 0 / 0.08) !important; }
+[data-part="game-card"]:hover [data-part="cover"] { transform: translateY(-2px); box-shadow: inset 0 0 0 1px var(--w-stroke-strong), 0 8px 16px rgb(0 0 0 / 0.14) !important; }
+[data-part="game-card"] .t { font-weight: 400; font-size: 14px; }
+:is([data-part="tile"], [data-part="resume-card"], .group, .stats) { background: var(--w-card) !important; box-shadow: inset 0 0 0 1px var(--w-stroke) !important; border-radius: 8px !important; }
+[data-part="resume-card"]:hover { background: var(--w-card-hover) !important; }
+.stats { padding: 16px; }
+
+/* ── Bannières : coins arrondis, dégradé vers la couche ── */
+.spotlight-frame, .game-hero { border-radius: 8px 0 0 0; overflow: hidden; }
+.spotlight .shade, .game-hero .shade { background: linear-gradient(0deg, rgb(0 0 0 / 0.55) 0%, rgb(0 0 0 / 0.15) 40%, transparent 70%); }
+
+/* ── Menus, fenêtres, notifications : surfaces acryliques avec ombre douce ── */
+.modal { border-radius: 8px !important; border: 1px solid var(--w-stroke-strong) !important; background: var(--w-solid) !important; box-shadow: 0 32px 64px rgb(0 0 0 / 0.28), 0 2px 21px rgb(0 0 0 / 0.22) !important; }
+.prefs-side { background: transparent !important; }
+.prefs-cats button { border-radius: 4px !important; color: var(--w-text); }
+.prefs-cats button.on, .prefs-me.on { background: var(--w-subtle-hover) !important; color: var(--w-text) !important; box-shadow: inset 3px 0 0 var(--accent); }
+.ctx-menu, .inbox { background: var(--w-flyout) !important; border-radius: 8px !important; box-shadow: inset 0 0 0 1px var(--w-stroke-strong), 0 8px 16px rgb(0 0 0 / 0.14) !important; -webkit-backdrop-filter: var(--blur) !important; backdrop-filter: var(--blur) !important; color: var(--w-text); }
+.ctx-menu button { border-radius: 4px !important; }
+.ctx-menu button:hover { background: var(--w-subtle-hover) !important; color: var(--w-text) !important; }
+.toast, .toast-undo { background: var(--w-flyout) !important; color: var(--w-text) !important; border-radius: 8px !important; box-shadow: inset 0 0 0 1px var(--w-stroke-strong), 0 8px 16px rgb(0 0 0 / 0.14) !important; -webkit-backdrop-filter: var(--blur) !important; backdrop-filter: var(--blur) !important; }
+/* Interrupteur WinUI : contour quand éteint, plein d'accent quand allumé */
+:is(.row-switch, .home-toggles) input[type="checkbox"] { width: 40px; height: 20px; border-radius: 10px !important; background: transparent !important; box-shadow: inset 0 0 0 1px var(--w-text-2) !important; }
+:is(.row-switch, .home-toggles) input[type="checkbox"]::after { top: 5px; left: 5px; width: 10px; height: 10px; background: var(--w-text-2); box-shadow: none; }
+:is(.row-switch, .home-toggles) input[type="checkbox"]:checked { background: var(--accent) !important; box-shadow: none !important; }
+:is(.row-switch, .home-toggles) input[type="checkbox"]:checked::after { background: var(--on-accent); transform: translateX(20px); width: 12px; height: 12px; top: 4px; }
+/* Barre de progression fine */
+.hl-row .bar, .cover-dl { height: 3px; border-radius: 2px; background: var(--w-stroke-strong); }
+.hl-row .bar span, .cover-dl div { background: var(--accent); border-radius: 2px; }
+select option { background: var(--w-solid); color: var(--w-text); }
+/* Barre de défilement fine, qui s'épaissit au survol */
+::-webkit-scrollbar { width: 12px; background: transparent; }
+::-webkit-scrollbar-thumb { background: rgb(var(--w-fg-rgb) / 0.35) !important; border: 5px solid transparent !important; background-clip: padding-box !important; border-radius: 6px; }
+::-webkit-scrollbar-thumb:hover { border-width: 3px !important; }
