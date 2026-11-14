@@ -272,13 +272,39 @@ function watch(paths) {
 }
 
 // ---------- Jeux en cours + sessions ----------
-function listProcesses() {
+function listProcesses(filter) {
   return new Promise((resolve) => {
-    execFile('tasklist', ['/fo', 'csv', '/nh'], { windowsHide: true, maxBuffer: 8 * 1024 * 1024 }, (err, out) => {
+    const args = ['/fo', 'csv', '/nh', ...(filter ? ['/fi', `IMAGENAME eq ${filter}`] : [])];
+    execFile('tasklist', args, { windowsHide: true, maxBuffer: 8 * 1024 * 1024 }, (err, out) => {
       if (err) return resolve(new Set());
       resolve(new Set(out.split(/\r?\n/).map((l) => (l.match(/^"([^"]+)"/) || [])[1]).filter(Boolean).map((s) => s.toLowerCase())));
     });
   });
+}
+// Lequel de ces exécutables tourne ? Relevé toutes les 5 s : tasklist coûte ~100 ms de CPU à chaque
+// fois, qprocess ~20 ms. Mais qprocess coupe les noms longs à 12 caractères (« fortniteclie... ») :
+// il sert de premier tri, et tasklist, limité aux noms coupés qui correspondent, confirme le nom exact.
+function qprocessNames() {
+  return new Promise((resolve) => {
+    execFile('qprocess', ['*'], { windowsHide: true, maxBuffer: 8 * 1024 * 1024 }, (err, out) => {
+      if (err) return resolve(null);
+      const names = out.split(/\r?\n/).map((l) => (l.match(/\s\d+\s+\d+\s+(\S.*?)\s*$/) || [])[1]).filter(Boolean).map((s) => s.toLowerCase());
+      resolve(names.length ? names : null);
+    });
+  });
+}
+async function runningAmong(wanted) {
+  const q = await qprocessNames();
+  if (!q) return listProcesses(); // qprocess absent ou illisible : relevé complet comme avant
+  const found = new Set();
+  const prefixes = new Set();
+  for (const n of q) {
+    if (!n.endsWith('...')) { if (wanted.has(n)) found.add(n); continue; }
+    const pre = n.slice(0, -3);
+    for (const w of wanted) if (w.length > pre.length && w.startsWith(pre)) { prefixes.add(pre); break; }
+  }
+  for (const set of await Promise.all([...prefixes].map((pre) => listProcesses(pre + '*')))) for (const n of set) if (wanted.has(n)) found.add(n);
+  return found;
 }
 
 // Un relevé à la fois : si tasklist est lent, le suivant attend au lieu de s'empiler.
@@ -293,7 +319,7 @@ async function pollRunning() {
   const now = [];
   const watched = [...games.values()].filter((g) => g.store !== 'steam' && g.installed && g.processNames && g.processNames.length);
   // Registre Steam et liste des processus lus en même temps, sans bloquer l'interface
-  const [steamId, procs] = await Promise.all([regDwordAsync('RunningAppID'), watched.length ? listProcesses() : null]);
+  const [steamId, procs] = await Promise.all([regDwordAsync('RunningAppID'), watched.length ? runningAmong(new Set(watched.flatMap((g) => g.processNames))) : null]);
   if (steamId) now.push(String(steamId));
   if (procs) for (const g of watched) if (g.processNames.some((p) => procs.has(p))) now.push(g.key);
   const names = Object.fromEntries(now.map((k) => [k, (games.get(k) || {}).name || k]));

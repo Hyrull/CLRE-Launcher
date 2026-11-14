@@ -6,15 +6,16 @@
 const S3 = { tintKey: null, videos: new Map(), splash: null };
 // Vidéos de fond (fiches de jeu et du magasin) : on en garde 4 au plus. Les plus anciennes sont
 // arrêtées et leur lecteur HLS détruit, sinon chaque fiche visitée gardait sa vidéo et son tampon en mémoire.
+function releaseVideo(k, v) {
+  clearTimeout(v._t);
+  v.pause();
+  if (v._hls) v._hls.destroy();
+  v.removeAttribute('src'); v.load();
+  v.remove();
+  S3.videos.delete(k);
+}
 function trimVideos(max = 4) {
-  while (S3.videos.size > max) {
-    const [k, old] = S3.videos.entries().next().value;
-    old.pause();
-    if (old._hls) old._hls.destroy();
-    old.removeAttribute('src'); old.load();
-    old.remove();
-    S3.videos.delete(k);
-  }
+  while (S3.videos.size > max) { const [k, old] = S3.videos.entries().next().value; releaseVideo(k, old); }
 }
 Object.assign(ICONS, {
   journal: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5V5a2 2 0 0 1 2-2h12v18H6a2 2 0 0 1-2-1.5Z"/><path d="M4 19.5A2 2 0 0 1 6 18h12M9 7h5M9 11h5"/></svg>',
@@ -88,7 +89,27 @@ function liveBanner(hero, g) {
   if (v._loaded) { if (v.paused) start(); return; }
   if (!v._t) v._t = setTimeout(() => { v._t = null; start(); }, 2000);
 }
-document.addEventListener('visibilitychange', () => { for (const v of S3.videos.values()) if (document.hidden) v.pause(); });
+// Fenêtre cachée (barre des tâches, jeu par-dessus) : pause tout de suite, puis au bout d'une minute
+// les vidéos sont libérées (lecteur HLS, tampons, décodeur) ; elles se recréent quand la fenêtre revient.
+let videoFreeTimer = null;
+document.addEventListener('visibilitychange', () => {
+  clearTimeout(videoFreeTimer);
+  if (document.hidden) {
+    for (const v of S3.videos.values()) v.pause();
+    videoFreeTimer = setTimeout(() => {
+      if (!document.hidden || !S3.videos.size) return;
+      for (const [k, v] of [...S3.videos]) releaseVideo(k, v);
+      S3.videosFreed = true;
+    }, 60e3);
+    return;
+  }
+  if (!S3.videosFreed) return;
+  S3.videosFreed = false;
+  const hero = document.querySelector('[data-hero-key]');
+  const g = hero && byId(hero.dataset.heroKey);
+  if (hero && g) liveBanner(hero.querySelector('.spotlight') || hero, g);
+  if (typeof shopTrailer === 'function') shopTrailer();
+});
 
 // ---------- Après chaque rendu ----------
 const _render3 = render;
