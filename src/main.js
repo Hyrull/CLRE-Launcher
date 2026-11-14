@@ -41,7 +41,58 @@ protocol.registerSchemesAsPrivileged([
   { scheme: 'clre-theme', privileges: { standard: true, secure: true } },
 ]);
 
+// ---------- Durcissement ----------
+// Autorisations Chromium : tout est refusé, sauf ce dont la fenêtre principale se sert vraiment
+// (export vidéo de la story, plein écran des bandes-annonces, copie d'une invitation).
+// Les fenêtres de connexion GOG / Epic (pages web) n'obtiennent rien : ni micro, ni caméra, ni position.
+const ALLOWED_PERMISSIONS = new Set(['display-capture', 'fullscreen', 'clipboard-sanitized-write']);
+const isMainContents = (wc) => !!(wc && win && !win.isDestroyed() && wc === win.webContents);
+function hardenSession(s) {
+  s.setPermissionRequestHandler((wc, permission, cb) => cb(isMainContents(wc) && ALLOWED_PERMISSIONS.has(permission)));
+  s.setPermissionCheckHandler((wc, permission) => isMainContents(wc) && ALLOWED_PERMISSIONS.has(permission));
+}
+app.on('session-created', hardenSession);
+// Aucune page du launcher n'utilise <webview>
+app.on('web-contents-created', (_e, wc) => wc.on('will-attach-webview', (e) => e.preventDefault()));
+
+// Fichier local sur un disque (C:\…) : jamais un partage réseau (\\serveur\…), qui enverrait
+// les identifiants Windows à un serveur choisi par quelqu'un d'autre.
+const isLocalFile = (f) => typeof f === 'string' && /^[a-z]:[\\/]/i.test(f) && !f.includes('\0');
+const IMAGE_EXT = new Set(['.jpg', '.jpeg', '.png', '.webp', '.gif']);
+const LAUNCH_EXT = new Set(['.exe', '.lnk', '.url', '.bat', '.cmd']);
+const hasExt = (f, set) => set.has(path.extname(String(f)).toLowerCase());
+// Programme choisi par l'utilisateur (jeu ajouté à la main, appli à ouvrir avant un jeu) : chemin complet d'un fichier qui se lance
+const isProgram = (f) => typeof f === 'string' && path.isAbsolute(f) && !f.includes('\0') && hasExt(f, LAUNCH_EXT);
+// Nom de fichier proposé dans une boîte « Enregistrer » : sans séparateur ni caractère interdit
+const safeFileName = (s, fallback) => String(s || '').replace(/[<>:"/\\|?*\x00-\x1f]/g, '_').replace(/^\.+/, '').slice(0, 80).trim() || fallback;
+// Options de lancement d'un jeu : mêmes règles à l'enregistrement et à l'import d'un fichier de données
+const PROC_RE = /^[\w .()-]+\.exe$/i;
+function cleanLaunchOpts(o) {
+  o = o && typeof o === 'object' ? o : {};
+  return {
+    args: String(o.args || '').slice(0, 500),
+    open: (Array.isArray(o.open) ? o.open : []).filter(isProgram).slice(0, 5),
+    close: (Array.isArray(o.close) ? o.close : []).filter((x) => typeof x === 'string' && PROC_RE.test(x)).slice(0, 10),
+  };
+}
+
 const dataFile = (name) => path.join(app.getPath('userData'), name);
+
+// Boîte « Ouvrir » qui repart du dernier dossier utilisé pour ce type de choix (jeu, jaquette, thème…).
+// Depuis Electron 43, sans defaultPath elle s'ouvrirait toujours sur Téléchargements.
+async function pickPath(kind, opts) {
+  const p = readPrefs();
+  const dirs = p.dialogDirs && typeof p.dialogDirs === 'object' ? p.dialogDirs : {};
+  const last = typeof dirs[kind] === 'string' && fs.existsSync(dirs[kind]) ? dirs[kind] : undefined;
+  const r = await dialog.showOpenDialog(win, { defaultPath: last, ...opts });
+  if (!r.canceled && r.filePaths[0]) {
+    const dir = opts.properties && opts.properties.includes('openDirectory') ? r.filePaths[0] : path.dirname(r.filePaths[0]);
+    const q = readPrefs();
+    q.dialogDirs = { ...(q.dialogDirs || {}), [kind]: dir };
+    writePrefs(q);
+  }
+  return r;
+}
 function readJson(name, fallback = {}) { return readJsonSafe(dataFile(name), fallback); }
 function writeJson(name, v) { writeJsonAtomic(dataFile(name), v, true); }
 // prefs.json n'est écrit que par le launcher : on le garde en mémoire au lieu de le relire
@@ -130,11 +181,11 @@ function dedupeStores(all) {
 }
 
 // ---------- Synchronisation de toutes les plateformes ----------
-async function sync() {
+async function sync(fresh) {
   const prefs = readPrefs();
   let steamError = null;
   try {
-    lib = await loadLibrary({ apiKey: prefs.apiKey, steamId: prefs.steamId });
+    lib = await loadLibrary({ apiKey: prefs.apiKey, steamId: prefs.steamId, fresh });
   } catch (e) {
     steamError = e.message;
     lib = { steamPath: null, user: { name: '?', id64: null }, users: [], games: [], collections: [], watchPaths: [] };
@@ -377,8 +428,13 @@ function withSteamSpeed(list) {
   return list;
 }
 const allDownloads = () => [...(lib && lib.steamPath ? withSteamSpeed(extras.steamDownloads(lib.steamPath)) : []), ...(gog ? gog.list() : []), ...(epicDl ? epicDl.list() : [])];
-function pollDownloads() {
+let dlSkipped = 0;
+function pollDownloads(force) {
   if (!win) return;
+  // Fenêtre cachée ou réduite, et rien ne télécharge : un relevé sur quatre suffit (12 s au lieu de 3).
+  // Chaque relevé relit le dossier de chaque bibliothèque Steam.
+  const away = !win.isVisible() || win.isMinimized();
+  if (force !== true && away && !lastDownloads.some((d) => d.active) && ++dlSkipped % 4) return;
   const list = allDownloads();
   const sig = JSON.stringify(list);
   if (sig === lastSig) return;
@@ -446,10 +502,10 @@ const launchOpts = (key) => (readPrefs().launchOpts || {})[key] || {};
 function beforeLaunch(key) {
   const o = launchOpts(key);
   for (const proc of o.close || []) {
-    if (/^[\w .()-]+\.exe$/i.test(proc)) execFile('taskkill', ['/IM', proc], { windowsHide: true }, () => {});
+    if (PROC_RE.test(proc)) execFile('taskkill', ['/IM', proc], { windowsHide: true }, () => {});
   }
   for (const exe of o.open || []) {
-    if (fs.existsSync(exe)) startFile(exe, '', path.dirname(exe), () => {});
+    if (isProgram(exe) && fs.existsSync(exe)) startFile(exe, '', path.dirname(exe), () => {});
   }
   return o.args || '';
 }
@@ -727,7 +783,8 @@ function createWindow() {
     icon: path.join(ASSETS, 'icon-256.png'),
     titleBarStyle: 'hidden',
     titleBarOverlay: { color: '#00000000', symbolColor: '#a1a1a6', height: 36 },
-    webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false },
+    // sandbox : la page tourne dans le bac à sable de Chromium ; le preload n'a besoin que d'ipcRenderer
+    webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false, sandbox: true, webviewTag: false },
   });
   win.loadFile(path.join(__dirname, 'renderer', 'index.html'));
   // Un fichier déposé à côté d'une zone prévue ne doit pas remplacer la page du launcher
@@ -764,8 +821,10 @@ app.whenReady().then(() => {
   // Export vidéo du récap : la page filme sa propre fenêtre
   // On filme directement la page (capture d'onglet) : pas de capture d'écran de Windows, qui échouait
   // (« Error starting capture ») et qui aurait aussi filmé ce qui passe par-dessus la fenêtre.
+  hardenSession(session.defaultSession);
   session.defaultSession.setDisplayMediaRequestHandler((req, cb) => {
-    if (win && !win.isDestroyed() && req.frame) { cb({ video: req.frame }); return; }
+    // Seule la page du launcher peut se filmer elle-même
+    if (win && !win.isDestroyed() && req.frame && req.frame === win.webContents.mainFrame) { cb({ video: req.frame }); return; }
     cb({});
   });
   setTimeout(checkRecaps, 20000);
@@ -775,7 +834,7 @@ app.whenReady().then(() => {
   gog = new Gog({
     dataDir: app.getPath('userData'),
     getDir: () => settings().gogDir,
-    onChange: () => pollDownloads(),
+    onChange: () => pollDownloads(true),
     onDone: (j) => {
       notify('downloads', `${j.name} est installé`, 'Tu peux lancer le jeu', { view: 'game', id: j.key });
       if (win) win.webContents.send('library-changed');
@@ -784,7 +843,7 @@ app.whenReady().then(() => {
   epicDl = new EpicDl({
     dataDir: app.getPath('userData'),
     getDir: () => settings().epicDir,
-    onChange: () => pollDownloads(),
+    onChange: () => pollDownloads(true),
     onDone: (j) => {
       notify('downloads', `${j.name} est installé`, 'Tu peux lancer le jeu', { view: 'game', id: j.key });
       if (win) win.webContents.send('library-changed');
@@ -792,8 +851,11 @@ app.whenReady().then(() => {
   });
 
   protocol.handle('steamart', (req) => {
-    const file = path.normalize(decodeURIComponent(new URL(req.url).pathname.slice(1)));
-    const ok = /librarycache/i.test(file) || /[\\/]760[\\/]remote[\\/]/.test(file) || file.toLowerCase().startsWith(coversDir.toLowerCase());
+    let file;
+    try { file = path.normalize(decodeURIComponent(new URL(req.url).pathname.slice(1))); } catch { return new Response('', { status: 400 }); }
+    // Uniquement des images, sur un disque local, dans les dossiers d'images de Steam ou les jaquettes du launcher
+    const ok = isLocalFile(file) && hasExt(file, IMAGE_EXT)
+      && (/[\\/]appcache[\\/]librarycache[\\/]/i.test(file) || /[\\/]760[\\/]remote[\\/]/.test(file) || file.toLowerCase().startsWith(coversDir.toLowerCase() + path.sep));
     if (!ok) return new Response('', { status: 403 });
     return net.fetch(pathToFileURL(file).toString());
   });
@@ -824,7 +886,7 @@ app.whenReady().then(() => {
   // Import d'une archive : chemin déposé sur la fenêtre, ou choisi dans une boîte de dialogue
   ipcMain.handle('themes:import', async (_e, file) => {
     if (!file) {
-      const res = await dialog.showOpenDialog(win, { title: 'Importer un thème', filters: [{ name: 'Thème (.zip)', extensions: ['zip'] }], properties: ['openFile'] });
+      const res = await pickPath('theme', { title: 'Importer un thème', filters: [{ name: 'Thème (.zip)', extensions: ['zip'] }], properties: ['openFile'] });
       if (res.canceled || !res.filePaths[0]) return null;
       file = res.filePaths[0];
     }
@@ -852,7 +914,7 @@ app.whenReady().then(() => {
 
   // Une seule synchro à la fois : un appel pendant une synchro en cours reçoit le même résultat.
   let syncing = null;
-  ipcMain.handle('library', () => syncing || (syncing = sync().finally(() => { syncing = null; })));
+  ipcMain.handle('library', (_e, fresh) => syncing || (syncing = sync(fresh === true).finally(() => { syncing = null; })));
   for (const kind of ['play', 'install', 'uninstall', 'store', 'details']) ipcMain.handle(kind, (_e, key) => action(key, kind));
   ipcMain.handle('open-store-home', () => shell.openExternal('steam://store'));
   ipcMain.handle('open-friends', () => shell.openExternal('steam://open/friends'));
@@ -869,7 +931,10 @@ app.whenReady().then(() => {
     if (g && g.installDir && fs.existsSync(g.installDir)) shell.openPath(g.installDir);
   });
   ipcMain.handle('open-screenshot', (_e, file) => {
-    if (typeof file === 'string' && /[\\/]760[\\/]remote[\\/]/.test(file) && fs.existsSync(file)) shell.openPath(file);
+    // Une capture Steam, et rien d'autre : openPath lancerait un programme si on lui en donnait un
+    if (!isLocalFile(file)) return;
+    const f = path.normalize(file);
+    if (hasExt(f, IMAGE_EXT) && /[\\/]760[\\/]remote[\\/]/.test(f) && fs.existsSync(f)) shell.openPath(f);
   });
 
   // Données en plus
@@ -987,19 +1052,22 @@ app.whenReady().then(() => {
 
   // Jeux ajoutés à la main
   ipcMain.handle('pick-exe', async () => {
-    const r = await dialog.showOpenDialog(win, { title: 'Choisir le jeu', properties: ['openFile'], filters: [{ name: 'Programmes', extensions: ['exe', 'lnk', 'bat', 'url'] }] });
+    const r = await pickPath('exe', { title: 'Choisir le jeu', properties: ['openFile'], filters: [{ name: 'Programmes', extensions: ['exe', 'lnk', 'bat', 'url'] }] });
     return r.canceled ? null : r.filePaths[0];
   });
   ipcMain.handle('pick-image', async () => {
-    const r = await dialog.showOpenDialog(win, { title: 'Choisir une jaquette', properties: ['openFile'], filters: [{ name: 'Images', extensions: ['jpg', 'jpeg', 'png', 'webp'] }] });
+    const r = await pickPath('image', { title: 'Choisir une jaquette', properties: ['openFile'], filters: [{ name: 'Images', extensions: ['jpg', 'jpeg', 'png', 'webp'] }] });
     return r.canceled ? null : r.filePaths[0];
   });
-  ipcMain.handle('custom:add', (_e, { name, exe, args, cover }) => {
-    if (!exe || !fs.existsSync(exe)) throw new Error('Fichier introuvable');
+  ipcMain.handle('custom:add', (_e, { name, exe, args, cover } = {}) => {
+    if (typeof exe !== 'string' || !path.isAbsolute(exe) || !fs.existsSync(exe)) throw new Error('Fichier introuvable');
+    if (!isProgram(exe)) throw new Error('Ce type de fichier ne se lance pas (.exe, .lnk, .url, .bat)');
+    args = String(args || '').slice(0, 500);
     const p = readPrefs();
     const id = Date.now().toString(36);
     let coverUrl = '';
-    if (cover && fs.existsSync(cover)) {
+    // La jaquette est copiée dans le dossier du launcher : uniquement une image
+    if (isLocalFile(cover) && hasExt(cover, IMAGE_EXT) && fs.existsSync(cover)) {
       fs.mkdirSync(coversDir, { recursive: true });
       const dest = path.join(coversDir, id + path.extname(cover).toLowerCase());
       fs.copyFileSync(cover, dest);
@@ -1068,7 +1136,7 @@ app.whenReady().then(() => {
     shell.openPath(dir);
   });
   ipcMain.handle('pick-folder', async () => {
-    const r = await dialog.showOpenDialog(win, { title: 'Choisir un dossier', properties: ['openDirectory', 'createDirectory'] });
+    const r = await pickPath('folder', { title: 'Choisir un dossier', properties: ['openDirectory', 'createDirectory'] });
     return r.canceled ? null : r.filePaths[0];
   });
 
@@ -1080,15 +1148,17 @@ app.whenReady().then(() => {
   });
   ipcMain.handle('launch-opts:get', (_e, key) => launchOpts(String(key)));
   ipcMain.handle('launch-opts:set', (_e, key, o) => {
+    key = String(key);
+    if (!games.has(key)) throw new Error('Jeu introuvable');
     const p = readPrefs();
     p.launchOpts = p.launchOpts || {};
-    const clean = { args: String(o.args || '').slice(0, 500), open: (o.open || []).filter((x) => typeof x === 'string').slice(0, 5), close: (o.close || []).filter((x) => /^[\w .()-]+\.exe$/i.test(x)).slice(0, 10) };
+    const clean = cleanLaunchOpts(o);
     if (!clean.args && !clean.open.length && !clean.close.length) delete p.launchOpts[key]; else p.launchOpts[key] = clean;
     writePrefs(p);
     return true;
   });
   ipcMain.handle('cover:set', async (_e, key) => {
-    const r = await dialog.showOpenDialog(win, { title: 'Choisir une jaquette (format portrait)', properties: ['openFile'], filters: [{ name: 'Images', extensions: ['jpg', 'jpeg', 'png', 'webp'] }] });
+    const r = await pickPath('image', { title: 'Choisir une jaquette (format portrait)', properties: ['openFile'], filters: [{ name: 'Images', extensions: ['jpg', 'jpeg', 'png', 'webp'] }] });
     if (r.canceled) return null;
     fs.mkdirSync(coversDir, { recursive: true });
     const dest = path.join(coversDir, `cover-${String(key).replace(/[^\w-]/g, '_')}-${Date.now().toString(36)}${path.extname(r.filePaths[0]).toLowerCase()}`);
@@ -1140,17 +1210,21 @@ app.whenReady().then(() => {
   });
   ipcMain.handle('perf', (_e, key) => (perf ? perf.list(key) : []));
   ipcMain.handle('pick-presentmon', async () => {
-    const r = await dialog.showOpenDialog(win, { title: 'Choisir PresentMon.exe', properties: ['openFile'], filters: [{ name: 'PresentMon', extensions: ['exe'] }] });
+    const r = await pickPath('presentmon', { title: 'Choisir PresentMon.exe', properties: ['openFile'], filters: [{ name: 'PresentMon', extensions: ['exe'] }] });
     return r.canceled ? null : r.filePaths[0];
   });
   // Teinte dominante d'une image (jaquette) : réduite à 32×32, la teinte la plus présente parmi les pixels colorés
   const tintCache = new Map();
   ipcMain.handle('art-color', async (_e, url) => {
-    if (!url) return null;
+    if (!url || typeof url !== 'string') return null;
     if (tintCache.has(url)) return tintCache.get(url);
     try {
+      // Une jaquette : image locale servie par steamart:// ou image d'un CDN en https. Jamais file:// ni http://
+      const proto = new URL(url).protocol;
+      if (proto !== 'https:' && proto !== 'steamart:') return null;
       const res = await net.fetch(url);
-      if (!res.ok) return null;
+      if (!res.ok || Number(res.headers.get('content-length') || 0) > 20 * 1024 * 1024) return null;
+      if (tintCache.size > 800) tintCache.clear();
       const img = nativeImage.createFromBuffer(Buffer.from(await res.arrayBuffer())).resize({ width: 32, height: 32, quality: 'good' });
       const px = img.toBitmap(); // BGRA
       const bins = Array.from({ length: 24 }, () => ({ w: 0, r: 0, g: 0, b: 0 }));
@@ -1172,6 +1246,8 @@ app.whenReady().then(() => {
     } catch { return null; }
   });
   ipcMain.handle('save-video', async (_e, buf, name, ext) => {
+    ext = ext === 'mp4' ? 'mp4' : 'webm';
+    name = safeFileName(name, 'recap');
     // Captures de dev : enregistrement direct dans un dossier, sans boîte de dialogue
     if (process.env.LAUNCHER_SNAP_SAVE && !app.isPackaged) { const f = path.join(process.env.LAUNCHER_SNAP_SAVE, `${name || 'recap'}.${ext}`); fs.writeFileSync(f, Buffer.from(buf)); return f; }
     const res = await dialog.showSaveDialog(win, { title: 'Enregistrer la vidéo du récap', defaultPath: path.join(app.getPath('videos'), `${name || 'recap'}.${ext}`), filters: [{ name: 'Vidéo', extensions: [ext] }] });
@@ -1182,7 +1258,7 @@ app.whenReady().then(() => {
   ipcMain.handle('capture', async (_e, rect, name) => {
     const r = { x: Math.round(rect.x), y: Math.round(rect.y), width: Math.round(rect.width), height: Math.round(rect.height) };
     const img = await win.webContents.capturePage(r);
-    const res = await dialog.showSaveDialog(win, { title: 'Enregistrer le récap', defaultPath: path.join(app.getPath('pictures'), `${name || 'recap'}.png`), filters: [{ name: 'Image PNG', extensions: ['png'] }] });
+    const res = await dialog.showSaveDialog(win, { title: 'Enregistrer le récap', defaultPath: path.join(app.getPath('pictures'), `${safeFileName(name, 'recap')}.png`), filters: [{ name: 'Image PNG', extensions: ['png'] }] });
     if (res.canceled) return null;
     fs.writeFileSync(res.filePath, img.toPNG());
     return res.filePath;
@@ -1198,10 +1274,22 @@ app.whenReady().then(() => {
     return res.filePath;
   });
   ipcMain.handle('data:import', async () => {
-    const res = await dialog.showOpenDialog(win, { title: 'Importer des données', properties: ['openFile'], filters: [{ name: 'JSON', extensions: ['json'] }] });
+    const res = await pickPath('data', { title: 'Importer des données', properties: ['openFile'], filters: [{ name: 'JSON', extensions: ['json'] }] });
     if (res.canceled) return null;
+    if (fs.statSync(res.filePaths[0]).size > 50 * 1024 * 1024) throw new Error('Fichier trop gros pour un export de CLRE-Launcher');
     const d = JSON.parse(fs.readFileSync(res.filePaths[0], 'utf8'));
-    if (d.app !== 'CLRE-Launcher') throw new Error('Ce fichier ne vient pas de CLRE-Launcher');
+    if (!d || d.app !== 'CLRE-Launcher') throw new Error('Ce fichier ne vient pas de CLRE-Launcher');
+    // Le fichier peut venir de quelqu'un d'autre : on ne reprend que des entrées bien formées, et les
+    // programmes à lancer passent par les mêmes règles que ceux choisis dans le launcher.
+    const obj = (v) => (v && typeof v === 'object' && !Array.isArray(v) ? v : {});
+    d.local = obj(d.local);
+    d.customGames = (Array.isArray(d.customGames) ? d.customGames : [])
+      .filter((c) => c && typeof c.id === 'string' && /^[\w-]{1,40}$/.test(c.id) && isLocalFile(c.exe) && isProgram(c.exe))
+      .map((c) => ({ id: c.id, name: String(c.name || path.basename(c.exe, path.extname(c.exe))).slice(0, 200), exe: c.exe, args: String(c.args || '').slice(0, 500), cover: typeof c.cover === 'string' && c.cover.startsWith('steamart://local/') ? c.cover : '' }));
+    d.launchOpts = Object.fromEntries(Object.entries(obj(d.launchOpts)).slice(0, 5000).map(([k, v]) => { const c = cleanLaunchOpts(v); return [k, { ...c, open: c.open.filter(isLocalFile) }]; }));
+    d.sessions = (Array.isArray(d.sessions) ? d.sessions : [])
+      .filter((s) => s && typeof s.key === 'string' && Number.isFinite(s.start) && Number.isFinite(s.end) && s.end >= s.start)
+      .map((s) => ({ key: s.key, name: String(s.name || s.key).slice(0, 200), start: s.start, end: s.end }));
     const p = readPrefs();
     const l = p.local || {};
     const il = d.local || {};
@@ -1257,7 +1345,9 @@ app.whenReady().then(() => {
   });
   ipcMain.handle('prefs:set', (_e, patch) => {
     const p = readPrefs();
-    for (const [k, v] of Object.entries(patch || {})) {
+    for (const [k, v] of Object.entries(patch && typeof patch === 'object' ? patch : {})) {
+      if ((k === 'system' || k === 'settings') && (!v || typeof v !== 'object' || Array.isArray(v))) continue;
+      if ((k === 'apiKey' || k === 'steamId') && v !== null && typeof v !== 'string') continue;
       if (k === 'system') { p.system = { ...system(), ...v }; continue; }
       if (k === 'settings') { p.settings = { ...(p.settings || {}), ...v, notify: { ...((p.settings || {}).notify || {}), ...(v.notify || {}) }, overlay: { ...((p.settings || {}).overlay || {}), ...(v.overlay || {}) } }; continue; }
       if (!['apiKey', 'steamId'].includes(k)) continue;

@@ -663,7 +663,7 @@ async function syncOnce(silent) {
   state.syncing = true;
   $('#sync-btn').classList.add('spinning');
   try {
-    state.lib = await api.library();
+    state.lib = await api.library(!silent); // bouton « Synchroniser » : liste Steam redemandée, sans cache
     state.error = null;
     state.running = state.lib.running || [];
     state.home.spotPool = [];
@@ -679,9 +679,22 @@ async function syncOnce(silent) {
   } finally {
     state.syncing = false;
     $('#sync-btn').classList.remove('spinning');
-    render({ quiet: !!silent }); // synchro discrète : pas d'animation d'entrée
+    renderSoon({ quiet: !!silent }); // synchro discrète : pas d'animation d'entrée
   }
 }
+
+// Fenêtre cachée (barre des tâches, réduite) : inutile de reconstruire toute la page à chaque changement
+// de Steam ou de jeu lancé. On note qu'il y a du nouveau et on redessine une seule fois au retour.
+let renderPending = false;
+function renderSoon(opts) {
+  if (document.hidden && state.lib) { renderPending = true; return; }
+  render(opts);
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden || !renderPending) return;
+  renderPending = false;
+  render({ quiet: true });
+});
 
 // ---------- Réglages ----------
 async function openSettings() {
@@ -844,7 +857,7 @@ api.onRunningChanged((keys) => {
   for (const k of started) { const g = byId(k); if (g) toast(`${g.name} est lancé`); }
   if (stopped.length) delete state.cache.sessions; // une session vient de se terminer
   if (stopped.some((k) => !k.includes(':'))) sync(true); // partie Steam finie : nouveau temps de jeu
-  else render({ quiet: true });
+  else renderSoon({ quiet: true });
 });
 
 // ---------- Démarrage ----------

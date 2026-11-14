@@ -6,6 +6,7 @@
   "main": "src/main.js",
   "license": "MIT",
   "scripts": {
+    "postinstall": "install-electron --no",
     "start": "electron .",
     "dist": "electron-builder --win portable",
     "icons": "electron scripts/build-icons.js"
@@ -38,7 +39,7 @@
     ]
   },
   "devDependencies": {
-    "electron": "^33.2.1",
+    "electron": "^45.3.2",
     "electron-builder": "^26.18.0"
   },
   "dependencies": {

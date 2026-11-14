@@ -22,12 +22,12 @@ const DEFAULT = [
 
 module.exports = (win, outDir) => {
   const wait = (ms) => new Promise((r) => setTimeout(r, ms));
-  const js = (code) => win.webContents.executeJavaScript(code);
+  const js = (code) => win.webContents.executeJavaScript(code, true); // true : comme un clic (export vidéo, presse-papiers)
   if (process.env.SNAP_W) win.setContentSize(+process.env.SNAP_W, +process.env.SNAP_H);
   win.webContents.setBackgroundThrottling(false); // sinon les captures d'une fenêtre masquée sont en retard
   win.webContents.once('did-finish-load', async () => {
     fs.mkdirSync(outDir, { recursive: true });
-    win.webContents.on('console-message', (_e, level, msg) => { if (level >= 2) fs.appendFileSync(path.join(outDir, 'console.log'), msg + '\n'); });
+    win.webContents.on('console-message', ({ level, message }) => { if (level === 'warning' || level === 'error') fs.appendFileSync(path.join(outDir, 'console.log'), message + '\n'); });
     if (process.env.SNAP_THEME) require('electron').nativeTheme.themeSource = process.env.SNAP_THEME;
     await wait(3500);
     const routes = process.env.SNAP_ROUTES ? JSON.parse(process.env.SNAP_ROUTES) : DEFAULT;
