@@ -118,7 +118,14 @@ function parseAppInfoBuf(buf, wanted, out) {
 }
 
 // ---------- Localisation de Steam ----------
+// Le dossier de Steam ne change pas en cours de route : on ne relance pas reg.exe (≈40 ms, bloquant)
+// à chaque synchro tant que le dossier trouvé existe toujours.
+let steamPathCache = null;
 function findSteamPath() {
+  if (steamPathCache && fs.existsSync(path.join(steamPathCache, 'steamapps'))) return steamPathCache;
+  return (steamPathCache = locateSteam());
+}
+function locateSteam() {
   try {
     const out = regQuery('HKCU\\Software\\Valve\\Steam', ['/v', 'SteamPath']);
     const m = out.match(/SteamPath\s+REG_SZ\s+(.+)/);
@@ -207,6 +214,17 @@ function readSteamCollections(steamPath, accountId) {
 
 const EXCLUDED_IDS = new Set([228980, 250820, 1070560, 1391110, 1628350, 1826330, 1493710, 2180100]); // Steamworks, SteamVR, runtimes Linux…
 
+// Les synchros discrètes (Steam a écrit un fichier, une partie se termine) réutilisent la dernière
+// réponse pendant 5 min ; le bouton « Synchroniser » redemande toujours la liste à Steam.
+let ownedCache = { k: '', t: 0, list: null };
+async function ownedGames(apiKey, steamId, fresh) {
+  const k = `${apiKey}|${steamId}`;
+  if (!fresh && ownedCache.list && ownedCache.k === k && Date.now() - ownedCache.t < 5 * 60e3) return ownedCache.list;
+  const list = await fetchOwnedGames(apiKey, steamId);
+  ownedCache = { k, t: Date.now(), list };
+  return list;
+}
+
 async function fetchOwnedGames(apiKey, steamId) {
   const url = `https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/?key=${encodeURIComponent(apiKey)}&steamid=${steamId}&include_appinfo=1&include_played_free_games=1&format=json`;
   const res = await fetch(url);
@@ -215,7 +233,7 @@ async function fetchOwnedGames(apiKey, steamId) {
   return (json.response && json.response.games) || [];
 }
 
-async function loadLibrary({ apiKey, steamId: forcedId } = {}) {
+async function loadLibrary({ apiKey, steamId: forcedId, fresh } = {}) {
   const steamPath = findSteamPath();
   if (!steamPath) throw new Error('Steam introuvable sur ce PC.');
   const users = findUsers(steamPath);
@@ -270,7 +288,7 @@ async function loadLibrary({ apiKey, steamId: forcedId } = {}) {
   let apiError = null;
   if (apiKey) {
     try {
-      for (const o of await fetchOwnedGames(apiKey, user.id64)) {
+      for (const o of await ownedGames(apiKey, user.id64, fresh)) {
         const g = ensure(o.appid);
         g.owned = true;
         g.name = g.name || o.name;

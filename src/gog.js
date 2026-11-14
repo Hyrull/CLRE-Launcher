@@ -399,6 +399,8 @@ class Gog {
   // puis on retire du registre GOG les entrées restantes du jeu et de ses DLC.
   async uninstall(dir, id) {
     id = String(id);
+    // L'identifiant est écrit dans un script lancé en administrateur : uniquement des chiffres
+    if (!/^\d+$/.test(id)) throw new Error('Identifiant GOG invalide');
     let unins = [];
     try { unins = fs.readdirSync(dir).filter((f) => /^unins\d+\.exe$/i.test(f)).sort().reverse(); } catch { /* dossier absent */ }
     const info = path.join(dir, `goggame-${id}.info`);

@@ -403,7 +403,8 @@ function pollPad(t) {
   const gp = [...(navigator.getGamepads ? navigator.getGamepads() : [])].find(Boolean);
   if (!gp) { pad.running = false; return; } // plus de manette : la boucle s'arrête jusqu'à la prochaine
   // Fenêtre en arrière-plan (tu joues avec la manette) : le launcher ignore les touches.
-  if (!document.hasFocus()) { pad.prev = gp.buttons.map((x) => x.pressed); pad.dir = null; requestAnimationFrame(pollPad); return; }
+  // On ne revérifie alors que deux fois par seconde, au lieu de 60 (tu es en jeu : chaque image compte).
+  if (!document.hasFocus()) { pad.prev = gp.buttons.map((x) => x.pressed); pad.dir = null; setTimeout(() => requestAnimationFrame(pollPad), 500); return; }
   {
     const b = gp.buttons.map((x) => x.pressed);
     const pressed = (i) => b[i] && !pad.prev[i];
