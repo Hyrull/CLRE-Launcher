@@ -80,6 +80,11 @@ function readManifest(dir, id, builtin) {
     apiVersion,
     compatible: apiVersion <= API_VERSION,
     colorScheme: raw.colorScheme === 'light' ? 'light' : 'dark',
+    // Matière de fenêtre de Windows 11 (Mica, Acrylique, Mica à onglets) ; ignorée ailleurs
+    windowMaterial: ['mica', 'acrylic', 'tabbed'].includes(raw.windowMaterial) ? raw.windowMaterial : 'none',
+    // Un jeu de couleurs peut changer le mode clair/sombre : { "Sombre": "dark" }
+    schemeColorSchemes: Object.fromEntries(Object.entries(raw.schemeColorSchemes && typeof raw.schemeColorSchemes === 'object' ? raw.schemeColorSchemes : {})
+      .filter(([, v]) => v === 'light' || v === 'dark').map(([k, v]) => [str(k, 40), v])),
     schemes, options,
     css: css && SERVED.has(path.extname(css).toLowerCase()) ? css : '',
     preview,
@@ -87,8 +92,9 @@ function readManifest(dir, id, builtin) {
 }
 
 class Themes {
-  constructor({ builtinDir, userDir, getPrefs, setPrefs, safeMode, fetch: fetchFn, catalogUrl }) {
+  constructor({ builtinDir, userDir, getPrefs, setPrefs, safeMode, fetch: fetchFn, catalogUrl, materialSupported }) {
     this.builtinDir = builtinDir;
+    this.materialSupported = !!materialSupported; // Mica & co : Windows 11 22H2 et plus
     this.fetch = fetchFn;
     this.catalogUrl = catalogUrl; // () => adresse du index.json du catalogue
     this.catalogCache = null;
@@ -128,7 +134,7 @@ class Themes {
   // Ce que la page applique au démarrage : le CSS à charger et les variables du jeu de couleurs.
   active() {
     const p = this.getPrefs() || {};
-    const base = { id: DEFAULT_ID, scheme: 'default', vars: {}, css: '', options: [], colorScheme: 'dark', safeMode: this.safeMode };
+    const base = { id: DEFAULT_ID, scheme: 'default', vars: {}, css: '', options: [], colorScheme: 'dark', windowMaterial: 'none', safeMode: this.safeMode };
     if (this.safeMode) return base;
     const found = this.dirOf(p.theme || DEFAULT_ID);
     const m = found && readManifest(found.dir, p.theme || DEFAULT_ID, found.builtin);
@@ -143,7 +149,8 @@ class Themes {
       // ?v= change à chaque modification du dossier : la page recharge la feuille (rechargement à chaud)
       css: m.css ? `clre-theme://${m.id}/${m.css}${this.rev ? `?v=${this.rev}` : ''}` : '',
       options: m.options.filter((o) => (o.id in chosen ? !!chosen[o.id] : o.default)).map((o) => o.id),
-      colorScheme: m.colorScheme,
+      colorScheme: m.schemeColorSchemes[scheme] || m.colorScheme,
+      windowMaterial: this.materialSupported ? m.windowMaterial : 'none',
       safeMode: false,
     };
   }

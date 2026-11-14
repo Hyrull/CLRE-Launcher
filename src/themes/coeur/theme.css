@@ -1,0 +1,168 @@
+/* Cœur — rose bonbon et girly, pour CLRE-Launcher (apiVersion 1).
+   Fond rose avec de larges rayures blanches en biais, trame de petits cœurs qui s'efface vers le centre,
+   panneaux blancs teintés de rose au bord doux, titres en petites capitales roses,
+   jaquettes et boutons en autocollants à bord blanc épais, petits gribouillis en marge.
+   Tous les motifs sont dessinés ici (dégradés et SVG) ; aucun personnage ni image reprise. */
+@import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400..700&display=swap');
+
+:root {
+  --sans: 'Fredoka', 'Segoe UI', sans-serif;
+  --heart: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 21s-7.5-4.6-9.6-9.2C.9 8.4 3 4.5 6.7 4.5c2.2 0 3.6 1.2 4.3 2.4.4.6 1.6.6 2 0 .7-1.2 2.1-2.4 4.3-2.4 3.7 0 5.8 3.9 4.3 7.3C19.5 16.4 12 21 12 21z'/%3E%3C/svg%3E");
+  --heart-dots: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='22' height='22' viewBox='0 0 22 22'%3E%3Cpath transform='translate(4 4) scale(0.58)' d='M12 21s-7.5-4.6-9.6-9.2C.9 8.4 3 4.5 6.7 4.5c2.2 0 3.6 1.2 4.3 2.4.4.6 1.6.6 2 0 .7-1.2 2.1-2.4 4.3-2.4 3.7 0 5.8 3.9 4.3 7.3C19.5 16.4 12 21 12 21z' fill='white'/%3E%3C/svg%3E");
+  /* Matière des cartes, bord des autocollants, rayures et trame : redéfinis par les jeux sombres */
+  --paper: #ffffff; --paper-rgb: 255 255 255;
+  --stripe: rgb(255 255 255 / 0.32); --dot: #ffffff;
+  --sticker-edge: 0 0 0 4px var(--sticker), 0 4px 0 4px rgb(var(--pink-rgb) / 0.25), 0 10px 22px rgb(var(--pink-rgb) / 0.35);
+  --bg-rgb: 255 230 240;
+  --card-rgb: var(--paper-rgb);
+  --raised-rgb: var(--paper-rgb);
+  --popover-rgb: var(--paper-rgb);
+  --glass-rgb: var(--paper-rgb);
+  --fg-rgb: 90 42 63;
+  --shade-rgb: 120 30 70;
+  --on-art-rgb: 255 255 255;
+  --sidebar: rgb(var(--paper-rgb) / 0.72);
+  --card: var(--paper);
+  --surface-2: var(--paper);
+  --control: var(--pink-soft);
+  --control-strong: var(--pink);
+  --text: var(--ink);
+  --text-2: var(--ink-2);
+  --muted: color-mix(in srgb, var(--ink-2), white 30%);
+  --accent: var(--pink);
+  --on-accent: #ffffff;
+  --on-text: #ffffff;
+  --knob: #ffffff;
+  --material: rgb(var(--paper-rgb) / 0.82);
+  --blur: blur(8px);
+  --line: rgb(var(--pink-rgb) / 0.22);
+  --line-strong: rgb(var(--pink-rgb) / 0.45);
+  --fill: var(--pink-bg-2);
+  --fill-strong: var(--pink-soft);
+  --art-fallback: linear-gradient(160deg, var(--paper), var(--pink-soft));
+  --art-fallback-flat: linear-gradient(160deg, var(--paper), var(--pink-soft));
+  --radius-cover: 14px;
+  --radius-tile: 16px;
+  --ease: cubic-bezier(0.34, 1.4, 0.64, 1);
+  --key: var(--paper);
+  --key-hover: var(--pink-bg-2);
+  --key-press: var(--pink-soft);
+  --key-edge: 0 0 0 2px var(--pink-soft), 0 3px 0 rgb(var(--pink-rgb) / 0.25);
+  --key-edge-press: 0 0 0 2px var(--pink);
+  --well: var(--paper);
+  --well-edge: inset 0 0 0 2px var(--pink-soft);
+  --btn-primary: linear-gradient(180deg, color-mix(in srgb, var(--pink), white 18%) 0%, var(--pink) 100%);
+  --btn-primary-hover: var(--pink);
+  --btn-primary-press: var(--pink-deep);
+  --btn-primary-edge: rgb(255 255 255 / 0.6);
+}
+.content::before { display: none; }
+
+/* ── Fond : rose, larges rayures blanches en biais, trame de cœurs dans les coins (option) ── */
+html {
+  background:
+    repeating-linear-gradient(135deg, var(--stripe) 0 46px, transparent 46px 110px),
+    linear-gradient(160deg, var(--pink-bg-2) 0%, var(--pink-bg) 100%) fixed;
+}
+body { background: transparent; color: var(--ink); }
+:is([data-part="app"], [data-part="content"]) { background: transparent; }
+:root.theme-opt-hearts body::before {
+  content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  background: var(--dot);
+  -webkit-mask: var(--heart-dots) 0 0 / 22px 22px, radial-gradient(ellipse 55% 50% at 50% 45%, transparent 55%, #000 100%);
+  -webkit-mask-composite: source-in;
+  mask: var(--heart-dots) 0 0 / 22px 22px intersect, radial-gradient(ellipse 55% 50% at 50% 45%, transparent 55%, #000 100%);
+  opacity: 0.9;
+}
+
+/* ── Typo : arrondie, titres en petites capitales roses ── */
+h1, .toolbar h1, h2.section, .prefs-head h2, .modal h2 { font-variant: small-caps; font-weight: 600; letter-spacing: 0.02em; color: var(--pink-deep); }
+.toolbar h1 { font-size: 40px; }
+h2.section { font-size: 24px; display: flex; align-items: center; gap: 10px; }
+:root.theme-opt-doodles h2.section::before {
+  content: ""; width: 18px; height: 18px; flex: none; background: var(--pink);
+  -webkit-mask: var(--heart) center / contain no-repeat; mask: var(--heart) center / contain no-repeat;
+  transform: rotate(-12deg);
+}
+.section-sub, .stats .k { color: var(--ink-2); }
+.nav-title, .nav-sec-toggle, .group-title, .stats .k { font-variant: small-caps; letter-spacing: 0.04em; }
+[data-part="brand"] .wordmark, [data-part="brand"] .wordmark b { font-variant: small-caps; font-weight: 600; color: var(--pink-deep); font-size: 17px; letter-spacing: 0.03em; }
+
+/* ── Barre latérale : une grande carte blanche teintée, bord rose, posée sur les rayures ── */
+[data-part="sidebar"] {
+  margin: 14px 0 14px 14px; border-radius: 24px; border-right: 0 !important;
+  background: linear-gradient(180deg, rgb(var(--paper-rgb) / 0.9), rgb(var(--paper-rgb) / 0.72)) !important;
+  -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+  box-shadow: 0 0 0 3px rgb(var(--paper-rgb) / 0.9), 0 12px 30px rgb(var(--pink-rgb) / 0.3) !important;
+  padding-top: 30px !important;
+}
+[data-part="sidebar"] .nav-item { border-radius: 999px; color: var(--ink-2); font-weight: 500; background: transparent !important; box-shadow: none !important; }
+[data-part="sidebar"] .nav-item svg { color: var(--pink); }
+[data-part="sidebar"] .nav-item:hover { background: var(--pink-bg-2) !important; color: var(--ink); }
+[data-part="sidebar"] .nav-item.active { background: var(--pink) !important; color: #ffffff; box-shadow: 0 3px 0 var(--pink-deep) !important; }
+[data-part="sidebar"] .nav-item.active :is(svg, .count, .plat-ico) { color: #ffffff; }
+[data-part="sidebar"] .count { color: var(--ink-2); }
+[data-part="nav-collections"] .nav-sec-toggle { color: var(--pink-deep); font-weight: 600; }
+[data-part="week-card"] { margin-top: 10px; border-top: 0; border-radius: 18px; background: linear-gradient(180deg, var(--pink-bg-2), var(--paper)) !important; box-shadow: inset 0 0 0 2px var(--pink-soft); padding: 12px 14px; }
+[data-part="week-card"] .v { color: var(--pink-deep); font-weight: 600; }
+
+/* ── Barre du haut : blanc rosé ── */
+[data-part="topbar"].material { background: rgb(var(--paper-rgb) / 0.85) !important; border-bottom-color: var(--pink-soft) !important; }
+.segmented, .seg-chips, .search { border-radius: 999px !important; background: var(--paper) !important; box-shadow: 0 0 0 2px var(--pink-soft) !important; }
+.segmented button, .seg-chips button { border-radius: 999px !important; color: var(--ink-2); font-weight: 500; }
+.segmented button.active, .seg-chips button.on { background: var(--pink) !important; color: #ffffff !important; box-shadow: 0 2px 0 var(--pink-deep) !important; }
+.search input { color: var(--ink); }
+.topbar.over-hero:not(.material) :is(.segmented, .search, .icon-btn, .avatar) { background: var(--paper) !important; }
+
+/* ── Boutons : pastilles autocollantes blanches, le principal rose en relief ── */
+.btn, .chip, .icon-btn, .select, .filter select, .tag-toggle, .field select, .filter-more-btn { border-radius: 999px !important; font-weight: 600; color: var(--pink-deep); }
+.btn-primary, .btn-light, .cover .quick { color: #ffffff !important; box-shadow: 0 0 0 3px var(--sticker), 0 4px 0 3px var(--pink-deep), 0 10px 20px rgb(var(--pink-rgb) / 0.4) !important; text-shadow: 0 1px 0 rgb(0 0 0 / 0.12); }
+:is(.btn, .chip, .icon-btn, .tag-toggle):hover { transform: translateY(-1px); }
+:is(.btn, .chip, .icon-btn, .tag-toggle):active { transform: translateY(2px) !important; }
+.chip.on, .tag-toggle.on { background: var(--pink) !important; color: #ffffff !important; }
+.btn-glass, .btn-running { background: var(--paper) !important; color: var(--pink-deep) !important; box-shadow: 0 0 0 3px rgb(var(--paper-rgb) / 0.6), 0 6px 14px rgb(var(--pink-rgb) / 0.3) !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+.avatar { border-radius: 50% !important; background: var(--pink) !important; color: #ffffff !important; box-shadow: 0 0 0 3px var(--sticker) !important; }
+.icon-btn { color: var(--pink-deep) !important; }
+
+/* ── Jaquettes : autocollants à bord blanc épais, ils se penchent au survol ── */
+[data-part="cover"] { box-shadow: var(--sticker-edge) !important; transition: transform 240ms var(--ease) !important; }
+[data-part="game-card"] { gap: 14px; }
+[data-part="game-card"]:hover [data-part="cover"] { transform: translateY(-4px) rotate(-2deg); }
+[data-part="game-card"]:nth-child(even):hover [data-part="cover"] { transform: translateY(-4px) rotate(2deg); }
+:root.theme-opt-doodles [data-part="game-card"] { position: relative; }
+:root.theme-opt-doodles [data-part="game-card"]::after {
+  content: ""; position: absolute; right: -10px; top: -10px; width: 28px; height: 28px; z-index: 2; pointer-events: none;
+  background: var(--pink); -webkit-mask: var(--heart) center / contain no-repeat; mask: var(--heart) center / contain no-repeat;
+  filter: drop-shadow(2px 2px 0 var(--sticker)) drop-shadow(-2px -2px 0 var(--sticker)) drop-shadow(2px -2px 0 var(--sticker)) drop-shadow(-2px 2px 0 var(--sticker));
+  transform: scale(0) rotate(-20deg); transition: transform 260ms var(--ease);
+}
+:root.theme-opt-doodles [data-part="game-card"]:hover::after { transform: scale(1) rotate(-12deg); }
+[data-part="game-card"] .t { font-weight: 600; color: var(--ink); }
+:is([data-part="tile"], [data-part="resume-card"], .stats, .group, .ranked, .chart, .panel) {
+  background: linear-gradient(180deg, var(--paper), color-mix(in srgb, var(--pink-bg-2), var(--paper) 30%)) !important;
+  border-radius: 20px !important; box-shadow: 0 0 0 3px rgb(var(--paper-rgb) / 0.9), 0 10px 26px rgb(var(--pink-rgb) / 0.25) !important;
+}
+.stats { padding: 18px; }
+.stats .v { color: var(--pink-deep); font-weight: 600; }
+
+/* ── Bannières : coins arrondis, cadre blanc ── */
+.spotlight-frame, .game-hero { padding: 0 14px; }
+[data-part="spotlight"], [data-part="game-hero"] { border-radius: 0 0 28px 28px; overflow: hidden; box-shadow: 0 0 0 4px var(--sticker), 0 14px 30px rgb(var(--pink-rgb) / 0.35); }
+
+/* ── Fenêtres, menus, notifications : cartes blanches au bord rose ── */
+.modal { border-radius: 28px !important; border: 0 !important; background: linear-gradient(180deg, var(--paper), var(--pink-bg-2)) !important; box-shadow: 0 0 0 4px var(--paper), 0 0 0 6px var(--pink-soft), 0 30px 60px rgb(var(--pink-rgb) / 0.35) !important; }
+.prefs-side { background: rgb(var(--paper-rgb) / 0.6) !important; }
+.prefs-cats button.on, .prefs-me.on { background: var(--pink-soft) !important; color: var(--ink) !important; }
+.prefs-cats button.on::before, .prefs-me.on::before { background: var(--pink); }
+.ctx-menu, .inbox { background: var(--paper) !important; border-radius: 20px !important; box-shadow: 0 0 0 3px var(--pink-soft), 0 14px 30px rgb(var(--pink-rgb) / 0.3) !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; color: var(--ink); }
+.ctx-menu button { border-radius: 999px !important; }
+.ctx-menu button:hover { background: var(--pink) !important; color: #ffffff !important; }
+.toast, .toast-undo { background: var(--paper) !important; color: var(--pink-deep) !important; border-radius: 999px !important; font-weight: 600; box-shadow: 0 0 0 3px var(--pink-soft), 0 10px 24px rgb(var(--pink-rgb) / 0.35) !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+.filter-panel { background: var(--paper) !important; border-radius: 18px; box-shadow: 0 0 0 3px var(--pink-soft), 0 12px 26px rgb(var(--pink-rgb) / 0.3) !important; }
+:is(.row-switch, .home-toggles) input[type="checkbox"] { background: var(--pink-soft) !important; box-shadow: none !important; }
+:is(.row-switch, .home-toggles) input[type="checkbox"]:checked { background: var(--pink) !important; }
+.hl-row .bar, .cover-dl { height: 10px; border-radius: 999px; background: var(--pink-soft); }
+.hl-row .bar span, .cover-dl div, .bars30 span.today { background: var(--pink); border-radius: 999px; }
+.bars30 span { background: var(--pink-soft); }
+select option { background: var(--paper); color: var(--ink); }
+::-webkit-scrollbar-thumb { background: var(--pink) !important; border: 4px solid transparent !important; background-clip: padding-box !important; border-radius: 999px; }

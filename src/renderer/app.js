@@ -150,6 +150,7 @@ function coverCard(g, sub) {
     <div class="cover" data-part="cover" style="background:${fallbackBg(g)}">
       <span class="fallback">${esc(g.name)}</span>
       <img src="${esc(g.art.cover)}" alt="" loading="lazy">
+      ${g.art.header ? `<img class="art-wide" src="${esc(g.art.header)}" alt="" loading="lazy">` : ''}
       <div class="shade"></div>
       ${platBadge(g)}
       ${achBadge(g)}
@@ -346,7 +347,6 @@ function viewHome() {
           </div>
           <div class="actions">
             ${playButton(spot)}
-            <button type="button" class="btn btn-glass" data-act="shuffle">${ICONS.shuffle}Surprends-moi</button>
             <button type="button" class="btn btn-glass" data-open="${spot.key}">Voir la fiche</button>
           </div>
         </div>
@@ -361,9 +361,12 @@ function viewHome() {
   const shown = results.slice(0, 12);
   const moodHtml = `
     <section class="stack" style="gap:20px">
-      <div class="stack-6">
-        <h2 class="section big">Tu as envie de quoi ?</h2>
-        <p class="section-sub">Choisis une humeur, on pioche dans tes jeux selon leurs tags Steam</p>
+      <div class="section-head">
+        <div class="stack-6">
+          <h2 class="section big">Tu as envie de quoi ?</h2>
+          <p class="section-sub">Choisis une humeur, on pioche dans tes jeux selon leurs tags Steam</p>
+        </div>
+        <button type="button" class="btn btn-ghost" data-act="shuffle">${ICONS.shuffle}Surprends-moi</button>
       </div>
       <div class="filters">
         <div class="seg-chips" role="group" aria-label="Portée">

@@ -163,3 +163,11 @@ h2.section::before { content: ""; width: 18px; height: 18px; flex: none; backgro
 .hl-row .bar span, .cover-dl div { background: var(--accent); border-radius: 999px; }
 select option { background: #fff; color: var(--brown); }
 ::-webkit-scrollbar-thumb { background-color: rgb(107 78 61 / 0.25); }
+
+/* Thème clair : le launcher voile les bannières en sombre avec un texte blanc. Ici le texte est posé
+   dans une bulle crème, il garde donc sa couleur brune, et la bulle reste compacte. */
+:root[data-color-scheme] .spotlight .body, :root[data-color-scheme] .game-hero .title { --text: var(--brown); --text-2: var(--brown-2); --on-art-rgb: 107 78 61; --on-art: var(--brown); }
+:root[data-color-scheme] .spotlight .body :is(h1, .kicker, p, .meta-row, .meta-row span), :root[data-color-scheme] .game-hero .title :is(h1, .kicker) { color: var(--brown); text-shadow: none; }
+.spotlight .body { max-width: 520px !important; }
+.spotlight .logo { max-height: 96px; }
+:root[data-color-scheme] .spotlight .shade { background: linear-gradient(90deg, rgb(0 0 0 / 0.3) 0%, rgb(0 0 0 / 0) 45%); }

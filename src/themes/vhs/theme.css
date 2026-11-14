@@ -160,3 +160,11 @@ select option { background: var(--tape-panel); color: var(--osd); }
 @media (prefers-reduced-motion: reduce) {
   :root.theme-opt-noise body::before, :root.theme-opt-osd body::after, [data-part="sidebar"] .nav-item.active::before { animation: none; }
 }
+
+/* Texte courant lisible : le menu, les noms de jeux et les petits libellés quittent la police d'écran */
+[data-part='sidebar'] .nav-item, [data-part='game-card'] .t, .stats .k, .nav-title, .nav-sec-toggle, .group-title {
+  font-family: var(--sans) !important; text-transform: none; letter-spacing: 0; font-size: 13px !important;
+}
+[data-part='sidebar'] .nav-item { height: 32px; }
+[data-part='game-card'] .t { font-size: 13px !important; }
+:is(.nav-title, .nav-sec-toggle, .group-title, .stats .k) { font-size: 12px !important; }

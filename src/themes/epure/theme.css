@@ -1,0 +1,161 @@
+/* Épure — design fonctionnel des années 60, en relief doux (neumorphisme), pour CLRE-Launcher (apiVersion 1).
+   Une seule matière mate : chaque surface est moulée dans le fond, en relief (deux ombres, claire en haut à gauche,
+   sombre en bas à droite) ou en creux (les mêmes, à l'intérieur). Typo neutre et petite, beaucoup d'air,
+   un seul accent orange réservé à l'action et à la sélection, une grille de petits trous comme signature.
+   Inspiré d'une époque, sans nom, logo ni objet d'une marque. */
+@import url('https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600&display=swap');
+
+:root {
+  --sans: 'Inter Tight', 'Helvetica Neue', Arial, sans-serif;
+  --d: 6px; /* profondeur du relief */
+  --out: calc(var(--d) * -1) calc(var(--d) * -1) calc(var(--d) * 2) var(--hi), var(--d) var(--d) calc(var(--d) * 2) var(--lo);
+  --out-s: -3px -3px 6px var(--hi), 3px 3px 6px var(--lo);
+  --in: inset 3px 3px 6px var(--lo), inset -3px -3px 6px var(--hi);
+  --in-deep: inset 5px 5px 10px var(--lo), inset -5px -5px 10px var(--hi);
+  --bg-rgb: var(--base-rgb);
+  --card-rgb: var(--base-rgb);
+  --raised-rgb: var(--base-rgb);
+  --popover-rgb: var(--base-rgb);
+  --glass-rgb: var(--base-rgb);
+  --shade-rgb: 0 0 0;
+  --sidebar: var(--base);
+  --card: var(--base);
+  --surface-2: var(--base);
+  --control: var(--base);
+  --control-strong: var(--base);
+  --text: var(--ink);
+  --text-2: var(--ink-2);
+  --muted: var(--ink-3);
+  --on-text: var(--on-accent);
+  --knob: var(--base);
+  --material: var(--base);
+  --blur: none;
+  --line: rgb(var(--fg-rgb) / 0.08);
+  --line-strong: rgb(var(--fg-rgb) / 0.14);
+  --fill: var(--base);
+  --fill-strong: var(--base);
+  --art-fallback: var(--base);
+  --art-fallback-flat: var(--base);
+  --radius-cover: 14px;
+  --radius-tile: 16px;
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+  --key: var(--base);
+  --key-hover: var(--base);
+  --key-press: var(--base);
+  --key-edge: var(--out-s);
+  --key-edge-press: var(--in);
+  --well: var(--base);
+  --well-edge: var(--in);
+  --btn-primary: var(--accent);
+  --btn-primary-hover: var(--accent);
+  --btn-primary-press: var(--accent);
+  --btn-primary-edge: transparent;
+}
+html, body, [data-part="content"] { background: var(--base); color: var(--ink); }
+.content::before { display: none; }
+
+/* ── Typo : petite, neutre, sans gras appuyé ── */
+h1, .toolbar h1 { font-weight: 500; letter-spacing: -0.02em; color: var(--ink); }
+h2.section { font-weight: 500; letter-spacing: -0.01em; font-size: 18px; }
+.section-sub, .stats .k, .nav-title, .nav-sec-toggle, .group-title { color: var(--ink-3); font-weight: 500; }
+.stats .v { font-weight: 500; letter-spacing: -0.02em; }
+
+/* ── Barre latérale : un panneau moulé en relief, entrées plates, sélection en creux avec un point orange ── */
+[data-part="sidebar"] {
+  margin: 16px 0 16px 16px; border-radius: 22px; border-right: 0 !important;
+  box-shadow: var(--out) !important; padding: 32px 12px 12px !important; position: relative;
+}
+/* Signature : une grille de petits trous en haut du panneau, comme une grille de haut-parleur */
+:root.theme-opt-grille [data-part="sidebar"]::before {
+  content: ""; position: absolute; top: 12px; right: 18px; width: 54px; height: 18px; pointer-events: none;
+  background: radial-gradient(circle, var(--lo) 0 1.6px, transparent 2px) 0 0 / 9px 9px;
+  filter: drop-shadow(0.5px 0.5px 0 var(--hi));
+}
+[data-part="brand"] .wordmark, [data-part="brand"] .wordmark b { color: var(--ink); font-weight: 500; }
+[data-part="sidebar"] .nav-item { height: 36px; border-radius: 12px; color: var(--ink-2); background: transparent !important; box-shadow: none !important; transition: box-shadow 200ms var(--ease), color 150ms var(--ease); }
+[data-part="sidebar"] .nav-item svg { color: var(--ink-3); }
+[data-part="sidebar"] .nav-item:hover { color: var(--ink); box-shadow: var(--out-s) !important; }
+[data-part="sidebar"] .nav-item.active { color: var(--ink); box-shadow: var(--in) !important; position: relative; }
+[data-part="sidebar"] .nav-item.active svg { color: var(--accent); }
+[data-part="sidebar"] .count { color: var(--ink-3); }
+[data-part="week-card"] { margin: 8px 0 0; border-top: 0; border-radius: 14px; background: var(--base) !important; box-shadow: var(--in); padding: 12px 14px; }
+[data-part="week-card"] .v { color: var(--ink); font-weight: 500; }
+
+/* ── Barre du haut : posée sur la matière, les contrôles en relief ── */
+[data-part="topbar"], [data-part="topbar"].material { background: var(--base) !important; border-bottom: 0 !important; -webkit-backdrop-filter: none; backdrop-filter: none; }
+[data-part="topbar"].material { box-shadow: 0 8px 16px -10px var(--lo); }
+.topbar.over-hero:not(.material) { background: transparent !important; box-shadow: none; }
+.segmented, .seg-chips { background: var(--base) !important; box-shadow: var(--in) !important; border-radius: 14px !important; padding: 4px !important; gap: 4px !important; }
+.segmented button, .seg-chips button { border-radius: 10px !important; color: var(--ink-2); font-weight: 500; }
+.segmented button.active, .seg-chips button.on { background: var(--base) !important; color: var(--ink) !important; box-shadow: var(--out-s) !important; }
+.search { border-radius: 14px !important; background: var(--base) !important; box-shadow: var(--in) !important; }
+.search input { color: var(--ink); }
+.topbar.over-hero:not(.material) :is(.segmented, .search) { background: var(--base) !important; }
+
+/* ── Boutons : ronds et doux en relief, ils s'enfoncent (relief → creux) ; l'action principale est orange ── */
+.btn, .chip, .select, .filter select, .tag-toggle, .field select, .filter-more-btn { border-radius: 12px !important; color: var(--ink); font-weight: 500; background: var(--base) !important; box-shadow: var(--out-s) !important; transition: box-shadow 150ms var(--ease) !important; }
+:is(.btn, .chip, .tag-toggle, .filter-more-btn):active { box-shadow: var(--in) !important; transform: none !important; }
+.icon-btn, .avatar { width: 36px; height: 36px; border-radius: 50% !important; background: var(--base) !important; color: var(--ink-2) !important; box-shadow: var(--out-s) !important; }
+.icon-btn:active { box-shadow: var(--in) !important; }
+.avatar { color: var(--ink) !important; }
+.btn-primary, .btn-light, .cover .quick {
+  background: var(--accent) !important; color: var(--on-accent) !important; text-shadow: none;
+  box-shadow: -3px -3px 6px var(--hi), 3px 3px 8px var(--lo), inset 1px 1px 0 rgb(255 255 255 / 0.25) !important;
+}
+.btn-primary:active, .btn-light:active { box-shadow: inset 3px 3px 6px rgb(0 0 0 / 0.25) !important; }
+.chip.on, .tag-toggle.on { box-shadow: var(--in) !important; color: var(--accent) !important; }
+.btn-glass, .btn-running { background: var(--base) !important; color: var(--ink) !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+.filter-more-btn b { background: var(--accent); color: var(--on-accent); }
+
+/* ── Jaquettes : posées dans une alvéole en creux, qui ressortent au survol ── */
+[data-part="cover"] { box-shadow: var(--out) !important; transition: box-shadow 220ms var(--ease), transform 220ms var(--ease) !important; }
+[data-part="game-card"]:hover [data-part="cover"] { transform: translateY(-2px); box-shadow: -10px -10px 20px var(--hi), 10px 10px 22px var(--lo) !important; }
+[data-part="game-card"] .t { font-weight: 500; }
+[data-part="game-card"] { gap: 12px; }
+.grid:has(> [data-part="game-card"]) { gap: 36px 28px; }
+:is([data-part="tile"], [data-part="resume-card"], .stats, .group, .ranked, .chart, .panel) { background: var(--base) !important; box-shadow: var(--out) !important; border-radius: 18px !important; }
+.stats { padding: 20px; }
+
+/* ── Bannières : l'image est encastrée dans la matière, avec un liseré en creux ── */
+.spotlight-frame, .game-hero { padding: 0 16px; }
+[data-part="spotlight"], [data-part="game-hero"] { border-radius: 0 0 28px 28px; overflow: hidden; box-shadow: var(--in-deep); }
+
+/* ── Fenêtres, menus, notifications : moulés dans la même matière ── */
+.modal { border: 0 !important; border-radius: 24px !important; background: var(--base) !important; box-shadow: var(--out), 0 30px 60px rgb(0 0 0 / 0.18) !important; }
+.prefs-side { background: var(--base) !important; border-right: 0 !important; box-shadow: inset -1px 0 0 var(--line); }
+.prefs-cats button.on, .prefs-me.on { background: var(--base) !important; box-shadow: var(--in); }
+.prefs-cats button.on::before, .prefs-me.on::before { background: var(--accent); }
+.ctx-menu, .inbox { background: var(--base) !important; border-radius: 16px !important; box-shadow: var(--out), 0 16px 32px rgb(0 0 0 / 0.12) !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; color: var(--ink); }
+.ctx-menu button { border-radius: 10px !important; }
+.ctx-menu button:hover { background: var(--base) !important; color: var(--ink) !important; box-shadow: var(--in) !important; }
+.toast, .toast-undo { background: var(--base) !important; color: var(--ink) !important; border-radius: 16px !important; box-shadow: var(--out) !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+.filter-panel { background: var(--base) !important; border-radius: 16px; box-shadow: var(--out), 0 12px 24px rgb(0 0 0 / 0.12) !important; }
+/* Interrupteur : rainure en creux, curseur en relief, orange quand il est allumé */
+:is(.row-switch, .home-toggles) input[type="checkbox"] { background: var(--base) !important; box-shadow: var(--in) !important; }
+:is(.row-switch, .home-toggles) input[type="checkbox"]::after { background: var(--base); box-shadow: var(--out-s); }
+:is(.row-switch, .home-toggles) input[type="checkbox"]:checked { background: var(--base) !important; }
+:is(.row-switch, .home-toggles) input[type="checkbox"]:checked::after { background: var(--accent); box-shadow: -2px -2px 4px var(--hi), 2px 2px 4px var(--lo); }
+/* Barre de progression : rainure en creux, remplissage orange */
+.hl-row .bar, .cover-dl { height: 8px; border-radius: 4px; background: var(--base); box-shadow: var(--in); }
+.hl-row .bar span, .cover-dl div { background: var(--accent); border-radius: 4px; }
+.bars30 span { background: var(--base); box-shadow: var(--out-s); }
+.bars30 span.today { background: var(--accent); }
+select option { background: var(--base); color: var(--ink); }
+::-webkit-scrollbar-thumb { background: var(--base) !important; box-shadow: var(--out-s); border: 3px solid transparent !important; background-clip: padding-box !important; border-radius: 8px; }
+
+/* Sur une image (bannières, barre du haut au-dessus d'une bannière) le relief n'a pas de sens :
+   la lumière claire en haut à gauche dessine un halo gris sur la photo. Les contrôles deviennent
+   des pièces pleines de la matière, posées sur l'image avec une ombre portée sombre et courte. */
+:is(.spotlight, .game-hero, .topbar.over-hero:not(.material)) :is(.btn, .icon-btn, .avatar, .segmented, .search, .back) {
+  background: var(--base) !important; color: var(--ink) !important;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.25), 0 6px 16px rgb(0 0 0 / 0.28) !important;
+  -webkit-backdrop-filter: none !important; backdrop-filter: none !important;
+}
+/* Même liste que la règle au-dessus, pour avoir la même priorité : l'action principale reste orange */
+:is(.spotlight, .game-hero, .topbar.over-hero:not(.material)) :is(.btn-primary, .btn-light) {
+  background: var(--accent) !important; color: var(--on-accent) !important;
+}
+:is(.spotlight, .game-hero, .topbar.over-hero:not(.material)) :is(.btn, .icon-btn, .avatar):active { transform: translateY(1px) !important; box-shadow: 0 1px 2px rgb(0 0 0 / 0.3) !important; }
+/* À l'intérieur des pièces posées sur l'image, le creux reste (onglets, recherche) mais sans halo clair */
+.topbar.over-hero:not(.material) .segmented button.active { box-shadow: inset 2px 2px 4px var(--lo) !important; background: var(--base) !important; }
+.topbar.over-hero:not(.material) .search { box-shadow: 0 1px 2px rgb(0 0 0 / 0.25), 0 6px 16px rgb(0 0 0 / 0.28) !important; }

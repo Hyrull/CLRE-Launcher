@@ -258,7 +258,7 @@ const _wishView = VIEWS.wishlist;
 VIEWS.wishlist = () => { return shopHead('wish') + _wishView().replace(/^<div class="toolbar">[\s\S]*?<\/button><\/div>/, ''); };
 
 // ---------- Barre latérale épurée : l'essentiel en haut, le reste en sections repliables ----------
-const NAV_DEFAULT_CLOSED = { tools: true, browse: true, steamcoll: true };
+const NAV_DEFAULT_CLOSED = { progress: true, tools: true, browse: true, steamcoll: true }; // fermées par défaut : la barre tient sur un écran
 // eslint-disable-next-line no-global-assign
 renderSidebar = function () {
   const all = games();

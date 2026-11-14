@@ -6,15 +6,16 @@
 const S3 = { tintKey: null, videos: new Map(), splash: null };
 // Vidéos de fond (fiches de jeu et du magasin) : on en garde 4 au plus. Les plus anciennes sont
 // arrêtées et leur lecteur HLS détruit, sinon chaque fiche visitée gardait sa vidéo et son tampon en mémoire.
+function releaseVideo(k, v) {
+  clearTimeout(v._t);
+  v.pause();
+  if (v._hls) v._hls.destroy();
+  v.removeAttribute('src'); v.load();
+  v.remove();
+  S3.videos.delete(k);
+}
 function trimVideos(max = 4) {
-  while (S3.videos.size > max) {
-    const [k, old] = S3.videos.entries().next().value;
-    old.pause();
-    if (old._hls) old._hls.destroy();
-    old.removeAttribute('src'); old.load();
-    old.remove();
-    S3.videos.delete(k);
-  }
+  while (S3.videos.size > max) { const [k, old] = S3.videos.entries().next().value; releaseVideo(k, old); }
 }
 Object.assign(ICONS, {
   journal: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5V5a2 2 0 0 1 2-2h12v18H6a2 2 0 0 1-2-1.5Z"/><path d="M4 19.5A2 2 0 0 1 6 18h12M9 7h5M9 11h5"/></svg>',
@@ -88,7 +89,27 @@ function liveBanner(hero, g) {
   if (v._loaded) { if (v.paused) start(); return; }
   if (!v._t) v._t = setTimeout(() => { v._t = null; start(); }, 2000);
 }
-document.addEventListener('visibilitychange', () => { for (const v of S3.videos.values()) if (document.hidden) v.pause(); });
+// Fenêtre cachée (barre des tâches, jeu par-dessus) : pause tout de suite, puis au bout d'une minute
+// les vidéos sont libérées (lecteur HLS, tampons, décodeur) ; elles se recréent quand la fenêtre revient.
+let videoFreeTimer = null;
+document.addEventListener('visibilitychange', () => {
+  clearTimeout(videoFreeTimer);
+  if (document.hidden) {
+    for (const v of S3.videos.values()) v.pause();
+    videoFreeTimer = setTimeout(() => {
+      if (!document.hidden || !S3.videos.size) return;
+      for (const [k, v] of [...S3.videos]) releaseVideo(k, v);
+      S3.videosFreed = true;
+    }, 60e3);
+    return;
+  }
+  if (!S3.videosFreed) return;
+  S3.videosFreed = false;
+  const hero = document.querySelector('[data-hero-key]');
+  const g = hero && byId(hero.dataset.heroKey);
+  if (hero && g) liveBanner(hero.querySelector('.spotlight') || hero, g);
+  if (typeof shopTrailer === 'function') shopTrailer();
+});
 
 // ---------- Après chaque rendu ----------
 const _render3 = render;
@@ -363,11 +384,31 @@ readExtraSettings = function (f) {
 Object.assign(ICONS, { tag: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12V4a1 1 0 0 1 1-1h8l9 9-9 9Z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg>' });
 VIEWS.tags = () => {
   const list = tagCounts();
-  const head = `<div class="toolbar"><div class="stack-6"><h1>Tags</h1><span class="sub">${list.length} tags Steam dans ta bibliothèque · clique pour voir les jeux</span></div></div>`;
+  const head = `<div class="toolbar"><div class="stack-6"><h1>Tags</h1><span class="sub">${list.length} tags Steam dans ta bibliothèque · clique pour voir les jeux</span></div>
+    ${list.length > TAGS_TOP ? '<label class="search tag-search"><span class="sr-only">Chercher un tag</span><input type="search" id="tag-q" placeholder="Chercher un tag" autocomplete="off"></label>' : ''}</div>`;
   if (!list.length) return head + emptyBox('Pas encore de tags', 'Ils arrivent du magasin Steam juste après la synchronisation');
   const max = list[0][1];
-  return head + `<div class="tag-cloud">${list.map(([id, n]) => `<button type="button" class="tag-chip" data-act="tag" data-id="${id}" style="--w:${Math.max(6, (n / max) * 100)}%"><span class="nm">${esc(tagName(id))}</span><span class="n">${n}</span></button>`).join('')}</div>`;
+  const chip = ([id, n]) => `<button type="button" class="tag-chip" data-act="tag" data-id="${id}" data-name="${esc(tagName(id).toLowerCase())}" style="--w:${Math.max(6, (n / max) * 100)}%"><span class="nm">${esc(tagName(id))}</span><span class="n num">${n}</span></button>`;
+  const top = list.slice(0, TAGS_TOP), rest = list.slice(TAGS_TOP);
+  return head + `<div class="tag-cloud" id="tag-cloud">${top.map(chip).join('')}<div class="tag-rest" ${state.tagsAll ? '' : 'hidden'}>${rest.map(chip).join('')}</div></div>
+    ${rest.length ? `<button type="button" class="link-btn tag-more" data-act="tags-all">${state.tagsAll ? 'Afficher moins' : `Afficher les ${rest.length} autres`}</button>` : ''}
+    <p class="tag-none" hidden>Aucun tag ne correspond</p>`;
 };
+// Les 30 tags les plus courants d'abord ; la recherche fouille aussi dans les autres
+const TAGS_TOP = 30;
+document.addEventListener('input', (e) => {
+  if (e.target.id !== 'tag-q') return;
+  const q = e.target.value.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  const cloud = document.getElementById('tag-cloud');
+  if (!cloud) return;
+  const rest = cloud.querySelector('.tag-rest');
+  const more = document.querySelector('.tag-more');
+  if (rest) rest.hidden = !q && !state.tagsAll;
+  if (more) more.hidden = !!q;
+  let any = false;
+  cloud.querySelectorAll('.tag-chip').forEach((b) => { const hit = !q || b.dataset.name.normalize('NFD').replace(/[̀-ͯ]/g, '').includes(q); b.hidden = !hit; any = any || hit; });
+  document.querySelector('.tag-none').hidden = any;
+});
 const _sidebarExtrasTags = sidebarExtras;
 // eslint-disable-next-line no-global-assign
 sidebarExtras = function (all) {
@@ -385,5 +426,6 @@ const _doActionTags = doAction;
 // eslint-disable-next-line no-global-assign
 doAction = async function (act, id, el) {
   if (act === 'tag') { state.local.filters = { tag: String(id) }; saveLocal(); return go({ view: 'all' }); }
+  if (act === 'tags-all') { state.tagsAll = !state.tagsAll; return render({ quiet: true }); }
   return _doActionTags(act, id, el);
 };

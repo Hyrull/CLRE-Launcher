@@ -6,7 +6,7 @@ const { BrowserWindow, screen } = require('electron');
 const W = 340;
 const H = 132;
 class Overlay {
-  constructor() { this.win = null; this.timer = null; this.visible = false; }
+  constructor() { this.win = null; this.timer = null; this.closeTimer = null; this.visible = false; }
   ensure() {
     if (this.win && !this.win.isDestroyed()) return this.win;
     const area = screen.getPrimaryDisplay().workArea;
@@ -25,6 +25,7 @@ class Overlay {
   }
   // info : { game, start, message } — message = rappel de pause
   show(info, ms = 0) {
+    clearTimeout(this.closeTimer);
     const w = this.ensure();
     const send = () => w.webContents.send('overlay', info);
     if (w.webContents.isLoading()) w.webContents.once('did-finish-load', send); else send();
@@ -36,10 +37,11 @@ class Overlay {
   }
   hide() {
     clearTimeout(this.timer);
-    if (this.win && !this.win.isDestroyed()) { this.win.webContents.send('overlay', null); setTimeout(() => this.win && !this.win.isDestroyed() && this.win.hide(), 220); }
+    // Après le fondu, la fenêtre est fermée (et non cachée) : son processus de rendu ne reste pas en mémoire
+    if (this.win && !this.win.isDestroyed()) { this.win.webContents.send('overlay', null); clearTimeout(this.closeTimer); this.closeTimer = setTimeout(() => this.destroy(), 220); }
     this.visible = false;
   }
   toggle(info) { if (this.visible) this.hide(); else this.show(info); }
-  destroy() { if (this.win && !this.win.isDestroyed()) this.win.destroy(); }
+  destroy() { clearTimeout(this.closeTimer); if (this.win && !this.win.isDestroyed()) this.win.destroy(); }
 }
 module.exports = { Overlay };

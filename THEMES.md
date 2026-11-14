@@ -64,6 +64,8 @@ et le thème apparaît dans le launcher. Pour une mise à jour, augmente `versio
 | `schemes` | Jeux de couleurs proposés dans les réglages. `default` (ou le premier) sert de base aux autres, qui n'en changent qu'une partie. Valeurs sans `;`, `{`, `}`, `<`, `>`. |
 | `options` | Interrupteurs. Activé, l'option ajoute la classe `theme-opt-<id>` sur `<html>`. |
 | `css` / `preview` | Par défaut `theme.css` et `preview.png` (vignette 16:10) s'ils existent. |
+| `windowMaterial` | `mica`, `acrylic` ou `tabbed` : matière de fenêtre de Windows 11 (22H2 et plus). Le fond d'écran transparaît, flouté. Le CSS doit alors rendre la page transparente, uniquement sous `:root[data-window-material="mica"]` (sinon, sur Windows 10, garder un fond plein). Exemple : [`bureau-11`](src/themes/bureau-11). |
+| `schemeColorSchemes` | Mode clair/sombre propre à un jeu de couleurs : `{ "Sombre": "dark" }`. Sert surtout avec `windowMaterial`, dont la teinte suit ce mode. |
 
 Dans le CSS, les fichiers du thème se référencent en relatif : `url('fonts/Display.woff2')`.
 Les images et polices distantes sont bloquées ; seul Google Fonts est autorisé (`@import url('https://fonts.googleapis.com/…')`).

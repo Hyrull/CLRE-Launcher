@@ -1,0 +1,78 @@
+{
+  "id": "epure",
+  "name": "Épure",
+  "author": "CLRE",
+  "version": "1.0.0",
+  "apiVersion": 1,
+  "description": "Design fonctionnel des années 60 en relief doux : surfaces mates moulées, boutons ronds en creux, grille de petits trous, un seul accent orange.",
+  "colorScheme": "light",
+  "schemes": {
+    "Blanc cassé": {
+      "--base": "#e9e7e2",
+      "--base-rgb": "233 231 226",
+      "--hi": "rgb(255 255 255 / 0.85)",
+      "--lo": "rgb(163 158 148 / 0.55)",
+      "--ink": "#2b2a28",
+      "--ink-2": "#6e6b65",
+      "--ink-3": "#9b978f",
+      "--accent": "#e8641b",
+      "--accent-rgb": "232 100 27",
+      "--on-accent": "#ffffff",
+      "--positive": "#4f8a3a",
+      "--fg-rgb": "43 42 40"
+    },
+    "Gris clair": {
+      "--base": "#dcdddd",
+      "--base-rgb": "220 221 221",
+      "--hi": "rgb(255 255 255 / 0.8)",
+      "--lo": "rgb(150 152 154 / 0.55)",
+      "--ink": "#232425",
+      "--ink-2": "#616466",
+      "--ink-3": "#909396",
+      "--accent": "#e8641b",
+      "--accent-rgb": "232 100 27",
+      "--on-accent": "#ffffff",
+      "--positive": "#4f8a3a",
+      "--fg-rgb": "43 42 40"
+    },
+    "Anthracite": {
+      "--base": "#2c2d2f",
+      "--base-rgb": "44 45 47",
+      "--hi": "rgb(255 255 255 / 0.06)",
+      "--lo": "rgb(0 0 0 / 0.55)",
+      "--ink": "#e6e4df",
+      "--ink-2": "#a7a49e",
+      "--ink-3": "#76736e",
+      "--accent": "#f07a2f",
+      "--accent-rgb": "240 122 47",
+      "--on-accent": "#1a1a1a",
+      "--positive": "#7cba5e",
+      "--fg-rgb": "230 228 223"
+    },
+    "Vert sauge": {
+      "--base": "#e4e6df",
+      "--base-rgb": "228 230 223",
+      "--hi": "rgb(255 255 255 / 0.85)",
+      "--lo": "rgb(150 156 140 / 0.55)",
+      "--ink": "#2a2d27",
+      "--ink-2": "#666b60",
+      "--ink-3": "#949889",
+      "--accent": "#3e7d5a",
+      "--accent-rgb": "62 125 90",
+      "--on-accent": "#ffffff",
+      "--positive": "#3e7d5a",
+      "--fg-rgb": "43 42 40"
+    }
+  },
+  "schemeColorSchemes": {
+    "Anthracite": "dark"
+  },
+  "options": [
+    {
+      "id": "grille",
+      "type": "toggle",
+      "label": "Grille de petits trous sur la barre latérale",
+      "default": true
+    }
+  ]
+}

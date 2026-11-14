@@ -272,13 +272,39 @@ function watch(paths) {
 }
 
 // ---------- Jeux en cours + sessions ----------
-function listProcesses() {
+function listProcesses(filter) {
   return new Promise((resolve) => {
-    execFile('tasklist', ['/fo', 'csv', '/nh'], { windowsHide: true, maxBuffer: 8 * 1024 * 1024 }, (err, out) => {
+    const args = ['/fo', 'csv', '/nh', ...(filter ? ['/fi', `IMAGENAME eq ${filter}`] : [])];
+    execFile('tasklist', args, { windowsHide: true, maxBuffer: 8 * 1024 * 1024 }, (err, out) => {
       if (err) return resolve(new Set());
       resolve(new Set(out.split(/\r?\n/).map((l) => (l.match(/^"([^"]+)"/) || [])[1]).filter(Boolean).map((s) => s.toLowerCase())));
     });
   });
+}
+// Lequel de ces exécutables tourne ? Relevé toutes les 5 s : tasklist coûte ~100 ms de CPU à chaque
+// fois, qprocess ~20 ms. Mais qprocess coupe les noms longs à 12 caractères (« fortniteclie... ») :
+// il sert de premier tri, et tasklist, limité aux noms coupés qui correspondent, confirme le nom exact.
+function qprocessNames() {
+  return new Promise((resolve) => {
+    execFile('qprocess', ['*'], { windowsHide: true, maxBuffer: 8 * 1024 * 1024 }, (err, out) => {
+      if (err) return resolve(null);
+      const names = out.split(/\r?\n/).map((l) => (l.match(/\s\d+\s+\d+\s+(\S.*?)\s*$/) || [])[1]).filter(Boolean).map((s) => s.toLowerCase());
+      resolve(names.length ? names : null);
+    });
+  });
+}
+async function runningAmong(wanted) {
+  const q = await qprocessNames();
+  if (!q) return listProcesses(); // qprocess absent ou illisible : relevé complet comme avant
+  const found = new Set();
+  const prefixes = new Set();
+  for (const n of q) {
+    if (!n.endsWith('...')) { if (wanted.has(n)) found.add(n); continue; }
+    const pre = n.slice(0, -3);
+    for (const w of wanted) if (w.length > pre.length && w.startsWith(pre)) { prefixes.add(pre); break; }
+  }
+  for (const set of await Promise.all([...prefixes].map((pre) => listProcesses(pre + '*')))) for (const n of set) if (wanted.has(n)) found.add(n);
+  return found;
 }
 
 // Un relevé à la fois : si tasklist est lent, le suivant attend au lieu de s'empiler.
@@ -293,7 +319,7 @@ async function pollRunning() {
   const now = [];
   const watched = [...games.values()].filter((g) => g.store !== 'steam' && g.installed && g.processNames && g.processNames.length);
   // Registre Steam et liste des processus lus en même temps, sans bloquer l'interface
-  const [steamId, procs] = await Promise.all([regDwordAsync('RunningAppID'), watched.length ? listProcesses() : null]);
+  const [steamId, procs] = await Promise.all([regDwordAsync('RunningAppID'), watched.length ? runningAmong(new Set(watched.flatMap((g) => g.processNames))) : null]);
   if (steamId) now.push(String(steamId));
   if (procs) for (const g of watched) if (g.processNames.some((p) => procs.has(p))) now.push(g.key);
   const names = Object.fromEntries(now.map((k) => [k, (games.get(k) || {}).name || k]));
@@ -562,12 +588,21 @@ function updateTray() {
   ]));
 }
 
-// ---------- Thème : toujours sombre (le mode clair a été retiré) ----------
+// ---------- Fenêtre : sombre par défaut ; un thème peut demander le clair et une matière Windows 11 ----------
+// Windows 11 22H2+ : la matière n'apparaît que si la fenêtre est CRÉÉE avec (l'activer ensuite ne fait rien).
+// On la crée donc toujours avec Mica ; les thèmes normaux gardent un fond plein par-dessus.
+const MATERIAL_OK = process.platform === 'win32' && Number(String(process.getSystemVersion()).split('.')[2] || 0) >= 22621;
 function applyTheme() {
-  nativeTheme.themeSource = 'dark';
+  const t = themes ? themes.active() : { colorScheme: 'dark', windowMaterial: 'none' };
+  const light = t.colorScheme === 'light';
+  const material = t.windowMaterial || 'none';
+  // La matière (Mica…) teinte selon le mode clair/sombre de l'application
+  nativeTheme.themeSource = material !== 'none' && light ? 'light' : 'dark';
   if (win && !win.isDestroyed()) {
-    win.setBackgroundColor('#111113');
-    try { win.setTitleBarOverlay({ color: '#00000000', symbolColor: '#a1a1a6', height: 36 }); } catch { /* fenêtre sans barre personnalisée */ }
+    // Mica ne se voit qu'à travers une fenêtre transparente ; sinon le fond sombre habituel le recouvre
+    if (MATERIAL_OK && material !== 'none') { try { win.setBackgroundMaterial(material); } catch { /* matière refusée */ } }
+    win.setBackgroundColor(material !== 'none' ? '#00000000' : '#111113');
+    try { win.setTitleBarOverlay({ color: '#00000000', symbolColor: light ? '#1f1f1f' : '#a1a1a6', height: 36 }); } catch { /* fenêtre sans barre personnalisée */ }
   }
 }
 
@@ -580,6 +615,7 @@ function resetTheme() {
   if (!themes) return;
   themes.reset();
   themes.watch();
+  applyTheme();
   if (win && !win.isDestroyed()) win.webContents.reload();
   updateTray();
 }
@@ -687,6 +723,7 @@ function createWindow() {
     minHeight: 640,
     show: !process.argv.includes('--hidden') && !playArg(process.argv),
     backgroundColor: (nativeTheme.themeSource = 'dark', '#111113'),
+    ...(MATERIAL_OK ? { backgroundMaterial: 'mica' } : {}),
     icon: path.join(ASSETS, 'icon-256.png'),
     titleBarStyle: 'hidden',
     titleBarOverlay: { color: '#00000000', symbolColor: '#a1a1a6', height: 36 },
@@ -767,11 +804,12 @@ app.whenReady().then(() => {
     getPrefs: () => readPrefs().appearance || {},
     setPrefs: (a) => { const p = readPrefs(); p.appearance = a; writePrefs(p); },
     safeMode: process.argv.includes('--safe-mode'),
+    materialSupported: MATERIAL_OK,
     fetch: (url, opts) => net.fetch(url, opts),
     catalogUrl: () => { const c = (readPrefs().settings || {}).themeCatalog; return c === undefined || c === null ? THEME_CATALOG : c; },
   });
   // Rechargement à chaud : une modification du dossier du thème actif est appliquée tout de suite
-  themes.watch((a) => { if (win && !win.isDestroyed()) win.webContents.send('theme-changed', a); });
+  themes.watch((a) => { applyTheme(); if (win && !win.isDestroyed()) win.webContents.send('theme-changed', a); });
   protocol.handle('clre-theme', (req) => {
     const hit = themes.resolve(req.url);
     if (!hit) return new Response('', { status: 404 });
@@ -781,8 +819,8 @@ app.whenReady().then(() => {
   // Lecture synchrone au chargement de la page : le thème est en place avant le premier affichage.
   ipcMain.on('themes:boot', (e) => { try { e.returnValue = themes.active(); } catch { e.returnValue = null; } });
   ipcMain.handle('themes:list', () => ({ themes: themes.list(), active: themes.active(), userDir: themes.userDir }));
-  ipcMain.handle('themes:set', (_e, choice) => { const a = themes.set(choice); themes.watch(); updateTray(); return a; });
-  ipcMain.handle('themes:reset', () => { themes.reset(); themes.watch(); updateTray(); return themes.active(); });
+  ipcMain.handle('themes:set', (_e, choice) => { const a = themes.set(choice); themes.watch(); applyTheme(); updateTray(); return a; });
+  ipcMain.handle('themes:reset', () => { themes.reset(); themes.watch(); applyTheme(); updateTray(); return themes.active(); });
   // Import d'une archive : chemin déposé sur la fenêtre, ou choisi dans une boîte de dialogue
   ipcMain.handle('themes:import', async (_e, file) => {
     if (!file) {
@@ -801,6 +839,7 @@ app.whenReady().then(() => {
     const dir = themes.removeDir(String(id));
     await shell.trashItem(dir);
     themes.watch();
+    applyTheme();
     updateTray();
     return themes.active();
   });
