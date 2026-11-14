@@ -1,0 +1,97 @@
+{
+  "id": "blocs",
+  "name": "Blocs",
+  "author": "CLRE",
+  "version": "1.0.0",
+  "apiVersion": 1,
+  "description": "Bac à sable en blocs : ciel en aplats, nuages et relief en pixels, panneaux de pierre en relief, boutons-blocs qui s'enfoncent et police pixel.",
+  "colorScheme": "dark",
+  "schemes": {
+    "Prairie": {
+      "--sky-1": "#2f5fc4",
+      "--sky-2": "#4577d6",
+      "--sky-3": "#5f90e4",
+      "--sky-4": "#83aef0",
+      "--far": "#8aa6d6",
+      "--top": "#7fcf5a",
+      "--soil": "#2f6b45",
+      "--stone": "#3c4459",
+      "--stone-hi": "#5a6582",
+      "--stone-lo": "#242a3a",
+      "--accent": "#4fa83d",
+      "--accent-rgb": "79 168 61",
+      "--accent-hi": "#7cd062",
+      "--accent-lo": "#2c6b21",
+      "--on-accent": "#ffffff",
+      "--cloud": "1"
+    },
+    "Neige": {
+      "--sky-1": "#5b7fae",
+      "--sky-2": "#7595c0",
+      "--sky-3": "#93add2",
+      "--sky-4": "#b6cae3",
+      "--far": "#c9d6e8",
+      "--top": "#f2f6fb",
+      "--soil": "#5f6c80",
+      "--stone": "#475468",
+      "--stone-hi": "#68778d",
+      "--stone-lo": "#2b3443",
+      "--accent": "#3f9ad6",
+      "--accent-rgb": "63 154 214",
+      "--accent-hi": "#74c0f0",
+      "--accent-lo": "#1f5e8a",
+      "--on-accent": "#ffffff",
+      "--cloud": "0.9"
+    },
+    "Désert": {
+      "--sky-1": "#d36b3c",
+      "--sky-2": "#e08a4c",
+      "--sky-3": "#eaa762",
+      "--sky-4": "#f3c784",
+      "--far": "#c98a63",
+      "--top": "#ebcb83",
+      "--soil": "#b5663e",
+      "--stone": "#4f3f4a",
+      "--stone-hi": "#715d6b",
+      "--stone-lo": "#2f242c",
+      "--accent": "#e0912c",
+      "--accent-rgb": "224 145 44",
+      "--accent-hi": "#f5b95c",
+      "--accent-lo": "#93561a",
+      "--on-accent": "#ffffff",
+      "--cloud": "0.7"
+    },
+    "Grotte": {
+      "--sky-1": "#0d0a17",
+      "--sky-2": "#141022",
+      "--sky-3": "#1b152e",
+      "--sky-4": "#231b3b",
+      "--far": "#2e2547",
+      "--top": "#6b4fa3",
+      "--soil": "#261e38",
+      "--stone": "#34304a",
+      "--stone-hi": "#4c4769",
+      "--stone-lo": "#1c192a",
+      "--accent": "#9b6bf0",
+      "--accent-rgb": "155 107 240",
+      "--accent-hi": "#c39cff",
+      "--accent-lo": "#5b35a3",
+      "--on-accent": "#ffffff",
+      "--cloud": "0"
+    }
+  },
+  "options": [
+    {
+      "id": "landscape",
+      "type": "toggle",
+      "label": "Paysage en blocs en fond",
+      "default": true
+    },
+    {
+      "id": "pixelfont",
+      "type": "toggle",
+      "label": "Police pixel pour les menus",
+      "default": true
+    }
+  ]
+}
