@@ -1,0 +1,125 @@
+{
+  "id": "coeur",
+  "name": "Cœur",
+  "author": "CLRE",
+  "version": "2.0.0",
+  "apiVersion": 1,
+  "description": "Rose bonbon et girly : rayures blanches en biais, trame de petits cœurs, cartes blanches au bord rose, autocollants à bord épais, petites capitales.",
+  "colorScheme": "light",
+  "schemes": {
+    "Bonbon": {
+      "--pink": "#f5689e",
+      "--pink-rgb": "245 104 158",
+      "--pink-deep": "#d9417f",
+      "--pink-soft": "#ffd3e4",
+      "--pink-bg": "#ffc5dc",
+      "--pink-bg-2": "#ffe6f0",
+      "--ink": "#5a2a3f",
+      "--ink-2": "#a35a7a",
+      "--sticker": "#ffffff"
+    },
+    "Lilas": {
+      "--pink": "#a77bf0",
+      "--pink-rgb": "167 123 240",
+      "--pink-deep": "#8456d6",
+      "--pink-soft": "#e6d8ff",
+      "--pink-bg": "#dccbff",
+      "--pink-bg-2": "#f1eaff",
+      "--ink": "#3f2a5c",
+      "--ink-2": "#7d62a6",
+      "--sticker": "#ffffff"
+    },
+    "Pêche": {
+      "--pink": "#ff8a6b",
+      "--pink-rgb": "255 138 107",
+      "--pink-deep": "#e2643f",
+      "--pink-soft": "#ffdccf",
+      "--pink-bg": "#ffcfbf",
+      "--pink-bg-2": "#ffece4",
+      "--ink": "#5c3024",
+      "--ink-2": "#a96a55",
+      "--sticker": "#ffffff"
+    },
+    "Menthe": {
+      "--pink": "#4fc49a",
+      "--pink-rgb": "79 196 154",
+      "--pink-deep": "#2f9d75",
+      "--pink-soft": "#cdf3e4",
+      "--pink-bg": "#bfeedc",
+      "--pink-bg-2": "#e6faf2",
+      "--ink": "#24493c",
+      "--ink-2": "#5a8c79",
+      "--sticker": "#ffffff"
+    },
+    "Bonbon nuit": {
+      "--pink": "#f0609a",
+      "--pink-rgb": "240 96 154",
+      "--pink-deep": "#ff9cc4",
+      "--paper": "#2a1d25",
+      "--paper-rgb": "42 29 37",
+      "--pink-bg": "#140d12",
+      "--pink-bg-2": "#1d141a",
+      "--pink-soft": "#4a2c3c",
+      "--ink": "#ffe6f0",
+      "--ink-2": "#e0a9c2",
+      "--sticker": "#ffd3e4",
+      "--stripe": "rgb(240 96 154 / 0.06)",
+      "--dot": "rgb(240 96 154 / 0.35)",
+      "--bg-rgb": "29 20 26",
+      "--fg-rgb": "255 236 246"
+    },
+    "Lilas nuit": {
+      "--pink": "#9d72ec",
+      "--pink-rgb": "157 114 236",
+      "--pink-deep": "#c4a8ff",
+      "--paper": "#241d33",
+      "--paper-rgb": "36 29 51",
+      "--pink-bg": "#100c18",
+      "--pink-bg-2": "#181223",
+      "--pink-soft": "#3d2f5a",
+      "--ink": "#efe6ff",
+      "--ink-2": "#bba6e0",
+      "--sticker": "#e6d8ff",
+      "--stripe": "rgb(157 114 236 / 0.06)",
+      "--dot": "rgb(157 114 236 / 0.35)",
+      "--bg-rgb": "24 18 35",
+      "--fg-rgb": "255 236 246"
+    },
+    "Pêche nuit": {
+      "--pink": "#f27752",
+      "--pink-rgb": "242 119 82",
+      "--pink-deep": "#ffab8f",
+      "--paper": "#2b1e1a",
+      "--paper-rgb": "43 30 26",
+      "--pink-bg": "#140d0b",
+      "--pink-bg-2": "#1d1411",
+      "--pink-soft": "#4d3128",
+      "--ink": "#ffece4",
+      "--ink-2": "#e6b2a0",
+      "--sticker": "#ffdccf",
+      "--stripe": "rgb(242 119 82 / 0.06)",
+      "--dot": "rgb(242 119 82 / 0.35)",
+      "--bg-rgb": "29 20 17",
+      "--fg-rgb": "255 236 246"
+    }
+  },
+  "options": [
+    {
+      "id": "hearts",
+      "type": "toggle",
+      "label": "Trame de petits cœurs dans les coins",
+      "default": true
+    },
+    {
+      "id": "doodles",
+      "type": "toggle",
+      "label": "Petits gribouillis et autocollants",
+      "default": true
+    }
+  ],
+  "schemeColorSchemes": {
+    "Bonbon nuit": "dark",
+    "Lilas nuit": "dark",
+    "Pêche nuit": "dark"
+  }
+}

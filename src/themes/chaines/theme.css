@@ -165,3 +165,47 @@ h1, h2.section { font-weight: 800; letter-spacing: -0.01em; color: #5a6570; }
   :root.theme-opt-bottom-bar [data-part="nav-main"] .nav-item { width: 62px; }
   :root.theme-opt-bottom-bar [data-part="nav-collections"] .nav-sec-toggle { width: auto; min-width: 62px; padding-left: 4px; padding-right: 4px; }
 }
+
+/* Tuiles larges : l'image horizontale du jeu plutôt qu'une jaquette verticale recadrée (titre coupé) */
+:root.theme-opt-landscape [data-part="cover"]:has(.art-wide) > img:not(.art-wide) { display: none; }
+:root.theme-opt-landscape [data-part="cover"] .art-wide { display: block; position: absolute; object-fit: cover; }
+
+/* Barre du bas : les 5 entrées principales, puis un seul rond « Plus » qui ouvre toutes les sections
+   (Activité, Progression, Collections, Parcourir, Outils) en colonnes, dans un panneau au-dessus de la barre.
+   Les colonnes partent du bord droit du rond (direction rtl) et montent de leur propre hauteur. */
+:root.theme-opt-bottom-bar [data-part='nav-collections'] {
+  position: relative; width: 76px; height: 82px; flex: none;
+  display: grid !important; grid-auto-flow: column; grid-auto-columns: 156px; align-items: stretch; direction: rtl;
+}
+:root.theme-opt-bottom-bar [data-part='nav-collections']::before {
+  content: 'Plus'; position: absolute; inset: 0; direction: ltr; padding-top: 58px; text-align: center;
+  font-size: 11px; font-weight: 700; color: var(--text-2);
+  background: radial-gradient(circle at 50% 26px, #ffffff 0 22px, var(--tile-edge) 23px 25px, transparent 26px);
+}
+:root.theme-opt-bottom-bar [data-part='nav-collections']::after {
+  content: '•••'; position: absolute; left: 0; right: 0; top: 16px; direction: ltr; text-align: center; font-size: 14px; letter-spacing: 1px; color: #9aa4ad;
+}
+:root.theme-opt-bottom-bar [data-part='nav-collections']:is(:hover, :focus-within)::before { color: var(--accent-deep); background: radial-gradient(circle at 50% 26px, #ffffff 0 22px, var(--accent) 23px 25px, rgb(var(--accent-rgb) / 0.3) 26px 30px, transparent 31px); }
+:root.theme-opt-bottom-bar [data-part='nav-collections']:is(:hover, :focus-within)::after { color: var(--accent-deep); }
+:root.theme-opt-bottom-bar [data-part='nav-collections'] > .nav-sec {
+  direction: ltr; visibility: hidden; opacity: 0; position: relative; margin: 0 !important;
+  /* Décalé vers la droite pour centrer le panneau sur la barre (le rond « Plus » est 205 px à droite du centre) */
+  transform: translate(min(270px, calc(50vw - 480px + 270px)), calc(-100% - 2px)); padding: 12px 8px 18px; border-bottom: 12px solid transparent;
+  background: #ffffff padding-box; box-shadow: 0 -2px 0 var(--tile-edge), 0 12px 30px rgb(0 0 0 / 0.14);
+  transition: opacity 140ms var(--ease), visibility 0s 140ms;
+}
+:root.theme-opt-bottom-bar [data-part='nav-collections'] > .nav-sec:first-child { border-radius: 18px 0 0 18px; }
+:root.theme-opt-bottom-bar [data-part='nav-collections'] > .nav-sec:last-child { border-radius: 0 18px 18px 0; }
+/* Les colonnes se lisent dans l'ordre du menu, de gauche à droite (la grille, elle, part de la droite) */
+:root.theme-opt-bottom-bar [data-part='nav-collections'] > .nav-sec:nth-child(1) { order: 9; }
+:root.theme-opt-bottom-bar [data-part='nav-collections'] > .nav-sec:nth-child(2) { order: 8; }
+:root.theme-opt-bottom-bar [data-part='nav-collections'] > .nav-sec:nth-child(3) { order: 7; }
+:root.theme-opt-bottom-bar [data-part='nav-collections'] > .nav-sec:nth-child(4) { order: 6; }
+:root.theme-opt-bottom-bar [data-part='nav-collections'] > .nav-sec:nth-child(5) { order: 5; }
+:root.theme-opt-bottom-bar [data-part='nav-collections'] > .nav-sec:nth-child(6) { order: 4; }
+:root.theme-opt-bottom-bar [data-part='nav-collections'] > .nav-sec:nth-child(7) { order: 3; }
+:root.theme-opt-bottom-bar [data-part='nav-collections']:is(:hover, :focus-within) > .nav-sec { visibility: visible; opacity: 1; transition-delay: 0s; }
+/* Dans le panneau, chaque section est une liste simple, toujours dépliée */
+:root.theme-opt-bottom-bar [data-part='nav-collections'] > .nav-sec .nav-sec-toggle { width: auto; height: 28px; padding: 0 10px !important; background: none !important; justify-content: flex-start; font-size: 12px; color: var(--text-2); pointer-events: none; }
+:root.theme-opt-bottom-bar [data-part='nav-collections'] > .nav-sec .nav-sec-body { position: static !important; transform: none !important; opacity: 1 !important; visibility: visible !important; display: flex !important; max-height: none !important; box-shadow: none !important; padding: 0 !important; min-width: 0; background: none; }
+:root.theme-opt-bottom-bar [data-part='nav-collections'] > .nav-sec::before { display: none; }

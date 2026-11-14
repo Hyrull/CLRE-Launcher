@@ -1,0 +1,185 @@
+/* Tonal — inspiré de Material Design 3, pour CLRE-Launcher (apiVersion 1).
+   Palettes tonales (primaire, conteneurs, surfaces à 5 niveaux), tiroir de navigation avec
+   indicateur en pilule, couches d'état (8 % au survol, 12 % à l'appui), boutons pleins arrondis,
+   bouton d'action flottant pour « Jouer », puces, cartes, interrupteur MD3. */
+@import url('https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,400..700&display=swap');
+
+:root {
+  --sans: 'Roboto Flex', 'Roboto', 'Segoe UI', sans-serif;
+  --st-hover: 0.08;
+  --st-press: 0.12;
+  --r-xs: 4px; --r-s: 8px; --r-m: 12px; --r-l: 16px; --r-xl: 28px;
+  --spring: cubic-bezier(0.2, 0, 0, 1);
+  /* Couleurs du launcher reliées aux rôles MD3 */
+  --bg-rgb: var(--md-surface-rgb);
+  --card-rgb: var(--md-surface-container-rgb);
+  --raised-rgb: var(--md-surface-container-rgb);
+  --popover-rgb: var(--md-surface-container-rgb);
+  --glass-rgb: 0 0 0;
+  --fg-rgb: var(--md-on-surface-rgb);
+  --shade-rgb: 0 0 0;
+  --on-art-rgb: 255 255 255;
+  --bg: var(--md-surface);
+  --sidebar: var(--md-surface-low);
+  --card: var(--md-surface-container);
+  --raised: var(--md-surface-high);
+  --surface-2: var(--md-surface-high);
+  --control: var(--md-surface-highest);
+  --control-strong: var(--md-secondary-container);
+  --text: var(--md-on-surface);
+  --text-2: var(--md-on-surface-variant);
+  --muted: var(--md-outline);
+  --accent: var(--md-primary);
+  --on-accent: var(--md-on-primary);
+  --on-text: var(--md-on-primary);
+  --knob: var(--md-on-primary);
+  --material: var(--md-surface-container);
+  --blur: none;
+  --line: var(--md-outline-variant);
+  --line-strong: var(--md-outline);
+  --fill: var(--md-surface-highest);
+  --fill-strong: var(--md-secondary-container);
+  --art-fallback: var(--md-surface-highest);
+  --art-fallback-flat: var(--md-surface-highest);
+  --radius-cover: var(--r-m);
+  --radius-tile: var(--r-m);
+  --ease: var(--spring);
+  --key: transparent;
+  --key-hover: rgb(var(--md-on-surface-rgb) / var(--st-hover));
+  --key-press: rgb(var(--md-on-surface-rgb) / var(--st-press));
+  --key-edge: inset 0 0 0 1px var(--md-outline);
+  --key-edge-press: inset 0 0 0 1px var(--md-outline);
+  --well: var(--md-surface-high);
+  --well-edge: none;
+  --btn-primary: var(--md-primary);
+  --btn-primary-hover: var(--md-primary);
+  --btn-primary-press: var(--md-primary);
+  --btn-primary-edge: transparent;
+  /* Ombres d'élévation MD3 (niveaux 1 à 3) */
+  --elev-1: 0 1px 2px rgb(0 0 0 / 0.3), 0 1px 3px 1px rgb(0 0 0 / 0.15);
+  --elev-2: 0 1px 2px rgb(0 0 0 / 0.3), 0 2px 6px 2px rgb(0 0 0 / 0.15);
+  --elev-3: 0 1px 3px rgb(0 0 0 / 0.3), 0 4px 8px 3px rgb(0 0 0 / 0.15);
+}
+:root.theme-opt-expressive { --r-m: 16px; --r-l: 24px; --r-xl: 32px; --spring: cubic-bezier(0.34, 1.4, 0.64, 1); }
+html, body { background: var(--md-surface); color: var(--md-on-surface); }
+.content::before { display: none; }
+[data-part="content"] { background: var(--md-surface); }
+
+/* ── Échelle typographique MD3 ── */
+h1, .toolbar h1 { font-weight: 400; letter-spacing: 0; color: var(--md-on-surface); }
+.toolbar h1 { font-size: 36px; line-height: 44px; }             /* Headline Large */
+h2.section { font-size: 22px; line-height: 28px; font-weight: 500; letter-spacing: 0; } /* Title Large */
+.spotlight h1, .game-hero h1 { font-weight: 400; letter-spacing: -0.01em; }         /* Display */
+.section-sub, .card .s, .stats .k { color: var(--md-on-surface-variant); }
+.stats .v { font-weight: 400; font-size: 28px; }
+
+/* ── Tiroir de navigation : entrées de 56 px en pilule, indicateur secondaire ── */
+[data-part="sidebar"] { background: var(--md-surface-low) !important; border-right: 0 !important; box-shadow: none !important; border-radius: 0 var(--r-l) var(--r-l) 0; padding: 40px 12px 12px !important; }
+[data-part="brand"] { padding: 0 16px; height: 48px; }
+[data-part="brand"] .wordmark, [data-part="brand"] .wordmark b { font-size: 16px; font-weight: 500; color: var(--md-on-surface-variant); }
+[data-part="sidebar"] .nav-item {
+  height: 52px; padding: 0 16px; border-radius: 999px; gap: 12px; position: relative; overflow: hidden;
+  font-size: 14px; font-weight: 500; letter-spacing: 0.01em; color: var(--md-on-surface-variant);
+  background: transparent !important; box-shadow: none !important;
+}
+[data-part="sidebar"] .nav-item svg { width: 22px; height: 22px; color: var(--md-on-surface-variant); }
+[data-part="sidebar"] .nav-item.small { height: 44px; }
+/* Couche d'état : une teinte de la couleur du texte, plus forte à l'appui */
+[data-part="sidebar"] .nav-item::after { content: ""; position: absolute; inset: 0; background: currentColor; opacity: 0; transition: opacity 150ms linear; pointer-events: none; }
+[data-part="sidebar"] .nav-item:hover::after { opacity: var(--st-hover); }
+[data-part="sidebar"] .nav-item:active::after { opacity: var(--st-press); }
+[data-part="sidebar"] .nav-item.active { background: var(--md-secondary-container) !important; color: var(--md-on-secondary-container); font-weight: 700; }
+[data-part="sidebar"] .nav-item.active :is(svg, .count, .plat-ico) { color: var(--md-on-secondary-container); }
+[data-part="sidebar"] .count { color: var(--md-on-surface-variant); font-size: 12px; font-weight: 500; }
+[data-part="nav-collections"] .nav-sec-toggle { color: var(--md-on-surface-variant); font-size: 14px; font-weight: 500; padding-left: 16px; height: 48px; }
+[data-part="nav-collections"] .nav-sec + .nav-sec { margin-top: 0; border-top: 1px solid var(--md-outline-variant); padding-top: 4px; }
+[data-part="week-card"] { margin: 8px 0 0; border-top: 0; border-radius: var(--r-m); background: var(--md-primary-container); color: var(--md-on-primary-container); padding: 14px 16px; }
+[data-part="week-card"] :is(.k, .sub, .v) { color: var(--md-on-primary-container); }
+[data-part="sidebar"] .add-game { border-radius: 999px; color: var(--md-on-surface-variant); }
+
+/* Option : rail de navigation (80 px, icône dans une pilule, libellé dessous) */
+:root.theme-opt-rail { --sidebar-width: 88px; }
+:root.theme-opt-rail [data-part="sidebar"] { padding: 40px 4px 12px !important; border-radius: 0; }
+:root.theme-opt-rail [data-part="sidebar"] :is(.wordmark, .count, .nav-sec-head, .nav-hint, [data-part="week-card"], .nav-item.small, .nav-title) { display: none !important; }
+:root.theme-opt-rail [data-part="brand"] { justify-content: center; padding: 0; }
+:root.theme-opt-rail [data-part="sidebar"] .nav-item { height: 64px; flex-direction: column; justify-content: center; gap: 4px; padding: 0; border-radius: 0; background: transparent !important; font-size: 11px; }
+:root.theme-opt-rail [data-part="sidebar"] .nav-item::after { display: none; }
+:root.theme-opt-rail [data-part="sidebar"] .nav-item svg { width: 56px; height: 32px; padding: 4px 16px; border-radius: 999px; box-sizing: border-box; transition: background 200ms var(--spring); }
+:root.theme-opt-rail [data-part="sidebar"] .nav-item:hover svg { background: rgb(var(--md-on-surface-rgb) / var(--st-hover)); }
+:root.theme-opt-rail [data-part="sidebar"] .nav-item.active svg { background: var(--md-secondary-container); }
+:root.theme-opt-rail [data-part="sidebar"] .nav-item .label { display: block !important; width: 100%; padding: 0 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: center; }
+:root.theme-opt-rail [data-part="sidebar"] .nav-item.active { color: var(--md-on-surface); }
+:root.theme-opt-rail [data-part="sidebar"] .nav-sec-body { max-height: none !important; }
+
+/* ── Barre d'app supérieure : prend la teinte du conteneur au défilement ── */
+[data-part="topbar"].material { background: var(--md-surface-container) !important; border-bottom-color: transparent !important; -webkit-backdrop-filter: none; backdrop-filter: none; }
+/* Barre de recherche MD3 : pilule de 48 px, surface haute */
+.search { height: 48px !important; border-radius: 999px !important; background: var(--md-surface-high) !important; padding: 0 12px 0 18px !important; box-shadow: none !important; }
+.search input { color: var(--md-on-surface); font-size: 15px; }
+.search:focus-within { background: var(--md-surface-highest) !important; box-shadow: none !important; }
+/* Boutons segmentés : contour, case cochée sur l'élément choisi */
+.segmented, .seg-chips { background: transparent !important; box-shadow: inset 0 0 0 1px var(--md-outline) !important; border-radius: 999px !important; padding: 0 !important; gap: 0 !important; overflow: hidden; }
+.segmented button, .seg-chips button { height: 40px; border-radius: 0 !important; padding: 0 16px; font-weight: 500; color: var(--md-on-surface); box-shadow: none !important; }
+.segmented button + button, .seg-chips button + button { box-shadow: inset 1px 0 0 var(--md-outline) !important; }
+.segmented button.active, .seg-chips button.on { background: var(--md-secondary-container) !important; color: var(--md-on-secondary-container) !important; }
+/* Coche seulement sur les puces de choix, pas sur les onglets de navigation */
+.seg-chips button.on:not(:has(svg))::before { content: "✓ "; font-weight: 700; }
+.topbar.over-hero:not(.material) :is(.segmented, .search, .icon-btn) { background: var(--md-surface-container) !important; -webkit-backdrop-filter: none; backdrop-filter: none; }
+
+/* ── Boutons : pleins (primaire), tonals, contour ; couche d'état au survol ── */
+.btn, .chip, .icon-btn, .avatar, .select, .filter select, .tag-toggle, .field select { font-weight: 500; letter-spacing: 0.01em; color: var(--md-primary); transition: box-shadow 200ms var(--spring), background 200ms linear, border-radius 200ms var(--spring) !important; }
+.btn { height: 40px; padding: 0 24px; border-radius: 999px !important; }
+.btn-primary, .btn-light, .cover .quick { background: var(--md-primary) !important; color: var(--md-on-primary) !important; box-shadow: none !important; }
+.btn-primary:hover, .btn-light:hover, .cover .quick:hover { box-shadow: var(--elev-1) !important; background: color-mix(in srgb, var(--md-primary), var(--md-on-primary) 8%) !important; }
+/* Grand bouton « Jouer » de la fiche : bouton d'action flottant étendu */
+.btn-primary.btn-big, .game-hero .btn-primary { height: 56px; padding: 0 22px; border-radius: var(--r-l) !important; background: var(--md-primary-container) !important; color: var(--md-on-primary-container) !important; box-shadow: var(--elev-3) !important; font-size: 15px; }
+.btn-primary.btn-big:hover, .game-hero .btn-primary:hover { background: color-mix(in srgb, var(--md-primary-container), var(--md-on-primary-container) 8%) !important; }
+:root.theme-opt-expressive :is(.btn, .icon-btn):active { border-radius: var(--r-s) !important; }
+.btn-glass, .btn-ghost, .btn-running { background: var(--md-secondary-container) !important; color: var(--md-on-secondary-container) !important; box-shadow: none !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+.btn-glass:hover, .btn-ghost:hover { background: color-mix(in srgb, var(--md-secondary-container), var(--md-on-secondary-container) 8%) !important; }
+.icon-btn { width: 40px; height: 40px; border-radius: 999px !important; background: transparent !important; box-shadow: none !important; color: var(--md-on-surface-variant) !important; }
+.icon-btn:hover { background: rgb(var(--md-on-surface-rgb) / var(--st-hover)) !important; }
+.avatar { width: 32px; height: 32px; border-radius: 999px !important; background: var(--md-primary) !important; color: var(--md-on-primary) !important; box-shadow: none !important; }
+/* Puces : 32 px, coins de 8 px, contour ; sélectionnée = conteneur secondaire */
+.chip, .tag-toggle, .select, .filter select, .field select { height: 32px; border-radius: var(--r-s) !important; box-shadow: inset 0 0 0 1px var(--md-outline) !important; background: transparent !important; color: var(--md-on-surface-variant); }
+.chip:hover, .tag-toggle:hover, .select:hover, .filter select:hover { background: rgb(var(--md-on-surface-rgb) / var(--st-hover)) !important; }
+.chip.on, .tag-toggle.on, .filter.on select { background: var(--md-secondary-container) !important; color: var(--md-on-secondary-container) !important; box-shadow: none !important; }
+
+/* ── Cartes ── */
+[data-part="cover"] { box-shadow: none !important; transition: transform 250ms var(--spring), box-shadow 200ms linear, border-radius 250ms var(--spring) !important; }
+[data-part="game-card"]:hover [data-part="cover"] { box-shadow: var(--elev-2) !important; transform: translateY(-2px); }
+:root.theme-opt-expressive [data-part="game-card"]:hover [data-part="cover"] { border-radius: var(--r-xl); }
+[data-part="game-card"] .t { font-size: 14px; font-weight: 500; letter-spacing: 0.01em; }
+:is([data-part="tile"], [data-part="resume-card"], .stats, .group) { background: var(--md-surface-container) !important; border-radius: var(--r-m) !important; box-shadow: none !important; }
+[data-part="resume-card"]:hover { background: var(--md-surface-high) !important; }
+.stats { padding: 16px; }
+
+/* ── Bannières : grand rayon, voile vers la surface ── */
+.spotlight-frame, .game-hero { border-radius: 0 0 var(--r-xl) var(--r-xl); overflow: hidden; }
+.spotlight .shade, .game-hero .shade { background: linear-gradient(0deg, rgb(0 0 0 / 0.6) 0%, rgb(0 0 0 / 0.2) 40%, transparent 70%); }
+
+/* ── Dialogues, menus, barre d'info ── */
+.modal { border-radius: var(--r-xl) !important; border: 0 !important; background: var(--md-surface-high) !important; box-shadow: var(--elev-3) !important; }
+.prefs-side { background: var(--md-surface-container) !important; }
+.prefs-cats button { border-radius: 999px !important; }
+.prefs-cats button.on, .prefs-me.on { background: var(--md-secondary-container) !important; color: var(--md-on-secondary-container) !important; }
+.group-title { color: var(--md-primary); font-weight: 500; }
+.ctx-menu, .inbox { background: var(--md-surface-container) !important; border-radius: var(--r-xs) !important; box-shadow: var(--elev-2) !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; color: var(--md-on-surface); padding: 8px 0 !important; }
+.ctx-menu button { border-radius: 0 !important; height: 48px !important; padding: 0 12px !important; }
+.ctx-menu button:hover { background: rgb(var(--md-on-surface-rgb) / var(--st-hover)) !important; color: var(--md-on-surface) !important; }
+/* Barre d'info (snackbar) : surface inverse */
+.toast, .toast-undo { background: var(--md-on-surface) !important; color: var(--md-surface) !important; border-radius: var(--r-xs) !important; box-shadow: var(--elev-3) !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+/* Interrupteur MD3 : piste 52×32, pastille qui grossit quand il est activé */
+:is(.row-switch, .home-toggles) input[type="checkbox"] { width: 52px; height: 32px; border-radius: 999px !important; background: var(--md-surface-highest) !important; box-shadow: inset 0 0 0 2px var(--md-outline) !important; }
+:is(.row-switch, .home-toggles) input[type="checkbox"]::after { top: 8px; left: 8px; width: 16px; height: 16px; background: var(--md-outline); box-shadow: none; transition: all 250ms var(--spring) !important; }
+:is(.row-switch, .home-toggles) input[type="checkbox"]:checked { background: var(--md-primary) !important; box-shadow: none !important; }
+:is(.row-switch, .home-toggles) input[type="checkbox"]:checked::after { top: 4px; left: 4px; width: 24px; height: 24px; background: var(--md-on-primary); transform: translateX(20px); }
+/* Indicateur de progression linéaire : piste et barre séparées par un petit espace */
+.hl-row .bar, .cover-dl { height: 4px; border-radius: 999px; background: var(--md-secondary-container); }
+.hl-row .bar span, .cover-dl div { background: var(--md-primary); border-radius: 999px; box-shadow: 4px 0 0 var(--md-surface); }
+select option { background: var(--md-surface-container); color: var(--md-on-surface); }
+::-webkit-scrollbar-thumb { background: var(--md-outline-variant) !important; border: 4px solid transparent !important; background-clip: padding-box !important; border-radius: 999px; }
+
+/* Texte posé sur les images des bannières : toujours clair */
+:is(.spotlight, .game-hero) :is(.kicker, .meta-row, .meta-row span, p) { color: #ffffff !important; text-shadow: 0 1px 3px rgb(0 0 0 / 0.5); }
+.game-hero .back { background: rgb(0 0 0 / 0.35) !important; color: #ffffff !important; box-shadow: none !important; border-radius: 999px !important; }

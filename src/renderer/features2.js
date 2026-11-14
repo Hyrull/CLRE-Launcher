@@ -95,14 +95,28 @@ function applyFilters(list) {
     (!f.controller || (f.controller === 'full' ? g.controller === 'full' : !!g.controller)) &&
     (!f.tag || (g.tags || []).includes(Number(f.tag))));
 }
+// Barre de filtres : Plateforme et État restent visibles ; les autres sont dans le panneau « Filtres »,
+// (les filtres actifs apparaissent en puces, ajoutées par features5.js).
+const FILTERS_MAIN = ['store', 'installed'];
 function filterBar() {
   const f = filters();
+  const sel = (k) => {
+    const [label, opts] = FILTERS[k];
+    const options = opts().map(([v, l]) => `<option value="${v}" ${String(f[k] || '') === v ? 'selected' : ''}>${v ? l : `${label} : ${l}`}</option>`).join('');
+    return `<label class="filter ${f[k] ? 'on' : ''}"><span class="sr-only">${label}</span><select data-filter="${k}">${options}</select></label>`;
+  };
+  const more = Object.keys(FILTERS).filter((k) => !FILTERS_MAIN.includes(k));
+  const moreOn = more.filter((k) => f[k]);
   const active = Object.values(f).some(Boolean);
   return `<div class="filter-bar" role="group" aria-label="Filtres">
-    ${Object.entries(FILTERS).map(([k, [label, opts]]) => `<label class="filter ${f[k] ? 'on' : ''}"><span class="sr-only">${label}</span><select data-filter="${k}">${opts().map(([v, l]) => `<option value="${v}" ${String(f[k] || '') === v ? 'selected' : ''}>${v ? l : `${label} : ${l}`}</option>`).join('')}</select></label>`).join('')}
-    ${active ? '<button type="button" class="link-btn" data-act="reset-filters">Effacer les filtres</button>' : ''}
+    ${FILTERS_MAIN.map(sel).join('')}
+    <details class="filter-more"${state.filtersOpen ? ' open' : ''}><summary class="filter-more-btn ${moreOn.length ? 'on' : ''}">Filtres${moreOn.length ? ` <b>${moreOn.length}</b>` : ''}</summary><div class="filter-panel">${more.map(sel).join('')}</div></details>
+    ${active ? '<button type="button" class="link-btn" data-act="reset-filters">Effacer</button>' : ''}
   </div>`;
 }
+// Le panneau reste ouvert pendant qu'on choisit, et se ferme en cliquant ailleurs
+document.addEventListener('toggle', (e) => { if (e.target.classList && e.target.classList.contains('filter-more')) state.filtersOpen = e.target.open; }, true);
+document.addEventListener('click', (e) => { const d = document.querySelector('.filter-more[open]'); if (d && !d.contains(e.target)) { d.open = false; state.filtersOpen = false; } });
 
 // ---------- Barre latérale ----------
 const _sidebarExtras = sidebarExtras;

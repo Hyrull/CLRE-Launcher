@@ -673,3 +673,84 @@ body.couch .spotlight-frame, body.couch .game-hero { width: calc(100cqw / 1.2); 
 /* Menus déroulants natifs : liste sombre en thème sombre (le clair est géré par theme-light.css) */
 :root { color-scheme: dark; }
 select option, select optgroup { background: var(--card); color: var(--text); }
+
+/* Bannières des thèmes clairs : un fondu vers une page claire salit l'image (gris laiteux) et
+   met le logo blanc sur du blanc. On voile l'image en sombre, le bord du bas reste net, le texte reste clair. */
+:root[data-color-scheme='light'] :is(.spotlight, .game-hero) {
+  --on-art-rgb: 255 255 255; --on-art: #ffffff; --text: #f5f5f7; --text-2: rgb(255 255 255 / 0.78);
+  background: #111113;
+}
+:root[data-color-scheme='light'] :is(.spotlight, .game-hero) .shade {
+  background: linear-gradient(0deg, rgb(0 0 0 / 0.72) 0%, rgb(0 0 0 / 0.35) 30%, rgb(0 0 0 / 0) 60%), linear-gradient(90deg, rgb(0 0 0 / 0.55) 0%, rgb(0 0 0 / 0) 55%);
+}
+:root[data-color-scheme='light'] :is(.spotlight, .game-hero) :is(img.bg, video, .shade) { -webkit-mask-image: none; mask-image: none; }
+:root[data-color-scheme='light'] :is(.spotlight, .game-hero) :is(h1, .kicker, p, .meta-row, .meta-row span) { color: #ffffff; }
+
+/* Image horizontale du jeu : cachée (et donc pas chargée) sauf pour les thèmes en tuiles larges */
+.cover .art-wide { display: none; }
+
+/* Panneau « Filtres » : bouton comme les listes, panneau flottant */
+.filter-more { position: relative; }
+.filter-more-btn { list-style: none; display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px; border-radius: 8px; background: var(--key, var(--fill)); box-shadow: var(--key-edge, none); color: var(--text-2); font-size: 12px; font-weight: 500; cursor: default; user-select: none; transition: background-color 120ms var(--ease); }
+.filter-more-btn::-webkit-details-marker { display: none; }
+.filter-more-btn::after { content: ''; width: 6px; height: 6px; margin-left: 2px; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: translateY(-2px) rotate(45deg); }
+.filter-more-btn:hover { background: var(--key-hover, var(--fill-strong)); color: var(--text); }
+.filter-more-btn b { min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; background: var(--accent); color: var(--on-accent); font-size: 11px; font-weight: 600; line-height: 16px; text-align: center; font-variant-numeric: tabular-nums; }
+.filter-more-btn.on, .filter-more[open] .filter-more-btn { color: var(--text); }
+.filter-panel { position: absolute; z-index: 20; top: calc(100% + 8px); left: 0; display: grid; grid-template-columns: 1fr; gap: 8px; min-width: 260px; padding: 12px; border-radius: 10px; background: var(--surface-2); box-shadow: 0 0 0 1px var(--line-strong), 0 12px 32px rgb(var(--shade-rgb) / 0.4); }
+.filter-panel .filter select { width: 100%; }
+
+/* Barre latérale plus courte : « Ajouter un jeu » est dans la barre du haut, la carte du temps de jeu reste visible en bas */
+[data-part="sidebar"] .add-game { display: none; }
+[data-part="week-card"] { position: sticky; bottom: -12px; margin-top: auto; padding-bottom: 12px; background: var(--sidebar); z-index: 1; }
+
+/* Actions de ligne (liste des jeux, Stockage, Sauvegardes, Amis) : visibles au survol ou au clavier.
+   La place reste réservée, rien ne bouge quand elles apparaissent. */
+:is(.row-item, .friend) > span:last-child .btn, .friend > .btn { opacity: 0; transition: opacity 120ms var(--ease); }
+:is(.row-item, .friend):is(:hover, :focus-within) :is(> span:last-child .btn, > .btn) { opacity: 1; }
+.row-item.list-head > span:last-child { opacity: 0; }
+/* Désinstaller : texte discret, rouge seulement au survol du bouton */
+.store-row .btn[data-act="uninstall"] { background: transparent !important; box-shadow: none !important; color: var(--text-2); }
+.store-row .btn[data-act="uninstall"]:hover { color: var(--negative) !important; background: rgb(var(--negative-rgb) / 0.1) !important; }
+@media (hover: none) { :is(.row-item, .friend) > span:last-child .btn, .friend > .btn { opacity: 1; } }
+
+/* Historique : barres par semaine, valeur écrite au-dessus de chaque barre */
+.chart-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 12px; }
+.chart-head .k { font-size: 13px; font-weight: 500; }
+.chart-head .m { font-size: 12px; color: var(--text-2); font-variant-numeric: tabular-nums; }
+.bars30.weeks { gap: 12px; }
+.bars30.weeks span { position: relative; border-radius: 4px 4px 0 0; }
+.bars30.weeks span i { position: absolute; left: 50%; bottom: calc(100% + 4px); transform: translateX(-50%); font-style: normal; font-size: 11px; color: var(--text-2); white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+/* Grandes fenêtres : le contenu (1536 px au plus) et la barre du haut sont centrés dans la zone de contenu,
+   au lieu d'être collés à gauche avec un grand vide à droite. --edge est la marge de chaque côté ;
+   elle se calcule sur la largeur de la zone de contenu (conteneur .content), donc juste aussi pour les thèmes
+   qui déplacent ou cachent la barre latérale. */
+.content { --edge: max(32px, calc((100cqw - 1536px) / 2)); }
+body.couch .content { --edge: 32px; }
+#view { max-width: none; padding-left: var(--edge); padding-right: var(--edge); }
+.topbar { padding-left: var(--edge); padding-right: var(--edge); }
+.spotlight-frame, .game-hero { margin-left: calc(var(--edge) * -1); }
+.spotlight .body { padding-left: var(--edge); }
+.game-hero .inner { left: var(--edge); right: calc(var(--edge) + 12px); }
+@media (max-width: 1100px) { .content { --edge: 24px; } }
+
+/* Fiche de jeu, Progression : quatre choix avec icône et sens, la note avec son libellé et son état */
+.progress-panel { gap: 12px; }
+.progress-panel .section-head { align-items: center; }
+.progress-panel .link-btn { font-size: 12px; color: var(--muted); }
+.status-picker { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.status-opt { display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 8px 10px; border: 0; border-radius: 10px; background: var(--fill); box-shadow: inset 0 0 0 1px var(--line); color: var(--text-2); text-align: left; font: inherit; cursor: default; transition: background-color 120ms var(--ease), box-shadow 120ms var(--ease), color 120ms var(--ease); }
+.status-opt:hover { background: var(--fill-strong); color: var(--text); }
+.status-opt .ic { width: 28px; height: 28px; flex: none; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; background: rgb(var(--fg-rgb) / 0.06); color: var(--text-2); }
+.status-opt .tx { display: flex; flex-direction: column; gap: 0; min-width: 0; }
+.status-opt .l { font-size: 13px; font-weight: 600; color: var(--text); line-height: 18px; }
+.status-opt .h { font-size: 11px; color: var(--muted); line-height: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.status-opt.on { background: color-mix(in srgb, var(--accent) 14%, transparent); box-shadow: inset 0 0 0 1.5px var(--accent); }
+.status-opt.on .ic { background: var(--accent); color: var(--on-accent); }
+.status-opt:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.note-field { display: flex; flex-direction: column; gap: 6px; }
+.note-head { display: flex; align-items: center; justify-content: space-between; }
+.note-title { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--text-2); }
+.note-title svg { width: 14px; height: 14px; }
+.note-state { font-size: 11px; color: var(--muted); }

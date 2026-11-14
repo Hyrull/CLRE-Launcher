@@ -145,7 +145,7 @@ new MutationObserver(() => {
   if (!form || form.dataset.auto) return;
   form.dataset.auto = '1';
   const foot = form.querySelector('.prefs-foot');
-  if (foot) foot.innerHTML = '<span class="prefs-saved">Enregistré</span><span class="prefs-hint">Les changements s’appliquent tout de suite</span><button type="button" class="btn btn-primary" data-close-prefs>Terminé</button>';
+  if (foot) foot.innerHTML = '<span class="prefs-saved">Enregistré</span><span class="prefs-hint">Les changements s’appliquent tout de suite</span><button type="button" class="btn btn-ghost" data-close-prefs>Fermer</button>';
   form.addEventListener('change', (e) => { if (e.target.id !== 'prefs-q' && e.target.type !== 'password') autoSavePrefs(form, true); });
   form.addEventListener('input', (e) => { if (e.target.id !== 'prefs-q' && e.target.type !== 'password' && e.target.tagName === 'INPUT' && e.target.type === 'text') autoSavePrefs(form); });
   form.addEventListener('focusout', (e) => { if (e.target.name === 'apiKey' && e.target.value) autoSavePrefs(form, true); });

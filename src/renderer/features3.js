@@ -384,11 +384,31 @@ readExtraSettings = function (f) {
 Object.assign(ICONS, { tag: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12V4a1 1 0 0 1 1-1h8l9 9-9 9Z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg>' });
 VIEWS.tags = () => {
   const list = tagCounts();
-  const head = `<div class="toolbar"><div class="stack-6"><h1>Tags</h1><span class="sub">${list.length} tags Steam dans ta bibliothèque · clique pour voir les jeux</span></div></div>`;
+  const head = `<div class="toolbar"><div class="stack-6"><h1>Tags</h1><span class="sub">${list.length} tags Steam dans ta bibliothèque · clique pour voir les jeux</span></div>
+    ${list.length > TAGS_TOP ? '<label class="search tag-search"><span class="sr-only">Chercher un tag</span><input type="search" id="tag-q" placeholder="Chercher un tag" autocomplete="off"></label>' : ''}</div>`;
   if (!list.length) return head + emptyBox('Pas encore de tags', 'Ils arrivent du magasin Steam juste après la synchronisation');
   const max = list[0][1];
-  return head + `<div class="tag-cloud">${list.map(([id, n]) => `<button type="button" class="tag-chip" data-act="tag" data-id="${id}" style="--w:${Math.max(6, (n / max) * 100)}%"><span class="nm">${esc(tagName(id))}</span><span class="n">${n}</span></button>`).join('')}</div>`;
+  const chip = ([id, n]) => `<button type="button" class="tag-chip" data-act="tag" data-id="${id}" data-name="${esc(tagName(id).toLowerCase())}" style="--w:${Math.max(6, (n / max) * 100)}%"><span class="nm">${esc(tagName(id))}</span><span class="n num">${n}</span></button>`;
+  const top = list.slice(0, TAGS_TOP), rest = list.slice(TAGS_TOP);
+  return head + `<div class="tag-cloud" id="tag-cloud">${top.map(chip).join('')}<div class="tag-rest" ${state.tagsAll ? '' : 'hidden'}>${rest.map(chip).join('')}</div></div>
+    ${rest.length ? `<button type="button" class="link-btn tag-more" data-act="tags-all">${state.tagsAll ? 'Afficher moins' : `Afficher les ${rest.length} autres`}</button>` : ''}
+    <p class="tag-none" hidden>Aucun tag ne correspond</p>`;
 };
+// Les 30 tags les plus courants d'abord ; la recherche fouille aussi dans les autres
+const TAGS_TOP = 30;
+document.addEventListener('input', (e) => {
+  if (e.target.id !== 'tag-q') return;
+  const q = e.target.value.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  const cloud = document.getElementById('tag-cloud');
+  if (!cloud) return;
+  const rest = cloud.querySelector('.tag-rest');
+  const more = document.querySelector('.tag-more');
+  if (rest) rest.hidden = !q && !state.tagsAll;
+  if (more) more.hidden = !!q;
+  let any = false;
+  cloud.querySelectorAll('.tag-chip').forEach((b) => { const hit = !q || b.dataset.name.normalize('NFD').replace(/[̀-ͯ]/g, '').includes(q); b.hidden = !hit; any = any || hit; });
+  document.querySelector('.tag-none').hidden = any;
+});
 const _sidebarExtrasTags = sidebarExtras;
 // eslint-disable-next-line no-global-assign
 sidebarExtras = function (all) {
@@ -406,5 +426,6 @@ const _doActionTags = doAction;
 // eslint-disable-next-line no-global-assign
 doAction = async function (act, id, el) {
   if (act === 'tag') { state.local.filters = { tag: String(id) }; saveLocal(); return go({ view: 'all' }); }
+  if (act === 'tags-all') { state.tagsAll = !state.tagsAll; return render({ quiet: true }); }
   return _doActionTags(act, id, el);
 };

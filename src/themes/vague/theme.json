@@ -45,7 +45,17 @@
     }
   },
   "options": [
-    { "id": "list", "type": "toggle", "label": "Bibliothèque en liste verticale", "default": true },
-    { "id": "still", "type": "toggle", "label": "Vagues immobiles", "default": false }
+    {
+      "id": "list",
+      "type": "toggle",
+      "label": "Bibliothèque en liste verticale",
+      "default": false
+    },
+    {
+      "id": "still",
+      "type": "toggle",
+      "label": "Vagues immobiles",
+      "default": false
+    }
   ]
 }

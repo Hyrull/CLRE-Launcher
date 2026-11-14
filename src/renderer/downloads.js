@@ -146,10 +146,12 @@ VIEWS.downloads = () => {
     speed ? `${fmtSize(speed)}/s` : '',
   ].filter(Boolean).join(' · ') || 'Rien ne télécharge en ce moment';
   const done = state.dlDone.slice(0, 6);
+  const reinstall = games().filter((g) => !g.installed && g.lastPlayed && ['steam', 'epic', 'gog'].includes(g.store)).sort(byRecent).slice(0, 6);
   const section = (title, body, extra = '') => `<section class="stack dl-sec"><div class="section-head"><h2 class="section">${title}</h2>${extra}</div>${body}</section>`;
   return `<div class="toolbar"><div class="stack-6"><h1>Téléchargements</h1><span class="sub num" id="dl-sub">${esc(sub)}</span></div></div>
     ${active.length ? section('En cours', `<div class="dl-heroes">${active.map(dlHero).join('')}</div>`) : ''}
     ${!live.length ? `<div class="dl-empty"><span class="dl-empty-ic">${ICONS.download}</span><div><b>Aucun téléchargement</b><span>Installe un jeu depuis sa fiche : Steam, GOG et Epic s’affichent ici en direct.</span></div></div>` : ''}
+    ${!live.length && reinstall.length ? section('À réinstaller ?', `<p class="section-sub">Joués ces derniers mois, plus sur ton disque</p><div class="grid">${reinstall.map((g) => coverCard(g)).join('')}</div>`) : ''}
     ${next.length ? section('À suivre', `<div class="dl-list">${next.map(downloadRow).join('')}</div>`) : ''}
     ${done.length ? section('Terminés', `<div class="dl-list">${done.map(doneRow).join('')}</div>`, '<button type="button" class="link-btn" data-act="dl-clear-done">Effacer</button>') : ''}
     ${sched.length ? `<details class="dl-sched"${state.dlSchedOpen ? ' open' : ''}>

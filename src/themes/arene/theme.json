@@ -1,0 +1,67 @@
+{
+  "id": "arene",
+  "name": "Arène",
+  "author": "CLRE",
+  "version": "1.0.0",
+  "apiVersion": 1,
+  "description": "Navigateur de joueur : noir profond, liserés de couleur entre les panneaux, entrée active en biais, relief de vagues lumineuses en fond.",
+  "colorScheme": "dark",
+  "schemes": {
+    "Rouge": {
+      "--accent": "#fa1e4e",
+      "--accent-rgb": "250 30 78",
+      "--on-accent": "#ffffff",
+      "--wave-a": "#c3123a",
+      "--wave-b": "#5e0a1d"
+    },
+    "Violet": {
+      "--accent": "#a970ff",
+      "--accent-rgb": "169 112 255",
+      "--on-accent": "#ffffff",
+      "--wave-a": "#7a3fe0",
+      "--wave-b": "#33185f"
+    },
+    "Cyan": {
+      "--accent": "#00d1ff",
+      "--accent-rgb": "0 209 255",
+      "--on-accent": "#001218",
+      "--wave-a": "#0094bb",
+      "--wave-b": "#043c4d"
+    },
+    "Vert toxique": {
+      "--accent": "#7cff3c",
+      "--accent-rgb": "124 255 60",
+      "--on-accent": "#0b1400",
+      "--wave-a": "#4fbf1f",
+      "--wave-b": "#1c4a08"
+    },
+    "Orange": {
+      "--accent": "#ff7a1a",
+      "--accent-rgb": "255 122 26",
+      "--on-accent": "#1a0a00",
+      "--wave-a": "#d35a0a",
+      "--wave-b": "#5a2405"
+    },
+    "Rose": {
+      "--accent": "#ff4fd8",
+      "--accent-rgb": "255 79 216",
+      "--on-accent": "#1a0014",
+      "--wave-a": "#c92aa8",
+      "--wave-b": "#550f47"
+    }
+  },
+  "options": [
+    {
+      "id": "waves",
+      "type": "toggle",
+      "label": "Relief de vagues en fond",
+      "default": true
+    },
+    {
+      "id": "frames",
+      "type": "toggle",
+      "label": "Liserés de couleur entre les panneaux",
+      "default": true
+    }
+  ]
+}

@@ -1,0 +1,39 @@
+{
+  "id": "atelier",
+  "name": "Atelier",
+  "author": "CLRE",
+  "version": "1.0.0",
+  "apiVersion": 1,
+  "description": "Skeuomorphisme : toile de lin, barre latérale en cuir cousu, métal brossé, boutons bombés et brillants, jaquettes posées comme des photos.",
+  "colorScheme": "light",
+  "schemes": {
+    "Cuir brun": {
+      "--leather": "#5a3a24", "--leather-2": "#432a19", "--leather-text": "#f3e3cc", "--stitch": "rgb(240 214 170 / 0.55)",
+      "--linen": "#e9e4d8", "--linen-2": "#ddd6c6",
+      "--accent": "#3f7fd8", "--accent-dark": "#2a5fae",
+      "--ink": "#3b3328", "--ink-2": "#6e6455"
+    },
+    "Cuir noir": {
+      "--leather": "#2c2a29", "--leather-2": "#1d1b1a", "--leather-text": "#e8e2d8", "--stitch": "rgb(220 214 204 / 0.4)",
+      "--linen": "#e4e3df", "--linen-2": "#d6d4ce",
+      "--accent": "#d24a3a", "--accent-dark": "#a93427",
+      "--ink": "#2f2d2a", "--ink-2": "#66625b"
+    },
+    "Feutre vert": {
+      "--leather": "#24563a", "--leather-2": "#183d29", "--leather-text": "#e6f1e2", "--stitch": "rgb(230 210 150 / 0.5)",
+      "--linen": "#ece6d6", "--linen-2": "#e0d8c4",
+      "--accent": "#c58a23", "--accent-dark": "#9a6913",
+      "--ink": "#3a3326", "--ink-2": "#6d6250"
+    },
+    "Denim": {
+      "--leather": "#2f4a6e", "--leather-2": "#22374f", "--leather-text": "#e6eef8", "--stitch": "rgb(232 182 92 / 0.7)",
+      "--linen": "#e8e6e1", "--linen-2": "#dbd8d0",
+      "--accent": "#e08a2c", "--accent-dark": "#b4661a",
+      "--ink": "#2e3440", "--ink-2": "#5f6775"
+    }
+  },
+  "options": [
+    { "id": "photos", "type": "toggle", "label": "Jaquettes en photos (cadre blanc, légère rotation)", "default": true },
+    { "id": "stitches", "type": "toggle", "label": "Coutures sur le cuir", "default": true }
+  ]
+}

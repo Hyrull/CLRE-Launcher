@@ -1,0 +1,173 @@
+/* Arène — navigateur de joueur, pour CLRE-Launcher (apiVersion 1).
+   Noir profond, panneaux séparés par des liserés de couleur, entrée active pleine avec coin en biais,
+   séparateurs encadrés, et un relief de vagues lumineuses qui défile lentement en fond.
+   Les vagues sont un SVG du thème (waves.svg) utilisé comme masque : elles prennent la couleur choisie.
+   Inspiré du genre : aucun logo, nom ni image d'un navigateur existant. */
+@import url('https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Barlow:wght@400;500;600;700&display=swap');
+
+:root {
+  --sans: 'Barlow', 'Segoe UI', sans-serif;
+  --head: 'Chakra Petch', 'Barlow', sans-serif;
+  --frame: 1px solid rgb(var(--accent-rgb) / 0.75);
+  --bg-rgb: 12 10 11;
+  --card-rgb: 20 17 18;
+  --raised-rgb: 26 22 24;
+  --popover-rgb: 18 15 16;
+  --glass-rgb: 8 6 7;
+  --fg-rgb: 255 255 255;
+  --shade-rgb: 0 0 0;
+  --on-art-rgb: 255 255 255;
+  --sidebar: #0f0c0d;
+  --card: #141112;
+  --surface-2: #141112;
+  --control: #1d191a;
+  --control-strong: var(--accent);
+  --text: #f2eff0;
+  --text-2: #b3abae;
+  --muted: #7d7477;
+  --on-text: var(--on-accent);
+  --knob: #ffffff;
+  --material: rgb(12 10 11 / 0.88);
+  --blur: blur(10px);
+  --line: rgb(var(--accent-rgb) / 0.25);
+  --line-strong: rgb(var(--accent-rgb) / 0.6);
+  --art-fallback: #1a1617;
+  --art-fallback-flat: #1a1617;
+  --radius-cover: 2px;
+  --radius-tile: 2px;
+  --cut: polygon(0 0, calc(100% - 12px) 0, 100% 50%, calc(100% - 12px) 100%, 0 100%);
+  --key: #1a1617;
+  --key-hover: #241f21;
+  --key-press: #120f10;
+  --key-edge: inset 0 0 0 1px rgb(var(--accent-rgb) / 0.35);
+  --key-edge-press: inset 0 0 0 1px var(--accent);
+  --well: #0d0b0c;
+  --well-edge: inset 0 0 0 1px rgb(var(--accent-rgb) / 0.45);
+  --btn-primary: var(--accent);
+  --btn-primary-hover: color-mix(in srgb, var(--accent), white 15%);
+  --btn-primary-press: color-mix(in srgb, var(--accent), black 15%);
+  --btn-primary-edge: transparent;
+}
+* { border-radius: 0; }
+html { background: #0c0a0b; }
+body { background: transparent; color: var(--text); }
+.content::before { display: none; }
+:is([data-part="app"], [data-part="content"]) { background: transparent; }
+
+/* ── Fond fixe en couches (option « Vagues ») ──
+   1. html : noir, halo de couleur derrière le relief, vignette sur les bords
+   2. body::before : nappe arrière, fine et lointaine, dans la couleur sombre
+   3. body::after : nappe avant, en dégradé (sombre → accent → clair) pour donner du relief,
+      avec quelques points lumineux, et un fondu vers le haut pour laisser le contenu lisible */
+html {
+  background:
+    radial-gradient(ellipse 75% 45% at 72% 92%, rgb(var(--accent-rgb) / 0.28), transparent 70%),
+    radial-gradient(ellipse 50% 30% at 18% 100%, rgb(var(--accent-rgb) / 0.12), transparent 70%),
+    radial-gradient(ellipse 120% 90% at 50% 30%, transparent 55%, rgb(0 0 0 / 0.55) 100%),
+    #0b090a;
+}
+:root.theme-opt-waves body::before, :root.theme-opt-waves body::after {
+  content: ''; position: fixed; left: 0; right: 0; bottom: 0; z-index: -1; pointer-events: none;
+}
+:root.theme-opt-waves body::before {
+  height: 62vh;
+  background: linear-gradient(90deg, var(--wave-b), color-mix(in srgb, var(--wave-a), transparent 30%) 60%, var(--wave-b));
+  -webkit-mask: url('waves-back.svg') 0 0 / 100% 100% no-repeat; mask: url('waves-back.svg') 0 0 / 100% 100% no-repeat;
+  opacity: 0.55;
+}
+:root.theme-opt-waves body::after {
+  height: 78vh;
+  background:
+    radial-gradient(circle at 63% 58%, #fff 0 1.5px, transparent 2.5px),
+    radial-gradient(circle at 81% 71%, #fff 0 1px, transparent 2px),
+    radial-gradient(circle at 34% 80%, #fff 0 1px, transparent 2px),
+    radial-gradient(ellipse 40% 50% at 70% 70%, color-mix(in srgb, var(--accent), white 25%), transparent 70%),
+    linear-gradient(100deg, var(--wave-b) 0%, var(--wave-a) 35%, var(--accent) 65%, var(--wave-a) 100%);
+  -webkit-mask: url('waves.svg') 0 0 / 100% 100% no-repeat, linear-gradient(180deg, transparent 0%, #000 30%);
+  -webkit-mask-composite: source-in;
+  mask: url('waves.svg') 0 0 / 100% 100% no-repeat intersect, linear-gradient(180deg, transparent 0%, #000 30%);
+}
+
+/* ── Typo ── */
+h1, h2.section, .toolbar h1, [data-part="brand"] .wordmark { font-family: var(--head); font-weight: 700; letter-spacing: 0.01em; }
+.toolbar h1 { font-size: 34px; }
+h2.section { font-size: 22px; }
+.nav-title, .nav-sec-toggle, .group-title, .stats .k { font-family: var(--head); font-weight: 600; letter-spacing: 0.02em; }
+.stats .v { font-family: var(--head); font-weight: 700; }
+
+/* ── Panneaux séparés par des liserés (option) ── */
+:root.theme-opt-frames [data-part="sidebar"] { border-right: var(--frame) !important; box-shadow: inset 1px 0 0 rgb(var(--accent-rgb) / 0.6); }
+:root.theme-opt-frames [data-part="topbar"] { border-bottom: var(--frame) !important; }
+:root.theme-opt-frames [data-part="content"] { box-shadow: inset -2px 0 0 rgb(var(--accent-rgb) / 0.8); }
+[data-part="topbar"], [data-part="topbar"].material { background: rgb(12 10 11 / 0.9) !important; -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
+.topbar.over-hero:not(.material) { background: transparent !important; }
+
+/* ── Barre latérale : entrée active pleine, coin en biais à droite ── */
+[data-part="sidebar"] { background: rgb(15 12 13 / 0.92) !important; }
+[data-part="brand"] .wordmark, [data-part="brand"] .wordmark b { color: #ffffff; font-size: 15px; }
+[data-part="sidebar"] .nav-item { height: 34px; border-radius: 0 !important; font-weight: 600; font-size: 15px; color: #e6e1e3; background: transparent; box-shadow: none !important; }
+[data-part="sidebar"] .nav-item svg { color: #cfc8cb; }
+[data-part="sidebar"] .nav-item:hover { background: rgb(var(--accent-rgb) / 0.12) !important; }
+[data-part="sidebar"] .nav-item.active { background: var(--accent) !important; color: var(--on-accent); clip-path: var(--cut); padding-right: 22px; }
+[data-part="sidebar"] .nav-item.active :is(svg, .count, .plat-ico) { color: var(--on-accent); }
+[data-part="sidebar"] .count { color: var(--muted); font-weight: 600; }
+[data-part="nav-collections"] .nav-sec { border-top: 1px solid rgb(var(--accent-rgb) / 0.35); padding-top: 4px; margin-top: 4px !important; }
+[data-part="nav-collections"] .nav-sec-toggle { color: #e6e1e3; font-size: 14px; }
+[data-part="nav-collections"] .nav-sec-head .mini-btn { color: var(--accent); }
+[data-part="week-card"] { border-top: var(--frame); }
+[data-part="week-card"] .v { color: var(--accent); font-family: var(--head); }
+[data-part="sidebar"] .add-game { border-top: 1px solid rgb(var(--accent-rgb) / 0.35); }
+
+/* ── Barre du haut ── */
+.segmented, .seg-chips { background: #0d0b0c !important; box-shadow: inset 0 0 0 1px rgb(var(--accent-rgb) / 0.5) !important; padding: 2px !important; }
+.segmented button, .seg-chips button { color: var(--text-2); font-weight: 600; border-radius: 0 !important; }
+.segmented button.active, .seg-chips button.on { background: var(--accent) !important; color: var(--on-accent) !important; box-shadow: none !important; }
+.search { background: #0d0b0c !important; box-shadow: inset 0 0 0 1px rgb(var(--accent-rgb) / 0.6) !important; border-radius: 0 !important; }
+.search input { color: var(--text); }
+.topbar.over-hero:not(.material) :is(.segmented, .search, .icon-btn, .avatar) { background: rgb(12 10 11 / 0.85) !important; }
+
+/* ── Boutons : cadres fins, le principal plein en biais ── */
+.btn, .chip, .icon-btn, .select, .filter select, .tag-toggle, .field select { border-radius: 0 !important; font-weight: 600; color: var(--text); }
+.btn-primary, .btn-light, .cover .quick { color: var(--on-accent) !important; box-shadow: none !important; clip-path: var(--cut); padding-right: 26px !important; font-family: var(--head); letter-spacing: 0.03em; }
+.btn-primary:hover, .btn-light:hover { box-shadow: 0 0 18px rgb(var(--accent-rgb) / 0.7) !important; }
+.chip.on, .tag-toggle.on { background: var(--accent) !important; color: var(--on-accent) !important; }
+:is(.btn-glass, .btn-ghost, .icon-btn, .chip:not(.on), .select, .tag-toggle:not(.on)):hover { box-shadow: inset 0 0 0 1px var(--accent) !important; color: #ffffff !important; }
+.btn-glass, .btn-running { background: rgb(12 10 11 / 0.7) !important; -webkit-backdrop-filter: blur(6px) !important; backdrop-filter: blur(6px) !important; }
+.avatar { border-radius: 50% !important; background: var(--accent) !important; color: var(--on-accent) !important; box-shadow: none !important; }
+
+/* ── Jaquettes : cadre fin, liseré lumineux au survol ── */
+[data-part="cover"] { box-shadow: inset 0 0 0 1px rgb(var(--accent-rgb) / 0.25) !important; }
+[data-part="game-card"]:hover [data-part="cover"] { box-shadow: 0 0 0 1px var(--accent), 0 0 22px rgb(var(--accent-rgb) / 0.45) !important; transform: translateY(-3px); }
+[data-part="game-card"]:hover .t { color: var(--accent); }
+[data-part="game-card"] .t { font-weight: 700; }
+:is([data-part="tile"], [data-part="resume-card"], .stats, .group) { background: rgb(20 17 18 / 0.85) !important; box-shadow: inset 0 0 0 1px rgb(var(--accent-rgb) / 0.3) !important; border-radius: 0 !important; }
+[data-part="resume-card"]:hover { box-shadow: inset 0 0 0 1px var(--accent) !important; }
+
+/* Séparateurs de section : titre encadré, comme les dates de la capture */
+h2.section { display: inline-flex; align-items: center; gap: 10px; }
+h2.section::after { content: ""; flex: 1; min-width: 40px; height: 1px; background: linear-gradient(90deg, rgb(var(--accent-rgb) / 0.8), transparent); }
+
+/* ── Bannières ── */
+[data-part="spotlight"], [data-part="game-hero"] { box-shadow: inset 0 -1px 0 var(--accent); }
+.spotlight .shade, .game-hero .shade { background: linear-gradient(0deg, #0c0a0b 0%, rgb(12 10 11 / 0.6) 25%, transparent 60%), linear-gradient(90deg, rgb(12 10 11 / 0.7), transparent 55%); }
+.spotlight .kicker, .game-hero .kicker { color: var(--accent); font-family: var(--head); font-weight: 600; }
+
+/* ── Fenêtres, menus, notifications ── */
+.modal { border-radius: 0 !important; border: 1px solid var(--accent) !important; background: #0f0c0d !important; box-shadow: 0 0 40px rgb(var(--accent-rgb) / 0.25), 0 30px 60px rgb(0 0 0 / 0.7) !important; }
+.prefs-side { background: #0c0a0b !important; border-right: var(--frame); }
+.prefs-cats button { border-radius: 0 !important; }
+.prefs-cats button.on, .prefs-me.on { background: var(--accent) !important; color: var(--on-accent) !important; clip-path: var(--cut); }
+.ctx-menu, .inbox { background: #110e0f !important; border-radius: 0 !important; box-shadow: 0 0 0 1px var(--accent), 0 14px 34px rgb(0 0 0 / 0.7) !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+.ctx-menu button { border-radius: 0 !important; }
+.ctx-menu button:hover { background: var(--accent) !important; color: var(--on-accent) !important; }
+.toast, .toast-undo { background: #110e0f !important; color: var(--text) !important; border-radius: 0 !important; box-shadow: 0 0 0 1px var(--accent), 0 0 20px rgb(var(--accent-rgb) / 0.3) !important; }
+:is(.row-switch, .home-toggles) input[type="checkbox"] { border-radius: 0 !important; background: #1d191a !important; box-shadow: inset 0 0 0 1px rgb(var(--accent-rgb) / 0.5) !important; }
+:is(.row-switch, .home-toggles) input[type="checkbox"]::after { border-radius: 0 !important; background: #8d8487; box-shadow: none; }
+:is(.row-switch, .home-toggles) input[type="checkbox"]:checked { background: var(--accent) !important; }
+:is(.row-switch, .home-toggles) input[type="checkbox"]:checked::after { background: #ffffff; }
+.hl-row .bar, .cover-dl { height: 4px; background: rgb(var(--accent-rgb) / 0.2); }
+.hl-row .bar span, .cover-dl div { background: var(--accent); box-shadow: 0 0 8px var(--accent); }
+select option { background: #141112; color: var(--text); }
+/* Barre de défilement : un trait de couleur */
+::-webkit-scrollbar { width: 6px; background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--accent) !important; border: 0 !important; border-radius: 0; }

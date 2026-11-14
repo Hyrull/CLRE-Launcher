@@ -4,61 +4,76 @@
   "author": "CLRE",
   "version": "1.0.0",
   "apiVersion": 1,
-  "description": "Comme une appli native de Windows 11 : matière Mica qui laisse voir le fond d'écran, volet de navigation, cartes superposées, contrôles WinUI.",
-  "colorScheme": "light",
+  "description": "Comme une appli native de Windows 11 en mode sombre : matière Mica qui laisse voir le fond d'écran, volet de navigation, cartes superposées, contrôles WinUI.",
+  "colorScheme": "dark",
   "windowMaterial": "mica",
-  "schemeColorSchemes": { "Sombre": "dark", "Sombre lavande": "dark" },
   "schemes": {
-    "Clair": {
-      "--accent": "#005fb8", "--accent-rgb": "0 95 184", "--accent-hover": "#1a6fc1", "--accent-press": "#3b83c9", "--on-accent": "#ffffff",
-      "--w-text": "#1a1a1a", "--w-text-2": "#5f5f5f", "--w-text-3": "#8a8a8a",
-      "--w-solid": "#f3f3f3",
-      "--w-layer": "rgb(255 255 255 / 0.5)",
-      "--w-card": "rgb(255 255 255 / 0.7)", "--w-card-hover": "rgb(249 249 249 / 0.5)",
-      "--w-stroke": "rgb(0 0 0 / 0.06)", "--w-stroke-strong": "rgb(0 0 0 / 0.16)",
-      "--w-ctrl": "rgb(255 255 255 / 0.7)", "--w-ctrl-hover": "rgb(249 249 249 / 0.5)", "--w-ctrl-press": "rgb(249 249 249 / 0.3)",
-      "--w-subtle-hover": "rgb(0 0 0 / 0.037)", "--w-subtle-press": "rgb(0 0 0 / 0.024)",
-      "--w-flyout": "rgb(252 252 252 / 0.92)",
-      "--w-fg-rgb": "0 0 0", "--w-bg-rgb": "243 243 243"
-    },
-    "Clair menthe": {
-      "--accent": "#0f7b5c", "--accent-rgb": "15 123 92", "--accent-hover": "#2a8a6e", "--accent-press": "#4a9a82", "--on-accent": "#ffffff",
-      "--w-text": "#1a1a1a", "--w-text-2": "#5f5f5f", "--w-text-3": "#8a8a8a",
-      "--w-solid": "#f3f3f3",
-      "--w-layer": "rgb(255 255 255 / 0.5)",
-      "--w-card": "rgb(255 255 255 / 0.7)", "--w-card-hover": "rgb(249 249 249 / 0.5)",
-      "--w-stroke": "rgb(0 0 0 / 0.06)", "--w-stroke-strong": "rgb(0 0 0 / 0.16)",
-      "--w-ctrl": "rgb(255 255 255 / 0.7)", "--w-ctrl-hover": "rgb(249 249 249 / 0.5)", "--w-ctrl-press": "rgb(249 249 249 / 0.3)",
-      "--w-subtle-hover": "rgb(0 0 0 / 0.037)", "--w-subtle-press": "rgb(0 0 0 / 0.024)",
-      "--w-flyout": "rgb(252 252 252 / 0.92)",
-      "--w-fg-rgb": "0 0 0", "--w-bg-rgb": "243 243 243"
-    },
     "Sombre": {
-      "--accent": "#60cdff", "--accent-rgb": "96 205 255", "--accent-hover": "#5ab9e8", "--accent-press": "#52a6d0", "--on-accent": "#000000",
-      "--w-text": "#ffffff", "--w-text-2": "#c5c5c5", "--w-text-3": "#9d9d9d",
+      "--accent": "#60cdff",
+      "--accent-rgb": "96 205 255",
+      "--accent-hover": "#5ab9e8",
+      "--accent-press": "#52a6d0",
+      "--on-accent": "#000000",
+      "--w-text": "#ffffff",
+      "--w-text-2": "#c5c5c5",
+      "--w-text-3": "#9d9d9d",
       "--w-solid": "#202020",
       "--w-layer": "rgb(58 58 58 / 0.3)",
-      "--w-card": "rgb(255 255 255 / 0.05)", "--w-card-hover": "rgb(255 255 255 / 0.08)",
-      "--w-stroke": "rgb(255 255 255 / 0.07)", "--w-stroke-strong": "rgb(255 255 255 / 0.09)",
-      "--w-ctrl": "rgb(255 255 255 / 0.06)", "--w-ctrl-hover": "rgb(255 255 255 / 0.084)", "--w-ctrl-press": "rgb(255 255 255 / 0.033)",
-      "--w-subtle-hover": "rgb(255 255 255 / 0.06)", "--w-subtle-press": "rgb(255 255 255 / 0.04)",
+      "--w-card": "rgb(255 255 255 / 0.05)",
+      "--w-card-hover": "rgb(255 255 255 / 0.08)",
+      "--w-stroke": "rgb(255 255 255 / 0.07)",
+      "--w-stroke-strong": "rgb(255 255 255 / 0.09)",
+      "--w-ctrl": "rgb(255 255 255 / 0.06)",
+      "--w-ctrl-hover": "rgb(255 255 255 / 0.084)",
+      "--w-ctrl-press": "rgb(255 255 255 / 0.033)",
+      "--w-subtle-hover": "rgb(255 255 255 / 0.06)",
+      "--w-subtle-press": "rgb(255 255 255 / 0.04)",
       "--w-flyout": "rgb(44 44 44 / 0.94)",
-      "--w-fg-rgb": "255 255 255", "--w-bg-rgb": "32 32 32"
+      "--w-fg-rgb": "255 255 255",
+      "--w-bg-rgb": "32 32 32"
     },
-    "Sombre lavande": {
-      "--accent": "#c3a6ff", "--accent-rgb": "195 166 255", "--accent-hover": "#b195ea", "--accent-press": "#9f85d4", "--on-accent": "#000000",
-      "--w-text": "#ffffff", "--w-text-2": "#c5c5c5", "--w-text-3": "#9d9d9d",
-      "--w-solid": "#202020",
-      "--w-layer": "rgb(58 58 58 / 0.3)",
-      "--w-card": "rgb(255 255 255 / 0.05)", "--w-card-hover": "rgb(255 255 255 / 0.08)",
-      "--w-stroke": "rgb(255 255 255 / 0.07)", "--w-stroke-strong": "rgb(255 255 255 / 0.09)",
-      "--w-ctrl": "rgb(255 255 255 / 0.06)", "--w-ctrl-hover": "rgb(255 255 255 / 0.084)", "--w-ctrl-press": "rgb(255 255 255 / 0.033)",
-      "--w-subtle-hover": "rgb(255 255 255 / 0.06)", "--w-subtle-press": "rgb(255 255 255 / 0.04)",
-      "--w-flyout": "rgb(44 44 44 / 0.94)",
-      "--w-fg-rgb": "255 255 255", "--w-bg-rgb": "32 32 32"
+    "Lavande": {
+      "--accent": "#c3a6ff",
+      "--accent-rgb": "195 166 255",
+      "--accent-hover": "#b195ea",
+      "--accent-press": "#9f85d4",
+      "--on-accent": "#000000"
+    },
+    "Émeraude": {
+      "--accent": "#5fd3a3",
+      "--accent-rgb": "95 211 163",
+      "--accent-hover": "#55be93",
+      "--accent-press": "#4ca983",
+      "--on-accent": "#00281a"
+    },
+    "Corail": {
+      "--accent": "#ff9a8a",
+      "--accent-rgb": "255 154 138",
+      "--accent-hover": "#e88b7c",
+      "--accent-press": "#d07c6f",
+      "--on-accent": "#3a0b05"
+    },
+    "Ambre": {
+      "--accent": "#ffc66b",
+      "--accent-rgb": "255 198 107",
+      "--accent-hover": "#e8b360",
+      "--accent-press": "#d0a056",
+      "--on-accent": "#2e1d00"
+    },
+    "Rose": {
+      "--accent": "#ff8fc7",
+      "--accent-rgb": "255 143 199",
+      "--accent-hover": "#e881b3",
+      "--accent-press": "#d073a0",
+      "--on-accent": "#3d0024"
     }
   },
   "options": [
-    { "id": "compact", "type": "toggle", "label": "Volet de navigation compact", "default": false }
+    {
+      "id": "compact",
+      "type": "toggle",
+      "label": "Volet de navigation compact",
+      "default": false
+    }
   ]
 }

@@ -129,8 +129,23 @@
     }
   },
   "options": [
-    { "id": "crt", "type": "toggle", "label": "Écran cathodique (lignes et coins sombres)", "default": true },
-    { "id": "cursor", "type": "toggle", "label": "Curseur clignotant sur le jeu survolé", "default": true },
-    { "id": "pixel-text", "type": "toggle", "label": "Police pixel pour tout le texte", "default": true }
+    {
+      "id": "crt",
+      "type": "toggle",
+      "label": "Écran cathodique (lignes et coins sombres)",
+      "default": true
+    },
+    {
+      "id": "cursor",
+      "type": "toggle",
+      "label": "Curseur clignotant sur le jeu survolé",
+      "default": true
+    },
+    {
+      "id": "pixel-text",
+      "type": "toggle",
+      "label": "Police pixel aussi pour le menu et les noms de jeux",
+      "default": false
+    }
   ]
 }

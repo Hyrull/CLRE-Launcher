@@ -13,6 +13,7 @@ function applyTheme(t) {
   root.dataset.theme = (t && t.id) || 'graphite';
   root.dataset.themeScheme = (t && t.scheme) || 'default';
   root.style.colorScheme = (t && t.colorScheme) || 'dark';
+  root.dataset.colorScheme = (t && t.colorScheme) || 'dark'; // les CSS savent si le thème est clair
   // Matière Windows (Mica…) réellement active : le CSS du thème peut rendre la page transparente
   root.dataset.windowMaterial = (t && t.windowMaterial) || 'none';
   if (oldCss && !(sameTheme && t.css)) oldCss.remove();

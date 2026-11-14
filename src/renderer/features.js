@@ -108,7 +108,10 @@ function activityHtml() {
   const today = d0.getTime() / 1000;
   const days = Array.from({ length: 30 }, (_, i) => today - (29 - i) * DAY);
   const perDay = days.map((start) => sessions.reduce((s, x) => s + Math.max(0, Math.min(x.end, start + DAY) - Math.max(x.start, start)), 0));
-  const max = Math.max(60, ...perDay);
+  // 12 semaines glissantes (la dernière se termine aujourd'hui) : un mois de jours presque vides racontait peu
+  const weekStart = (i) => today - ((11 - i) * 7 + 6) * DAY;
+  const perWeek = Array.from({ length: 12 }, (_, i) => sessions.reduce((s, x) => s + Math.max(0, Math.min(x.end, weekStart(i) + 7 * DAY) - Math.max(x.start, weekStart(i))), 0));
+  const maxW = Math.max(3600, ...perWeek);
   const sum = (from, to) => sessions.reduce((s, x) => s + Math.max(0, Math.min(x.end, to) - Math.max(x.start, from)), 0);
   const week = sum(today - 6 * DAY, today + DAY);
   const prev = sum(today - 13 * DAY, today - 6 * DAY);
@@ -126,9 +129,10 @@ function activityHtml() {
       <div><span class="k">Sessions sur 30 jours</span><span class="v">${sessions.filter((x) => x.end >= today - 29 * DAY).length}</span><span class="s">Toutes plateformes</span></div>
     </div>
     <div class="activity-body">
-      <div class="chart" role="img" aria-label="Temps de jeu par jour sur 30 jours">
-        <div class="bars30">${perDay.map((s, i) => `<span class="${i === 29 ? 'today' : ''}" style="height:${s ? Math.max(4, (s / max) * 100) : 0}%" title="${fmtDate(days[i])} · ${s ? fmtDur(s) : 'aucune session'}"></span>`).join('')}</div>
-        <div class="axis"><span>${fmtDate(days[0])}</span><span>${fmtDate(days[14])}</span><span>Aujourd’hui</span></div>
+      <div class="chart" role="img" aria-label="Temps de jeu par semaine sur 12 semaines">
+        <div class="chart-head"><span class="k">Par semaine</span><span class="m">${fmtDur(perWeek.reduce((x, y) => x + y, 0))} sur 12 semaines</span></div>
+        <div class="bars30 weeks">${perWeek.map((s, i) => `<span class="${i === 11 ? 'today' : ''}" style="height:${s ? Math.max(3, (s / maxW) * 100) : 0}%" title="Semaine du ${fmtDate(weekStart(i))} · ${s ? fmtDur(s) : 'aucune session'}"><i>${s ? fmtDur(s) : ''}</i></span>`).join('')}</div>
+        <div class="axis"><span>${fmtDate(weekStart(0))}</span><span>${fmtDate(weekStart(6))}</span><span>Cette semaine</span></div>
       </div>
       <div class="ranked"><h3>Ce mois-ci</h3>${top.map(([k, s]) => { const g = byId(k); return `<button type="button" class="ranked-row" data-open="${esc(k)}"><span class="t">${esc(g ? g.name : k)}</span><span class="m">${fmtDur(s)}</span><span class="bar"><span style="width:${(s / topMax) * 100}%"></span></span></button>`; }).join('')}</div>
     </div>
@@ -209,11 +213,16 @@ VIEWS.wishlist = () => {
 };
 
 // ---------- Progression ----------
+// Page vide : les derniers jeux lancés, qu'on classe d'un clic droit
+const statusSuggest = () => {
+  const recent = games().filter((g) => g.lastPlayed && !statusOf(g)).sort(byRecent).slice(0, 6);
+  return recent.length ? `<section class="stack" style="gap:16px;margin-top:8px"><div class="stack-6"><h2 class="section">Tes derniers jeux</h2><p class="section-sub">Pas encore classés</p></div><div class="grid">${recent.map((g) => coverCard(g)).join('')}</div></section>` : '';
+};
 VIEWS.status = () => {
   const id = state.route.id;
   const list = games().filter((g) => statusOf(g) === id).sort(byRecent);
   return `<div class="toolbar"><div class="stack-6"><h1>${STATUSES[id] || 'Progression'}</h1><span class="sub">${list.length} jeu${list.length > 1 ? 'x' : ''}</span></div></div>` +
-    (list.length ? `<div class="grid">${list.map((g) => coverCard(g)).join('')}</div>` : emptyBox('Rien ici pour l’instant', 'Choisis un statut depuis la fiche d’un jeu, dans le panneau Progression'));
+    (list.length ? `<div class="grid">${list.map((g) => coverCard(g)).join('')}</div>` : emptyBox('Rien ici pour l’instant', 'Aucun jeu n’a encore ce statut') + statusSuggest());
 };
 
 // ---------- Fiche jeu : onglets ----------
@@ -261,12 +270,30 @@ function gameTabContent(g) {
   }
   return '';
 }
+// Icônes des statuts (même trait que le reste de l'interface) et une phrase qui dit ce que veut dire chacun
+const SI = (d) => `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+const STATUS_UI = {
+  todo: { icon: SI('<path d="M18 21l-6-4-6 4V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2z"/>'), hint: 'Je veux y jouer' },
+  playing: { icon: SI('<circle cx="12" cy="12" r="9"/><path d="M10 8.5v7l6-3.5z"/>'), hint: 'Partie en cours' },
+  done: { icon: SI('<circle cx="12" cy="12" r="9"/><path d="M8 12.5l3 3 5-6"/>'), hint: 'Fini, ou presque' },
+  dropped: { icon: SI('<circle cx="12" cy="12" r="9"/><path d="M5.7 5.7l12.6 12.6"/>'), hint: 'Mis de côté' },
+};
+const NOTE_ICON = SI('<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>');
 function progressPanel(g) {
   const cur = statusOf(g);
-  return `<section class="panel">
-    <h2>Progression</h2>
-    <div class="seg-chips status-chips" role="group" aria-label="Statut">${Object.entries(STATUSES).map(([id, l]) => `<button type="button" class="${cur === id ? 'on' : ''}" data-status="${id}" data-id="${g.key}">${l}</button>`).join('')}</div>
-    <label class="field"><span class="sr-only">Note perso</span><textarea class="note-input" data-note="${g.key}" rows="3" placeholder="Note perso : où tu en es, ce qu’il te reste à faire">${esc((state.local.notes || {})[g.key] || '')}</textarea></label>
+  const note = (state.local.notes || {})[g.key] || '';
+  return `<section class="panel progress-panel">
+    <div class="section-head"><h2>Progression</h2>${cur ? `<button type="button" class="link-btn" data-status="${cur}" data-id="${g.key}" title="Retirer le statut">Retirer</button>` : ''}</div>
+    <div class="status-picker" role="radiogroup" aria-label="Statut du jeu">${Object.entries(STATUSES).map(([id, l]) => {
+      const ui = STATUS_UI[id] || { icon: '', hint: '' };
+      return `<button type="button" role="radio" aria-checked="${cur === id}" class="status-opt status-${id} ${cur === id ? 'on' : ''}" data-status="${id}" data-id="${g.key}" title="${esc(ui.hint)}">
+        <span class="ic">${ui.icon}</span><span class="tx"><span class="l">${esc(l)}</span><span class="h">${esc(ui.hint)}</span></span>
+      </button>`;
+    }).join('')}</div>
+    <label class="note-field">
+      <span class="note-head"><span class="note-title">${NOTE_ICON}Note perso</span><span class="note-state" aria-live="polite">${note ? 'Enregistrée' : ''}</span></span>
+      <textarea class="note-input" data-note="${g.key}" rows="3" placeholder="Où tu en es, ce qu’il te reste à faire">${esc(note)}</textarea>
+    </label>
   </section>`;
 }
 
@@ -439,7 +466,10 @@ document.addEventListener('input', (e) => {
   // Seul l'enregistrement sur le disque attend une pause de 400 ms.
   state.local.notes = { ...state.local.notes, [k]: v };
   if (!v) delete state.local.notes[k];
-  noteTimer = setTimeout(saveLocal, 400);
+  // Petit retour visible : « … » pendant la frappe, « Enregistrée » une fois écrite sur le disque
+  const st = e.target.closest('.note-field') && e.target.closest('.note-field').querySelector('.note-state');
+  if (st) st.textContent = '…';
+  noteTimer = setTimeout(() => { saveLocal(); if (st) st.textContent = v ? 'Enregistrée' : ''; }, 400);
 });
 
 

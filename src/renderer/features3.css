@@ -86,3 +86,9 @@ body.couch .content::before { left: 0; }
 /* Filtre actif : teinté de l'accent, lisible dans les deux thèmes */
 .filter.on select, .filter.on select:hover { background: color-mix(in srgb, var(--accent) 22%, transparent); color: var(--text); box-shadow: inset 0 0 0 0.5px color-mix(in srgb, var(--accent) 70%, transparent); }
 .filter select[data-filter="tag"] { max-width: 230px; }
+/* Tags : les autres se déplient dans la même grille ; la recherche masque ce qui ne correspond pas */
+.tag-rest:not([hidden]) { display: contents; }
+.tag-chip[hidden] { display: none; }
+.tag-more { align-self: flex-start; margin-top: -32px; }
+.tag-none { margin: -32px 0 0; font-size: 13px; color: var(--text-2); }
+.tag-search { width: 240px; }

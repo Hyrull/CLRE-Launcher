@@ -1,0 +1,161 @@
+/* Atelier — skeuomorphisme, pour CLRE-Launcher (apiVersion 1).
+   Toile de lin (fond), cuir cousu (barre latérale), métal brossé (barre du haut),
+   boutons bombés avec reflet, texte gravé (ombre claire d'un pixel), jaquettes posées comme des photos,
+   interrupteurs et barres de progression en relief. Textures dessinées en CSS, aucune image. */
+
+:root {
+  --sans: 'Helvetica Neue', 'Segoe UI', Arial, sans-serif;
+  --engrave: 0 1px 0 rgb(255 255 255 / 0.75);
+  --deboss: 0 -1px 0 rgb(0 0 0 / 0.55);
+  --bg-rgb: 233 228 216;
+  --card-rgb: 248 245 238;
+  --raised-rgb: 248 245 238;
+  --popover-rgb: 248 245 238;
+  --glass-rgb: 40 30 20;
+  --fg-rgb: 59 51 40;
+  --shade-rgb: 30 20 10;
+  --on-art-rgb: 255 255 255;
+  --sidebar: var(--leather);
+  --card: #f8f5ee;
+  --surface-2: #f8f5ee;
+  --control: #ebe6da;
+  --control-strong: #ffffff;
+  --text: var(--ink);
+  --text-2: var(--ink-2);
+  --muted: #8d8372;
+  --on-accent: #ffffff;
+  --on-text: #ffffff;
+  --knob: #ffffff;
+  --material: linear-gradient(180deg, #f1f1f1, #c9c9c9);
+  --blur: none;
+  --line: rgb(0 0 0 / 0.12);
+  --line-strong: rgb(0 0 0 / 0.25);
+  --art-fallback: linear-gradient(160deg, #f6f2e8, #ddd4c2);
+  --art-fallback-flat: linear-gradient(160deg, #f6f2e8, #ddd4c2);
+  --radius-cover: 3px;
+  --radius-tile: 6px;
+  /* Bouton ordinaire : bombé, dégradé clair, reflet en haut, ombre portée */
+  --key: linear-gradient(180deg, #ffffff 0%, #f1efe9 48%, #e2ded4 52%, #ece9e1 100%);
+  --key-hover: linear-gradient(180deg, #ffffff 0%, #f6f4ef 48%, #e8e4db 52%, #f2efe8 100%);
+  --key-press: linear-gradient(180deg, #d9d4c8 0%, #e6e2d8 100%);
+  --key-edge: inset 0 1px 0 #ffffff, 0 0 0 1px rgb(0 0 0 / 0.28), 0 1px 2px rgb(0 0 0 / 0.25);
+  --key-edge-press: inset 0 2px 4px rgb(0 0 0 / 0.25), 0 0 0 1px rgb(0 0 0 / 0.3);
+  --well: linear-gradient(180deg, #e9e5dc, #f7f5ef);
+  --well-edge: inset 0 1px 3px rgb(0 0 0 / 0.3), 0 1px 0 rgb(255 255 255 / 0.8);
+  --btn-primary: linear-gradient(180deg, color-mix(in srgb, var(--accent), white 35%) 0%, var(--accent) 50%, var(--accent-dark) 51%, color-mix(in srgb, var(--accent-dark), white 15%) 100%);
+  --btn-primary-hover: linear-gradient(180deg, color-mix(in srgb, var(--accent), white 45%) 0%, color-mix(in srgb, var(--accent), white 10%) 50%, var(--accent) 51%, color-mix(in srgb, var(--accent), white 20%) 100%);
+  --btn-primary-press: linear-gradient(180deg, var(--accent-dark), var(--accent));
+  --btn-primary-edge: rgb(255 255 255 / 0.45);
+}
+.content::before { display: none; }
+
+/* ── Toile de lin : trame fine croisée + léger grain ── */
+html, body {
+  background-color: var(--linen);
+  background-image:
+    repeating-linear-gradient(0deg, rgb(0 0 0 / 0.035) 0 1px, transparent 1px 3px),
+    repeating-linear-gradient(90deg, rgb(255 255 255 / 0.35) 0 1px, transparent 1px 3px),
+    repeating-linear-gradient(90deg, rgb(0 0 0 / 0.025) 0 1px, transparent 1px 4px),
+    radial-gradient(ellipse at 50% 0%, rgb(255 255 255 / 0.5), transparent 70%);
+}
+:is([data-part="app"], [data-part="content"]) { background: transparent; }
+h1, h2.section, .toolbar h1 { color: var(--ink); text-shadow: var(--engrave); font-weight: 700; letter-spacing: -0.01em; }
+.section-sub, .card .s, .stats .k, .muted { text-shadow: var(--engrave); }
+
+/* ── Barre latérale : cuir avec grain, coutures, texte embossé ── */
+[data-part="sidebar"] {
+  background-color: var(--leather) !important;
+  background-image:
+    radial-gradient(circle at 20% 30%, rgb(255 255 255 / 0.05) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 70% 60%, rgb(0 0 0 / 0.18) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 40% 80%, rgb(0 0 0 / 0.12) 0 1.2px, transparent 1.8px),
+    linear-gradient(90deg, rgb(255 255 255 / 0.04), transparent 30%, rgb(0 0 0 / 0.15)) !important;
+  background-size: 5px 5px, 7px 7px, 9px 9px, 100% 100% !important;
+  border-right: 0 !important;
+  box-shadow: inset -1px 0 0 rgb(255 255 255 / 0.08), 2px 0 6px rgb(0 0 0 / 0.35) !important;
+  position: relative;
+}
+:root.theme-opt-stitches [data-part="sidebar"]::after {
+  content: ""; position: absolute; inset: 10px 8px 10px 8px; pointer-events: none; border-radius: 6px;
+  border: 2px dashed var(--stitch);
+}
+[data-part="brand"] .wordmark, [data-part="brand"] .wordmark b { color: var(--leather-text); text-shadow: var(--deboss); }
+[data-part="sidebar"] .nav-item { color: var(--leather-text); text-shadow: var(--deboss); background: transparent; box-shadow: none !important; border-radius: 6px; }
+[data-part="sidebar"] .nav-item svg { color: var(--leather-text); filter: drop-shadow(0 -1px 0 rgb(0 0 0 / 0.5)); }
+[data-part="sidebar"] .nav-item:hover { background: rgb(0 0 0 / 0.15) !important; }
+/* Entrée active : creusée dans le cuir */
+[data-part="sidebar"] .nav-item.active { background: rgb(0 0 0 / 0.3) !important; box-shadow: inset 0 2px 4px rgb(0 0 0 / 0.5), 0 1px 0 rgb(255 255 255 / 0.1) !important; color: #ffffff; }
+[data-part="sidebar"] .nav-item.active :is(svg, .count) { color: #ffffff; }
+[data-part="sidebar"] :is(.count, .nav-hint, .nav-title, .nav-sec-toggle) { color: color-mix(in srgb, var(--leather-text), transparent 35%); text-shadow: var(--deboss); }
+[data-part="week-card"] { border-top: 0; margin-top: 12px; border-radius: 6px; background: rgb(0 0 0 / 0.22); box-shadow: inset 0 2px 5px rgb(0 0 0 / 0.45), 0 1px 0 rgb(255 255 255 / 0.08); padding: 12px; }
+[data-part="week-card"] :is(.k, .v, .sub) { color: var(--leather-text); text-shadow: var(--deboss); }
+[data-part="sidebar"] .add-game { color: var(--leather-text); text-shadow: var(--deboss); }
+
+/* ── Barre du haut : métal brossé ── */
+[data-part="topbar"], [data-part="topbar"].material {
+  background-color: #d8d8d8 !important;
+  background-image:
+    repeating-linear-gradient(90deg, rgb(255 255 255 / 0.12) 0 1px, transparent 1px 2px, rgb(0 0 0 / 0.04) 2px 3px),
+    linear-gradient(180deg, #f2f2f2 0%, #d4d4d4 55%, #bdbdbd 100%) !important;
+  border-bottom: 1px solid #8a8a8a !important;
+  box-shadow: inset 0 1px 0 #ffffff, 0 2px 4px rgb(0 0 0 / 0.25);
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+}
+.topbar.over-hero:not(.material) { background: transparent !important; border-bottom-color: transparent !important; box-shadow: none; }
+[data-part="topbar"] :is(.segmented, .search) { box-shadow: var(--well-edge) !important; }
+.segmented, .seg-chips { background: linear-gradient(180deg, #cfcbc2, #e8e4dc) !important; border-radius: 7px !important; padding: 2px !important; }
+.segmented button, .seg-chips button { color: var(--ink); text-shadow: var(--engrave); border-radius: 5px !important; }
+.segmented button.active, .seg-chips button.on { background: var(--key) !important; box-shadow: var(--key-edge) !important; color: var(--ink) !important; }
+.search { border-radius: 14px !important; background: linear-gradient(180deg, #e8e6e1, #ffffff) !important; }
+.search input { color: var(--ink); }
+.topbar.over-hero:not(.material) :is(.segmented, .search, .icon-btn, .avatar) { background: var(--key) !important; }
+
+/* ── Boutons bombés, texte gravé ── */
+.btn, .chip, .icon-btn, .avatar, .select, .filter select, .tag-toggle, .field select { color: var(--ink); text-shadow: var(--engrave); font-weight: 700; border-radius: 6px !important; }
+.btn-primary, .btn-light, .cover .quick, .chip.on, .tag-toggle.on {
+  color: #ffffff !important; text-shadow: 0 -1px 0 rgb(0 0 0 / 0.4) !important;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.45), 0 0 0 1px var(--accent-dark), 0 2px 3px rgb(0 0 0 / 0.3) !important;
+}
+.chip.on, .tag-toggle.on { background: var(--btn-primary) !important; }
+.btn-glass, .btn-running { background: var(--key) !important; color: var(--ink) !important; box-shadow: var(--key-edge) !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+.avatar { border-radius: 50% !important; }
+
+/* ── Jaquettes : photos à cadre blanc, ombre portée, petite rotation alternée ── */
+:root.theme-opt-photos [data-part="cover"] {
+  border: 6px solid #ffffff; border-bottom-width: 6px; box-sizing: border-box;
+  box-shadow: 0 1px 1px rgb(0 0 0 / 0.15), 0 4px 10px rgb(0 0 0 / 0.28) !important;
+  transform: rotate(-1.2deg); transition: transform 220ms var(--ease), box-shadow 220ms var(--ease);
+}
+:root.theme-opt-photos [data-part="game-card"]:nth-child(3n + 2) [data-part="cover"] { transform: rotate(1deg); }
+:root.theme-opt-photos [data-part="game-card"]:nth-child(3n) [data-part="cover"] { transform: rotate(-0.4deg); }
+:root.theme-opt-photos [data-part="game-card"]:hover [data-part="cover"] { transform: rotate(0) translateY(-4px) scale(1.03) !important; box-shadow: 0 2px 3px rgb(0 0 0 / 0.15), 0 14px 24px rgb(0 0 0 / 0.32) !important; }
+[data-part="cover"] { box-shadow: 0 0 0 1px rgb(0 0 0 / 0.25), 0 3px 8px rgb(0 0 0 / 0.3) !important; }
+[data-part="game-card"] .t { text-shadow: var(--engrave); font-weight: 700; }
+/* Panneaux : carton crème en relief */
+:is([data-part="tile"], [data-part="resume-card"], .stats, .group) {
+  background: linear-gradient(180deg, #fbf9f4, #efeadf) !important; border-radius: 8px !important;
+  box-shadow: inset 0 1px 0 #ffffff, 0 0 0 1px rgb(0 0 0 / 0.15), 0 2px 5px rgb(0 0 0 / 0.18) !important;
+}
+
+/* ── Bannières : vignette sombre, texte embossé ── */
+[data-part="spotlight"], [data-part="game-hero"] { box-shadow: inset 0 -1px 0 rgb(255 255 255 / 0.6), 0 3px 8px rgb(0 0 0 / 0.3); }
+.spotlight .shade, .game-hero .shade { background: radial-gradient(ellipse at 30% 40%, transparent 30%, rgb(0 0 0 / 0.55) 100%), linear-gradient(0deg, rgb(0 0 0 / 0.55), transparent 55%); }
+:is(.spotlight, .game-hero) :is(h1, p, .kicker, .meta-row) { color: #ffffff; text-shadow: 0 -1px 0 rgb(0 0 0 / 0.6), 0 2px 6px rgb(0 0 0 / 0.5); }
+
+/* ── Fenêtres : papier épais avec barre de titre métal ── */
+.modal { border-radius: 10px !important; border: 1px solid #7a7a7a !important; background: var(--linen) !important; box-shadow: inset 0 1px 0 #ffffff, 0 20px 50px rgb(0 0 0 / 0.45) !important; }
+.prefs-side { background: linear-gradient(180deg, #dcdad4, #cfcdc6) !important; box-shadow: inset -1px 0 0 rgb(0 0 0 / 0.15); }
+.prefs-cats button.on, .prefs-me.on { background: var(--btn-primary) !important; color: #fff !important; text-shadow: 0 -1px 0 rgb(0 0 0 / 0.4); }
+.ctx-menu, .inbox { background: linear-gradient(180deg, #ffffff, #f0ede6) !important; border-radius: 8px !important; box-shadow: 0 0 0 1px rgb(0 0 0 / 0.3), 0 8px 20px rgb(0 0 0 / 0.35) !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; color: var(--ink); }
+.ctx-menu button:hover { background: var(--btn-primary) !important; color: #fff !important; }
+.toast, .toast-undo { background: linear-gradient(180deg, #4a4a4a, #222) !important; color: #fff !important; border-radius: 10px !important; box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.25), 0 6px 16px rgb(0 0 0 / 0.45) !important; text-shadow: var(--deboss); }
+/* Interrupteur en relief : rainure creusée, bouton bombé */
+:is(.row-switch, .home-toggles) input[type="checkbox"] { background: linear-gradient(180deg, #bdb8ad, #e5e1d8) !important; box-shadow: inset 0 2px 4px rgb(0 0 0 / 0.35), 0 1px 0 #fff !important; }
+:is(.row-switch, .home-toggles) input[type="checkbox"]::after { background: linear-gradient(180deg, #ffffff, #dedad1); box-shadow: 0 0 0 1px rgb(0 0 0 / 0.25), 0 2px 3px rgb(0 0 0 / 0.3); }
+:is(.row-switch, .home-toggles) input[type="checkbox"]:checked { background: var(--btn-primary) !important; }
+:is(.row-switch, .home-toggles) input[type="checkbox"]:checked::after { background: linear-gradient(180deg, #ffffff, #dedad1); }
+/* Barre de progression : rainure et remplissage brillant */
+.hl-row .bar, .cover-dl { height: 10px; border-radius: 6px; background: linear-gradient(180deg, #c9c4b9, #ece8e0); box-shadow: inset 0 1px 3px rgb(0 0 0 / 0.35); }
+.hl-row .bar span, .cover-dl div { border-radius: 6px; background: var(--btn-primary); box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.5); }
+select option { background: #fff; color: var(--ink); }
+::-webkit-scrollbar-thumb { background: linear-gradient(90deg, #c8c3b8, #a9a397) !important; border: 3px solid transparent !important; background-clip: padding-box !important; border-radius: 8px; }
