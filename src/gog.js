@@ -35,7 +35,10 @@ class Gog {
     this.getDir = getDir;
     this.onChange = onChange || (() => {});
     this.onDone = onDone || (() => {});
-    this.auth = this.readAuth();
+    this.auth = null;
+    // Le jeton se déchiffre en asynchrone (Electron 45+) : tout ce qui en a besoin attend this.ready
+    this.ready = this.readAuth().then((a) => { this.auth = a; });
+    this.saving = Promise.resolve();
     this.owned = null;
     this.ownedAt = 0;
     this.jobs = [];
@@ -53,20 +56,30 @@ class Gog {
   }
 
   // ---------- Compte ----------
-  readAuth() {
+  // Chiffrement par Windows (DPAPI) via l'API asynchrone de safeStorage : les méthodes synchrones
+  // disparaissent en Electron 46. Elle lit aussi les jetons chiffrés par les anciennes versions.
+  async readAuth() {
     try {
-      const buf = fs.readFileSync(this.authFile);
-      const txt = safeStorage.isEncryptionAvailable() ? safeStorage.decryptString(buf) : buf.toString('utf8');
-      return JSON.parse(txt);
+      const buf = await fs.promises.readFile(this.authFile);
+      if (!(await safeStorage.isAsyncEncryptionAvailable())) return JSON.parse(buf.toString('utf8'));
+      const { result, shouldReEncrypt } = await safeStorage.decryptStringAsync(buf);
+      const a = JSON.parse(result);
+      if (shouldReEncrypt) this.writeAuth(a); // clé renouvelée par Windows : on rechiffre avec la nouvelle
+      return a;
     } catch { return null; }
   }
+  // Mémoire mise à jour tout de suite ; écritures sur le disque faites l'une après l'autre, dans l'ordre.
   writeAuth(a) {
     this.auth = a;
-    if (!a) { try { fs.unlinkSync(this.authFile); } catch { /* déjà absent */ } return; }
-    const txt = JSON.stringify(a);
-    writeAtomic(this.authFile, safeStorage.isEncryptionAvailable() ? safeStorage.encryptString(txt) : Buffer.from(txt));
+    this.saving = this.saving.then(async () => {
+      if (!a) { try { fs.unlinkSync(this.authFile); } catch { /* déjà absent */ } return; }
+      const txt = JSON.stringify(a);
+      writeAtomic(this.authFile, (await safeStorage.isAsyncEncryptionAvailable()) ? await safeStorage.encryptStringAsync(txt) : Buffer.from(txt));
+    }).catch((e) => console.warn('GOG : jeton non enregistré :', e.message));
+    return this.saving;
   }
-  status() {
+  async status() {
+    await this.ready;
     return { connected: !!this.auth, username: (this.auth && this.auth.username) || '', dir: this.getDir() };
   }
 
@@ -80,6 +93,7 @@ class Gog {
   }
 
   async token() {
+    await this.ready;
     if (!this.auth) throw Object.assign(new Error('Connecte ton compte GOG'), { code: 'nologin' });
     if (Date.now() < this.auth.expires) return this.auth.access;
     try {
@@ -110,6 +124,7 @@ class Gog {
     try { username = (await this.api(`${EMBED}/userData.json`)).username || ''; } catch { /* pas grave */ }
     this.writeAuth({ ...t, username });
     this.owned = null;
+    await this.saving;
     return this.status();
   }
 
@@ -151,11 +166,12 @@ class Gog {
     });
   }
 
-  logout() { this.writeAuth(null); this.owned = null; return this.status(); }
+  async logout() { await this.writeAuth(null); this.owned = null; return this.status(); }
 
   // ---------- Bibliothèque ----------
   // Jeux Windows possédés sur le compte : [{ id, title }]. Garde le dernier résultat en cas d'échec.
   async ownedGames() {
+    await this.ready;
     if (!this.auth) return [];
     if (this.owned && Date.now() - this.ownedAt < OWNED_TTL) return this.owned;
     try {
@@ -197,6 +213,7 @@ class Gog {
   updateFlag(id) { const u = this.updates[String(id)]; return !!(u && u.update); }
 
   async checkUpdates(games) {
+    await this.ready;
     if (!this.auth) return false;
     let changed = false;
     for (const g of games) {

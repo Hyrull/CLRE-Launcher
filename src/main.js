@@ -944,7 +944,7 @@ app.whenReady().then(() => {
   ipcMain.handle('gog:login', async () => { const s = await gog.login(win); if (win) win.webContents.send('library-changed'); return s; });
   ipcMain.handle('gog:login-browser', () => shell.openExternal(gog.authUrl()));
   ipcMain.handle('gog:login-code', async (_e, text) => { const s = await gog.loginWithPasted(text); if (win) win.webContents.send('library-changed'); return s; });
-  ipcMain.handle('gog:logout', () => { const s = gog.logout(); if (win) win.webContents.send('library-changed'); return s; });
+  ipcMain.handle('gog:logout', async () => { const s = await gog.logout(); if (win) win.webContents.send('library-changed'); return s; });
   for (const k of ['pause', 'resume', 'cancel']) ipcMain.handle(`gog:${k}`, (_e, key) => gog[k](String(key)));
   // ---------- Epic sans le Epic Games Launcher ----------
   ipcMain.handle('epic:status', () => epicDl.status());
