@@ -38,7 +38,9 @@ if (!app.requestSingleInstanceLock()) { app.quit(); process.exit(0); }
 
 protocol.registerSchemesAsPrivileged([
   { scheme: 'steamart', privileges: { standard: true, secure: true, supportFetchAPI: true } },
-  { scheme: 'clre-theme', privileges: { standard: true, secure: true } },
+  // corsEnabled : Chromium charge les masques CSS (mask: url(…)) et les polices en mode CORS.
+  // Sans ça, depuis Electron 45, la page (file://) n'a plus le droit de les lire et le masque disparaît.
+  { scheme: 'clre-theme', privileges: { standard: true, secure: true, corsEnabled: true } },
 ]);
 
 // ---------- Durcissement ----------
@@ -876,7 +878,8 @@ app.whenReady().then(() => {
     const hit = themes.resolve(req.url);
     if (!hit) return new Response('', { status: 404 });
     // fs lit aussi dans app.asar (thèmes intégrés de l'exe)
-    return fs.promises.readFile(hit.file).then((b) => new Response(b, { headers: { 'content-type': hit.type } }), () => new Response('', { status: 404 }));
+    // Fichiers statiques du thème (CSS, images, polices) : lisibles par la page en CORS, sans cookie ni identifiant.
+    return fs.promises.readFile(hit.file).then((b) => new Response(b, { headers: { 'content-type': hit.type, 'access-control-allow-origin': '*' } }), () => new Response('', { status: 404 }));
   });
   // Lecture synchrone au chargement de la page : le thème est en place avant le premier affichage.
   ipcMain.on('themes:boot', (e) => { try { e.returnValue = themes.active(); } catch { e.returnValue = null; } });
@@ -944,7 +947,7 @@ app.whenReady().then(() => {
   ipcMain.handle('gog:login', async () => { const s = await gog.login(win); if (win) win.webContents.send('library-changed'); return s; });
   ipcMain.handle('gog:login-browser', () => shell.openExternal(gog.authUrl()));
   ipcMain.handle('gog:login-code', async (_e, text) => { const s = await gog.loginWithPasted(text); if (win) win.webContents.send('library-changed'); return s; });
-  ipcMain.handle('gog:logout', () => { const s = gog.logout(); if (win) win.webContents.send('library-changed'); return s; });
+  ipcMain.handle('gog:logout', async () => { const s = await gog.logout(); if (win) win.webContents.send('library-changed'); return s; });
   for (const k of ['pause', 'resume', 'cancel']) ipcMain.handle(`gog:${k}`, (_e, key) => gog[k](String(key)));
   // ---------- Epic sans le Epic Games Launcher ----------
   ipcMain.handle('epic:status', () => epicDl.status());

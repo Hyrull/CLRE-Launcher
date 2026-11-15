@@ -1,0 +1,184 @@
+/* Blocs — bac à sable en blocs, pour CLRE-Launcher (apiVersion 1).
+   Ciel en aplats successifs (pas de dégradé lisse), nuages et relief dessinés en pixels, montagnes au loin.
+   Les panneaux et les boutons sont des blocs de pierre : lumière en haut à gauche, ombre en bas à droite,
+   contour sombre ; ils s'enfoncent quand on clique. Toutes les textures sont des SVG originaux du thème.
+   Inspiré du genre : aucun nom, logo, texture ni élément d'interface d'un jeu existant. */
+@import url('https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500;600;700&display=swap');
+
+:root {
+  --pixel: 'Pixelify Sans', 'Segoe UI', sans-serif;
+  --sans: 'Segoe UI', system-ui, sans-serif;
+  --u: 3px; /* un « pixel » d'interface */
+  --outline: #121214;
+  /* Bloc en relief : contour sombre, lumière en haut à gauche, ombre en bas à droite */
+  --bevel: 0 0 0 var(--u) var(--outline), inset var(--u) var(--u) 0 var(--stone-hi), inset calc(var(--u) * -1) calc(var(--u) * -1) 0 var(--stone-lo);
+  --bevel-in: 0 0 0 var(--u) var(--outline), inset var(--u) var(--u) 0 var(--stone-lo), inset calc(var(--u) * -1) calc(var(--u) * -1) 0 var(--stone-hi);
+  --bevel-accent: 0 0 0 var(--u) var(--outline), inset var(--u) var(--u) 0 var(--accent-hi), inset calc(var(--u) * -1) calc(var(--u) * -1) 0 var(--accent-lo);
+  --bevel-accent-in: 0 0 0 var(--u) var(--outline), inset var(--u) var(--u) 0 var(--accent-lo), inset calc(var(--u) * -1) calc(var(--u) * -1) 0 var(--accent-hi);
+  --bg-rgb: 30 32 40;
+  --card-rgb: 52 55 64;
+  --raised-rgb: 60 64 74;
+  --popover-rgb: 46 49 58;
+  --glass-rgb: 18 18 22;
+  --fg-rgb: 255 255 255;
+  --shade-rgb: 0 0 0;
+  --on-art-rgb: 255 255 255;
+  --sidebar: var(--stone);
+  --card: var(--stone);
+  --surface-2: var(--stone);
+  --control: var(--stone-lo);
+  --control-strong: var(--accent);
+  --text: #ffffff;
+  --text-2: #e1e3ea;
+  --muted: #b3b7c4;
+  --on-text: #121214;
+  --knob: #ffffff;
+  --material: var(--stone);
+  --blur: none;
+  --art-fallback: var(--stone);
+  --art-fallback-flat: var(--stone);
+  --radius-cover: 0px;
+  --radius-tile: 0px;
+  --btn-primary: var(--accent);
+  --btn-primary-hover: var(--accent-hi);
+  --btn-primary-press: var(--accent-lo);
+  --btn-primary-edge: transparent;
+  --ease: steps(3, end); /* les animations avancent par à-coups, comme un jeu en pixels */
+}
+* { border-radius: 0 !important; }
+body { background: transparent; color: var(--text); }
+.content::before { display: none; }
+:is([data-part="app"], [data-part="content"]) { background: transparent; }
+
+/* ── Paysage ──
+   Un masque CSS s'applique à tout un élément : chaque couche colorée a donc son propre pseudo-élément.
+   html : le ciel en quatre bandes nettes, et les nuages (images blanches, sans masque).
+   html::before : montagnes lointaines voilées. body::before : le sol. body::after : la couche du dessus
+   (herbe, neige, sable ou cristal), qui suit exactement le haut des colonnes du sol. */
+html {
+  background: linear-gradient(180deg, var(--sky-1) 0 22%, var(--sky-2) 22% 44%, var(--sky-3) 44% 68%, var(--sky-4) 68% 100%) fixed;
+}
+:root.theme-opt-landscape {
+  background:
+    url('clouds.svg') 0 70px / 640px 160px repeat-x fixed,
+    url('clouds.svg') 260px 230px / 480px 120px repeat-x fixed,
+    linear-gradient(180deg, var(--sky-1) 0 22%, var(--sky-2) 22% 44%, var(--sky-3) 44% 68%, var(--sky-4) 68% 100%) fixed;
+  image-rendering: pixelated;
+}
+/* Ciel sans nuages (jeu de couleurs Grotte) */
+:root.theme-opt-landscape[data-theme-scheme="Grotte"] { background: linear-gradient(180deg, var(--sky-1) 0 22%, var(--sky-2) 22% 44%, var(--sky-3) 44% 68%, var(--sky-4) 68% 100%) fixed; }
+:root.theme-opt-landscape::before, :root.theme-opt-landscape body::before, :root.theme-opt-landscape body::after {
+  content: ''; position: fixed; left: 0; right: 0; bottom: 0; height: 320px; z-index: -1; pointer-events: none;
+}
+:root.theme-opt-landscape::before {
+  height: 300px; background: color-mix(in srgb, var(--far), var(--sky-4) 40%);
+  -webkit-mask: url('far.svg') 120px 100% / 1200px 300px repeat-x; mask: url('far.svg') 120px 100% / 1200px 300px repeat-x;
+}
+:root.theme-opt-landscape body::before {
+  background: linear-gradient(180deg, var(--soil) 0 72%, color-mix(in srgb, var(--soil), black 25%) 72%);
+  -webkit-mask: url('terrain.svg') 0 100% / 640px 320px repeat-x; mask: url('terrain.svg') 0 100% / 640px 320px repeat-x;
+}
+:root.theme-opt-landscape body::after {
+  background: var(--top);
+  -webkit-mask: url('terrain-top.svg') 0 100% / 640px 320px repeat-x; mask: url('terrain-top.svg') 0 100% / 640px 320px repeat-x;
+}
+
+/* ── Typo pixel (option) ── */
+:root.theme-opt-pixelfont :is(h1, h2.section, .toolbar h1, [data-part="brand"] .wordmark, .nav-item, .nav-title, .nav-sec-toggle, .group-title, .stats .k, .stats .v, .segmented button, .seg-chips button, .btn, .chip, .tag-toggle, [data-part="week-card"] .v) {
+  font-family: var(--pixel); letter-spacing: 0.02em;
+}
+.toolbar h1 { font-size: 40px; font-weight: 700; color: #ffffff; text-shadow: var(--u) var(--u) 0 var(--outline), calc(var(--u) * 2) calc(var(--u) * 2) 0 rgb(0 0 0 / 0.35); }
+h2.section { font-size: 24px; font-weight: 700; color: #ffffff; text-shadow: var(--u) var(--u) 0 var(--outline); }
+.section-sub, .toolbar .sub, .toolbar p { color: #ffffff; text-shadow: 2px 2px 0 rgb(0 0 0 / 0.55); }
+.nav-title, .nav-sec-toggle, .group-title, .stats .k { font-weight: 600; }
+.stats .v { font-weight: 700; }
+
+/* ── Barre latérale : un grand bloc de pierre ── */
+[data-part="sidebar"] { background: var(--stone) !important; box-shadow: inset calc(var(--u) * -1) 0 0 var(--stone-lo), inset var(--u) 0 0 var(--stone-hi), var(--u) 0 0 var(--outline); }
+[data-part="brand"] .wordmark, [data-part="brand"] .wordmark b { color: #ffffff; font-size: 18px; font-weight: 700; text-shadow: 2px 2px 0 var(--outline); }
+[data-part="sidebar"] .nav-item { height: 36px; font-size: 16px; font-weight: 500; color: #ffffff; background: transparent; box-shadow: none !important; text-shadow: 2px 2px 0 rgb(0 0 0 / 0.45); }
+[data-part="sidebar"] .nav-item svg { color: #e4e6ee; }
+[data-part="sidebar"] .nav-item:not(.active):hover { background: rgb(255 255 255 / 0.1) !important; }
+[data-part="sidebar"] .nav-item.active { background: var(--accent) !important; color: var(--on-accent); box-shadow: var(--bevel-accent) !important; margin: 0 6px 0 3px; font-weight: 700; }
+[data-part="sidebar"] .nav-item.active :is(svg, .count, .plat-ico) { color: var(--on-accent); }
+[data-part="sidebar"] .count { color: #ffffff; font-family: var(--pixel); font-weight: 600; }
+[data-part="nav-collections"] .nav-sec { border-top: var(--u) solid var(--stone-lo); box-shadow: inset 0 var(--u) 0 var(--stone-hi); padding-top: 6px; margin-top: 4px !important; }
+[data-part="nav-collections"] .nav-sec-toggle { color: #ffffff; font-size: 15px; text-shadow: 2px 2px 0 rgb(0 0 0 / 0.45); }
+[data-part="nav-collections"] .nav-sec-head .mini-btn { color: var(--accent-hi); }
+[data-part="week-card"] { border-top: var(--u) solid var(--stone-lo); box-shadow: inset 0 var(--u) 0 var(--stone-hi); }
+[data-part="week-card"] .v { color: var(--accent-hi); font-size: 28px; font-weight: 700; text-shadow: 2px 2px 0 var(--outline); }
+[data-part="sidebar"] .add-game { border-top: var(--u) solid var(--stone-lo); }
+
+/* ── Barre du haut : une rangée de blocs ── */
+[data-part="topbar"], [data-part="topbar"].material { background: var(--stone) !important; box-shadow: inset 0 var(--u) 0 var(--stone-hi), inset 0 calc(var(--u) * -1) 0 var(--stone-lo), 0 var(--u) 0 var(--outline); -webkit-backdrop-filter: none; backdrop-filter: none; }
+.topbar.over-hero:not(.material) { background: transparent !important; box-shadow: none; }
+.segmented, .seg-chips { background: var(--stone-lo) !important; box-shadow: 0 0 0 var(--u) var(--outline) !important; padding: 3px !important; gap: 3px; }
+.segmented button, .seg-chips button { color: #ffffff; font-weight: 600; font-size: 15px; background: var(--stone) !important; box-shadow: inset 2px 2px 0 var(--stone-hi), inset -2px -2px 0 var(--outline) !important; }
+.segmented button.active, .seg-chips button.on { background: var(--accent) !important; color: var(--on-accent) !important; box-shadow: inset 2px 2px 0 var(--accent-hi), inset -2px -2px 0 var(--accent-lo) !important; }
+.search { background: #121214 !important; box-shadow: 0 0 0 var(--u) var(--stone-hi), inset var(--u) var(--u) 0 #000 !important; }
+.search input { color: #ffffff; font-family: var(--pixel); }
+.search input::placeholder { color: #9aa0ad; }
+.icon-btn, .avatar { background: var(--stone) !important; color: #ffffff !important; box-shadow: var(--bevel) !important; }
+.avatar { background: var(--accent) !important; box-shadow: var(--bevel-accent) !important; font-family: var(--pixel); font-weight: 700; }
+.topbar.over-hero:not(.material) :is(.segmented, .search) { box-shadow: 0 0 0 var(--u) var(--outline) !important; }
+
+/* ── Boutons-blocs : relief, et ils s'enfoncent au clic ── */
+.btn, .chip, .select, .filter select, .tag-toggle, .field select, .btn-ghost, .btn-glass {
+  background: var(--stone) !important; color: #ffffff !important; font-weight: 600;
+  box-shadow: var(--bevel) !important; text-shadow: 2px 2px 0 rgb(0 0 0 / 0.45);
+  -webkit-backdrop-filter: none !important; backdrop-filter: none !important;
+}
+:is(.btn, .chip, .select, .tag-toggle, .icon-btn):hover { background: var(--stone-hi) !important; }
+:is(.btn, .chip, .tag-toggle, .icon-btn):active { box-shadow: var(--bevel-in) !important; transform: translateY(2px); }
+.btn-primary, .btn-light, .cover .quick, .chip.on, .tag-toggle.on {
+  background: var(--accent) !important; color: var(--on-accent) !important; box-shadow: var(--bevel-accent) !important; font-weight: 700;
+}
+:is(.btn-primary, .btn-light, .chip.on, .tag-toggle.on):hover { background: var(--accent-hi) !important; }
+:is(.btn-primary, .btn-light):active { box-shadow: var(--bevel-accent-in) !important; }
+.btn-primary, .btn-light { font-size: 16px; padding-left: 20px !important; padding-right: 20px !important; }
+.btn-running { background: var(--stone) !important; }
+
+/* ── Jaquettes : cadre en pixels, elles montent d'un cran au survol ── */
+[data-part="cover"] { box-shadow: 0 0 0 var(--u) var(--outline), var(--u) var(--u) 0 var(--u) rgb(0 0 0 / 0.35) !important; transition: transform 90ms steps(2, end) !important; }
+[data-part="game-card"]:hover [data-part="cover"], [data-part="game-card"]:focus-visible [data-part="cover"] {
+  transform: translateY(-6px); box-shadow: 0 0 0 var(--u) #ffffff, 0 0 0 calc(var(--u) * 2) var(--outline), calc(var(--u) * 2) calc(var(--u) * 3) 0 calc(var(--u) * 2) rgb(0 0 0 / 0.35) !important;
+}
+[data-part="game-card"] .t { font-weight: 700; color: #ffffff; text-shadow: 2px 2px 0 rgb(0 0 0 / 0.7); }
+[data-part="game-card"] .s { color: #f0f2f7; text-shadow: 2px 2px 0 rgb(0 0 0 / 0.7); }
+[data-part="game-card"]:hover .t { color: var(--accent-hi); }
+:is([data-part="tile"], [data-part="resume-card"], .stats, .group, .panel, .empty) {
+  background: var(--stone) !important; box-shadow: var(--bevel) !important;
+}
+:is([data-part="tile"], [data-part="resume-card"]):hover { background: var(--stone-hi) !important; }
+
+/* ── Bannières : filet sombre en bas, étiquette en bloc ── */
+[data-part="spotlight"], [data-part="game-hero"] { box-shadow: 0 var(--u) 0 var(--outline); }
+.spotlight .shade, .game-hero .shade { background: linear-gradient(0deg, rgb(0 0 0 / 0.75) 0%, rgb(0 0 0 / 0.35) 28%, transparent 60%), linear-gradient(90deg, rgb(0 0 0 / 0.6), transparent 55%); }
+.spotlight .kicker, .game-hero .kicker {
+  align-self: flex-start; background: var(--stone); color: #ffffff !important; padding: 4px 12px;
+  font-family: var(--pixel); font-weight: 600; box-shadow: var(--bevel); text-shadow: 2px 2px 0 rgb(0 0 0 / 0.45);
+}
+.spotlight .kicker :is(.dot, .lamp), .game-hero .kicker :is(.dot, .lamp) { background: var(--accent-hi); }
+
+/* ── Fenêtres, menus, notifications ── */
+.modal { background: var(--stone) !important; border: 0 !important; box-shadow: var(--bevel), 0 24px 60px rgb(0 0 0 / 0.6) !important; }
+.prefs-side { background: var(--stone-lo) !important; }
+.prefs-cats button.on, .prefs-me.on { background: var(--accent) !important; color: var(--on-accent) !important; box-shadow: var(--bevel-accent) !important; }
+.ctx-menu, .inbox { background: var(--stone) !important; box-shadow: var(--bevel), 0 14px 34px rgb(0 0 0 / 0.55) !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+.ctx-menu button:hover { background: var(--accent) !important; color: var(--on-accent) !important; }
+.toast, .toast-undo { background: var(--stone) !important; color: #ffffff !important; font-family: var(--pixel); box-shadow: var(--bevel) !important; }
+:is(.row-switch, .home-toggles) input[type="checkbox"] { background: var(--stone-lo) !important; box-shadow: 0 0 0 2px var(--outline) !important; }
+:is(.row-switch, .home-toggles) input[type="checkbox"]::after { background: var(--stone-hi); box-shadow: none; }
+:is(.row-switch, .home-toggles) input[type="checkbox"]:checked { background: var(--accent) !important; }
+:is(.row-switch, .home-toggles) input[type="checkbox"]:checked::after { background: #ffffff; }
+.hl-row .bar, .cover-dl { height: 6px; background: var(--outline); }
+.hl-row .bar span, .cover-dl div { background: repeating-linear-gradient(90deg, var(--accent-hi) 0 6px, var(--accent) 6px 12px); }
+select option { background: var(--stone); color: #ffffff; }
+::selection { background: var(--accent); color: var(--on-accent); }
+::-webkit-scrollbar { width: 12px; background: var(--stone-lo); }
+::-webkit-scrollbar-thumb { background: var(--stone-hi) !important; border: 3px solid var(--stone-lo) !important; }
+
+@media (prefers-reduced-motion: reduce) {
+  [data-part="cover"] { transition: none !important; }
+  [data-part="game-card"]:hover [data-part="cover"] { transform: none !important; }
+}
