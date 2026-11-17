@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'">
+<title>CLRE-Launcher · réticule</title>
+<style>
+  html, body { margin: 0; width: 100%; height: 100%; background: transparent; overflow: hidden; }
+  canvas { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script src="crosshair-draw.js"></script>
+<script>
+  const c = document.getElementById('c');
+  let style = null;
+  function paint() {
+    // Toile à la résolution réelle de l'écran : 1 px du réticule = 1 px physique
+    c.width = Math.round(innerWidth * devicePixelRatio);
+    c.height = Math.round(innerHeight * devicePixelRatio);
+    if (style) CrosshairDraw.draw(c, style, 1); else c.getContext('2d').clearRect(0, 0, c.width, c.height);
+  }
+  window.crosshair.on((v) => { style = v; paint(); });
+  addEventListener('resize', paint);
+</script>
+</body>
+</html>
