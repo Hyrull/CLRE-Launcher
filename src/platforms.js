@@ -4,6 +4,7 @@
 const fs = require('fs');
 const path = require('path');
 const { regQuery, safeLoad } = require('./reg');
+const { fillBuiltinArt } = require('./builtin-art');
 
 function regTree(key) {
   try {
@@ -131,6 +132,7 @@ function applyArt(games, cache) {
       if (c.steamAppId) g.steamAppId = c.steamAppId;
     }
     if (g.customCover) g.art.cover = g.customCover;
+    fillBuiltinArt(g); // visuels intégrés pour les jeux introuvables (LoL, VALORANT, Minecraft…)
   }
 }
 
