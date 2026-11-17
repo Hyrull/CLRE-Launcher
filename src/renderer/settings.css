@@ -125,3 +125,19 @@
 .prefs-foot .prefs-hint { order: 0; }
 .prefs-foot .prefs-saved { order: 1; }
 .prefs-foot > .btn { order: 2; }
+
+/* Réticule : aperçu sur un fond de jeu neutre, curseurs avec leur valeur, jeux retenus */
+.ch-preview { display: flex; justify-content: flex-end; }
+.ch-preview canvas { width: 240px; height: 120px; border-radius: 8px; image-rendering: pixelated; background: linear-gradient(180deg, #6f8796 0%, #a7b3b8 48%, #5d5a4c 52%, #3e3b32 100%); box-shadow: inset 0 0 0 1px var(--line); }
+.ch-range { display: inline-flex; align-items: center; gap: 10px; }
+.ch-range input[type="range"] { width: 160px; accent-color: var(--accent); }
+.ch-range output { min-width: 44px; text-align: right; font-size: 12px; color: var(--text-2); font-variant-numeric: tabular-nums; }
+.ch-color { cursor: default; }
+.ch-games { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
+.ch-game { display: inline-flex; align-items: center; gap: 4px; height: 26px; padding: 0 4px 0 10px; border-radius: 13px; background: var(--fill); font-size: 12px; color: var(--text); }
+.ch-game button { width: 20px; height: 20px; border: 0; border-radius: 50%; background: none; color: var(--muted); font-size: 14px; line-height: 1; cursor: default; }
+.ch-game button:hover { background: var(--fill-strong); color: var(--text); }
+.ch-none { font-size: 12px; color: var(--muted); }
+/* La ligne de l'aperçu est plus haute que les autres : sans ça, la colonne la tasse à sa hauteur minimale */
+.prefs-form .row:has(.ch-preview) { flex-shrink: 0; }
+.prefs-form .row > input[type="color"].ch-color { flex: none; min-width: 0; width: 44px; height: 28px; padding: 2px; }

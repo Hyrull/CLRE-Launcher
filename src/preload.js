@@ -118,6 +118,7 @@ contextBridge.exposeInMainWorld('launcher', {
   onSavesChanged: on('saves-changed'),
   onLibraryChanged: on('library-changed'),
   onRunningChanged: on('running-changed'),
+  onCrosshairGames: on('crosshair-games'),
   onPerfSaved: on('perf-saved'),
   onDownloads: on('downloads'),
   onToast: on('toast'),

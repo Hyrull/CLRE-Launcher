@@ -1,5 +1,6 @@
 const { app, BrowserWindow, ipcMain, shell, protocol, net, Tray, Menu, nativeImage, globalShortcut, dialog, Notification, nativeTheme, session } = require('electron');
 const { Overlay } = require('./overlay');
+const { Crosshair } = require('./crosshair');
 const { Perf } = require('./perf');
 const journal = require('./journal');
 const { readJsonSafe, writeJsonAtomic } = require('./fsutil');
@@ -110,6 +111,8 @@ const settings = () => {
     notify: { downloads: true, promos: true, friends: true, updates: true, storage: true, recaps: true, party: true, ...(s.notify || {}) },
     theme: 'dark', // le launcher n'a plus de mode clair
     overlay: { enabled: true, pauseMin: 120, ...(s.overlay || {}) },
+    // Réticule : style commun, et les jeux où il s'affiche tout seul (clé du jeu -> true)
+    crosshair: { enabled: true, style: {}, games: {}, ...(s.crosshair || {}) },
     presentMon: s.presentMon || '',
     liveBanners: s.liveBanners !== false,
     gameTint: s.gameTint !== false,
@@ -388,6 +391,7 @@ async function pollRunning() {
   const prev = running;
   running = now;
   if (prev.join('|') === now.join('|')) return;
+  syncCrosshair();
   if (win) win.webContents.send('running-changed', now);
   const stopped = prev.filter((k) => !now.includes(k));
   // Une partie hors Steam vient de finir : on rafraîchit pour afficher le nouveau temps de jeu
@@ -705,6 +709,34 @@ function checkPause() {
   }
 }
 
+// ---------- Réticule ----------
+const crosshair = new Crosshair();
+let crossManual = false; // affiché à la main hors d'un jeu reconnu
+function syncCrosshair() {
+  const c = settings().crosshair;
+  const want = c.enabled && (crossManual || running.some((k) => c.games[k]));
+  // Exécutables du jeu en cours (jeux hors Steam), pour centrer sur sa fenêtre
+  const k = running.find((x) => c.games[x]) || running.find((x) => games.has(x));
+  const names = (k && (games.get(k) || {}).processNames) || [];
+  if (want) { if (crosshair.visible) crosshair.update(c.style); else crosshair.show(c.style, names); } else crosshair.hide();
+}
+// Ctrl + Alt + X : dans un jeu, allume ou éteint le réticule et retient le choix pour ce jeu ;
+// hors jeu, l'affiche ou le cache simplement.
+function toggleCrosshair() {
+  const k = running.find((x) => games.has(x));
+  if (!k) { crossManual = !crosshair.visible; syncCrosshair(); return; }
+  const p = readPrefs();
+  const c = settings().crosshair;
+  const list = { ...c.games };
+  const on = !crosshair.visible;
+  if (on) list[k] = true; else delete list[k];
+  crossManual = false;
+  p.settings = { ...(p.settings || {}), crosshair: { ...((p.settings || {}).crosshair || {}), games: list } };
+  writePrefs(p);
+  syncCrosshair();
+  if (win) win.webContents.send('crosshair-games', list);
+}
+
 // ---------- Récaps prêts (semaine, mois, année) ----------
 function periodIds(d = new Date()) {
   const day = (d.getDay() + 6) % 7; // lundi = 0
@@ -767,6 +799,8 @@ function applySystem() {
   const st = settings();
   if (st.overlay.enabled) globalShortcut.register('Control+Alt+O', () => overlay.toggle(overlayInfo()));
   else overlay.hide();
+  if (st.crosshair.enabled) globalShortcut.register('Control+Alt+X', toggleCrosshair);
+  syncCrosshair();
   applyTheme();
   if (app.isPackaged) {
     app.setLoginItemSettings({ openAtLogin: !!s.autostart, path: process.env.PORTABLE_EXECUTABLE_FILE || process.execPath, args: ['--hidden'] });
@@ -1352,7 +1386,7 @@ app.whenReady().then(() => {
       if ((k === 'system' || k === 'settings') && (!v || typeof v !== 'object' || Array.isArray(v))) continue;
       if ((k === 'apiKey' || k === 'steamId') && v !== null && typeof v !== 'string') continue;
       if (k === 'system') { p.system = { ...system(), ...v }; continue; }
-      if (k === 'settings') { p.settings = { ...(p.settings || {}), ...v, notify: { ...((p.settings || {}).notify || {}), ...(v.notify || {}) }, overlay: { ...((p.settings || {}).overlay || {}), ...(v.overlay || {}) } }; continue; }
+      if (k === 'settings') { p.settings = { ...(p.settings || {}), ...v, notify: { ...((p.settings || {}).notify || {}), ...(v.notify || {}) }, overlay: { ...((p.settings || {}).overlay || {}), ...(v.overlay || {}) }, crosshair: { ...((p.settings || {}).crosshair || {}), ...(v.crosshair || {}) } }; continue; }
       if (!['apiKey', 'steamId'].includes(k)) continue;
       if (v === null || v === '') delete p[k]; else p[k] = v;
     }
@@ -1379,5 +1413,5 @@ app.whenReady().then(() => {
   if (process.env.LAUNCHER_SNAP && !app.isPackaged) require('./dev-snap')(win, process.env.LAUNCHER_SNAP);
 });
 
-app.on('will-quit', () => { if (sessions && sessions.open.size) sessions.save(); globalShortcut.unregisterAll(); overlay.destroy(); if (perf) perf.stopAll(); });
+app.on('will-quit', () => { if (sessions && sessions.open.size) sessions.save(); globalShortcut.unregisterAll(); overlay.destroy(); crosshair.destroy(); if (perf) perf.stopAll(); });
 app.on('window-all-closed', () => { if (quitting) app.quit(); });

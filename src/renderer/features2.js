@@ -410,6 +410,9 @@ settingsSystem = function (prefs) {
   const n = s.notify || {};
   const cb = (name, on, label) => `<label class="check"><input type="checkbox" name="${name}" ${on ? 'checked' : ''}> ${label}</label>`;
   const l = state.local;
+  const ch = s.crosshair || {};
+  const cs = CrosshairDraw.normalize(ch.style);
+  const chRange = (name, label, v, min, max, unit = ' px') => `<label class="field-row">${label} <span class="ch-range"><input type="range" name="${name}" min="${min}" max="${max}" step="1" value="${v}"><output>${v}${unit}</output></span></label>`;
   return _settingsSystem(prefs) + `
   <fieldset class="field set"><legend>Apparence</legend>
     <div class="seg-chips" role="radiogroup" aria-label="Taille des jaquettes">${[['s', 'Petites'], ['m', 'Moyennes'], ['l', 'Grandes']].map(([id, lab]) => `<label class="seg-radio"><input type="radio" name="coverSize" value="${id}" ${(l.coverSize || 'm') === id ? 'checked' : ''}><span>${lab}</span></label>`).join('')}</div>
@@ -428,6 +431,21 @@ settingsSystem = function (prefs) {
       <select name="ov_pause" class="select">${[[0, 'Jamais'], [60, 'Toutes les heures'], [90, 'Toutes les 1 h 30'], [120, 'Toutes les 2 h'], [180, 'Toutes les 3 h']].map(([v, lab]) => `<option value="${v}" ${Number((s.overlay || {}).pauseMin ?? 120) === v ? 'selected' : ''}>${lab}</option>`).join('')}</select>
     </label>
     <small>S’affiche par-dessus les jeux en mode fenêtré sans bordure. En plein écran exclusif, Windows le cache</small>
+  </fieldset>
+  <fieldset class="field set"><legend>Réticule</legend>
+    ${cb('ch_enabled', ch.enabled !== false, 'Activer le réticule avec Ctrl + Alt + X')}
+    <div class="ch-preview"><canvas id="ch-canvas" width="240" height="120" aria-label="Aperçu du réticule"></canvas></div>
+    <div class="seg-chips" role="radiogroup" aria-label="Forme du réticule">${[['cross', 'Croix'], ['t', 'T'], ['dot', 'Point'], ['circle', 'Cercle']].map(([id, lab]) => `<label class="seg-radio"><input type="radio" name="ch_shape" value="${id}" ${cs.shape === id ? 'checked' : ''}><span>${lab}</span></label>`).join('')}</div>
+    <label class="field-row">Couleur <input type="color" name="ch_color" value="${esc(cs.color)}" class="ch-color"></label>
+    ${chRange('ch_size', 'Longueur', cs.size, 1, 40)}
+    ${chRange('ch_thickness', 'Épaisseur', cs.thickness, 1, 10)}
+    ${chRange('ch_gap', 'Écart au centre', cs.gap, 0, 30)}
+    ${chRange('ch_outline', 'Contour noir', cs.outline, 0, 3)}
+    ${chRange('ch_opacity', 'Opacité', Math.round(cs.opacity * 100), 10, 100, ' %')}
+    ${cb('ch_dot', cs.dot, 'Point au centre')}
+    <div class="ch-games" id="ch-games"></div>
+    <input type="hidden" name="ch_games" value="${esc(JSON.stringify(ch.games || {}))}">
+    <small>Appuie sur Ctrl + Alt + X dans un jeu : le réticule s’y affichera tout seul les fois suivantes. Rien n’est injecté dans le jeu, mais vérifie les règles des jeux compétitifs. Ne s’affiche pas en plein écran exclusif</small>
   </fieldset>
   <fieldset class="field set"><legend>Sauvegardes de jeux</legend>
     <div class="pick"><span class="path" id="backup-dir">${esc(s.backupDir || '')}</span><button type="button" class="btn btn-ghost" id="pick-backup">Changer…</button></div>
@@ -449,12 +467,53 @@ settingsSystem = function (prefs) {
     <small>Statuts, notes, collections, sessions, jeux ajoutés et options de lancement, dans un seul fichier</small>
   </fieldset>`;
 };
+// Réglages du réticule lus dans le formulaire
+function crosshairStyle(f) {
+  return CrosshairDraw.normalize({ shape: f.get('ch_shape'), color: f.get('ch_color'), size: f.get('ch_size'), thickness: f.get('ch_thickness'), gap: f.get('ch_gap'), outline: f.get('ch_outline'), opacity: Number(f.get('ch_opacity')) / 100, dot: !!f.get('ch_dot') });
+}
+// Aperçu agrandi (pixels nets) et liste des jeux où le réticule s'affiche tout seul
+function wireCrosshair(dlg) {
+  const form = $('#settings-form', dlg);
+  const cv = $('#ch-canvas', dlg);
+  const hidden = $('[name=ch_games]', dlg);
+  if (!form || !cv || !hidden) return;
+  const dpr = window.devicePixelRatio || 1;
+  cv.width = Math.round(240 * dpr); cv.height = Math.round(120 * dpr);
+  const paint = () => {
+    const st = crosshairStyle(new FormData(form));
+    const k = Math.max(1, Math.min(4, Math.floor((50 * dpr) / CrosshairDraw.extent(st))));
+    CrosshairDraw.draw(cv, st, k);
+    dlg.querySelectorAll('.ch-range').forEach((r) => { const i = r.querySelector('input'); r.querySelector('output').textContent = i.value + (i.name === 'ch_opacity' ? ' %' : ' px'); });
+  };
+  const list = () => {
+    let g = {}; try { g = JSON.parse(hidden.value || '{}'); } catch { /* vide */ }
+    const keys = Object.keys(g);
+    $('#ch-games', dlg).innerHTML = keys.length
+      ? keys.map((k) => { const x = byId(k); return `<span class="ch-game">${esc(x ? x.name : k)}<button type="button" data-ch-del="${esc(k)}" aria-label="Retirer ${esc(x ? x.name : k)}">×</button></span>`; }).join('')
+      : '<span class="ch-none">Aucun pour l’instant</span>';
+  };
+  $('#ch-games', dlg).onclick = (e) => {
+    const b = e.target.closest('[data-ch-del]'); if (!b) return;
+    let g = {}; try { g = JSON.parse(hidden.value || '{}'); } catch { /* vide */ }
+    delete g[b.dataset.chDel];
+    hidden.value = JSON.stringify(g);
+    hidden.dispatchEvent(new Event('input', { bubbles: true }));
+    list();
+  };
+  form.addEventListener('input', (e) => { if (e.target.name && e.target.name.startsWith('ch_')) paint(); });
+  form.addEventListener('change', (e) => { if (e.target.name && e.target.name.startsWith('ch_')) paint(); });
+  // Ctrl + Alt + X pendant que les réglages sont ouverts : la liste suit (un seul écouteur par fenêtre)
+  dlg._chList = list;
+  if (api.onCrosshairGames && !dlg._chOn) { dlg._chOn = true; api.onCrosshairGames((g) => { const h = $('[name=ch_games]', dlg); if (h && dlg.open) { h.value = JSON.stringify(g || {}); dlg._chList(); } }); }
+  paint(); list();
+}
 function readExtraSettings(f) {
   state.local.coverSize = f.get('coverSize') || 'm';
   saveLocal();
   return {
     notify: { downloads: !!f.get('n_downloads'), promos: !!f.get('n_promos'), friends: !!f.get('n_friends'), updates: !!f.get('n_updates'), storage: !!f.get('n_storage'), party: !!f.get('n_party') },
     overlay: { enabled: !!f.get('ov_enabled'), pauseMin: Number(f.get('ov_pause') || 0) },
+    crosshair: { enabled: !!f.get('ch_enabled'), style: crosshairStyle(f), games: (() => { try { return JSON.parse(f.get('ch_games') || '{}'); } catch { return {}; } })() },
     discordId: String(f.get('discordId') || '').replace(/\D/g, ''),
     discordEnabled: !!f.get('discordEnabled'),
     updateRepo: String(f.get('updateRepo') || '').trim(),
@@ -468,6 +527,7 @@ new MutationObserver(() => {
   if (!dlg.open || !$('#pick-backup', dlg) || dlg.dataset.wired === dlg.innerHTML.length + '') return;
   dlg.dataset.wired = dlg.innerHTML.length + '';
   api.appVersion().then((v) => { const el = $('#app-version', dlg); if (el) el.textContent = v; });
+  wireCrosshair(dlg);
   $('#pick-backup', dlg).onclick = async () => { const p = await api.pickFolder(); if (p) { $('#backup-dir', dlg).textContent = p; $('[name=backupDir]', dlg).value = p; } };
   $('#export-data', dlg).onclick = async () => { const p = await api.exportData(); if (p) toast('Données exportées'); };
   $('#import-data', dlg).onclick = async () => {
