@@ -293,7 +293,7 @@ async function openAssets(key) {
       </div></div>`;
   };
   const dlg = modal(`<h2>Visuels du jeu</h2><p>${esc(g ? g.name : key)}</p>
-    <div class="asset-auto">${sgBtn('data-asset-auto', 'Remplir avec les plus populaires')}<small>${sg ? 'Récupère sur SteamGridDB le meilleur visuel de chaque type (les visuels déjà personnalisés sont conservés). Bannière et arrière-plan viennent tous deux des « heroes »' : 'Ajoute ta clé API SteamGridDB dans Réglages › Général pour choisir les visuels en ligne'}</small></div>
+    <div class="asset-auto">${sgBtn('data-asset-auto', 'Remplir avec les plus populaires')}<small>${sg ? 'Récupère sur SteamGridDB le meilleur visuel de chaque type (les visuels déjà personnalisés sont conservés).' : 'Ajoute ta clé API SteamGridDB dans Réglages › Général pour choisir les visuels en ligne'}</small></div>
     <div class="asset-list">${Object.entries(info.types).map(row).join('')}</div>
     <div class="m-actions">${Object.keys(info.custom).length ? '<button type="button" class="btn btn-ghost" data-asset-reset-all>Tout rétablir</button>' : ''}<button type="button" class="btn btn-light" data-close>Fermer</button></div>`);
   const refresh = async (msg) => { if (msg) toast(msg); await sync(true); if (dlg.open) { dlg.close(); await openAssets(key); } };
